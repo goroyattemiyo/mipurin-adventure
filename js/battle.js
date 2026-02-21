@@ -59,8 +59,8 @@ const PlayerController = (() => {
     if (player.needleCooldown > 0) player.needleCooldown -= dt;
   }
 
-  function checkInteract(player) {
-    if (!Engine.consumePress('interact')) return null;
+   function checkInteract(player) {
+    // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;

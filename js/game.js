@@ -23,6 +23,8 @@ const Game = (() => {
 
   let _currentScene = SCENE.LOADING;
   let _prevScene = null;
+  let _prologueSeen = false;
+
 
   // プレイヤー状態
   const player = {
@@ -288,7 +290,12 @@ const Game = (() => {
 
     if (_titleReady) {
       if (Engine.consumePress('attack') || Engine.consumePress('interact') || Engine.consumeClick()) {
-        _changeScene(SCENE.PROLOGUE);
+        if (!_prologueSeen) {
+          _prologueSeen = true;
+          _changeScene(SCENE.PROLOGUE);
+        } else {
+          _changeScene(SCENE.MENU);
+        }
       }
     }
   }
@@ -370,7 +377,7 @@ const Game = (() => {
 
     // 戻る
     if (Engine.consumePress('menu')) {
-      _changeScene(SCENE.TITLE);
+      _changeScene(SCENE.MENU);
     }
   }
 

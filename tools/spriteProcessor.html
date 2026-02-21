@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Processor - ミプリンの冒険</title>
+<style>
+:root { --pri:#F5A623; --bg:#1a1a2a; --bg2:#252540; --txt:#eee; --dim:#888; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:monospace;font-size:14px;overflow-x:hidden;}
+h1{text-align:center;color:var(--pri);padding:16px 0 8px;font-size:20px;}
+.tabs{display:flex;justify-content:center;gap:4px;margin-bottom:12px;}
+.tab{padding:8px 20px;background:var(--bg2);color:var(--dim);cursor:pointer;border:1px solid #444;border-radius:6px 6px 0 0;}
+.tab.active{background:var(--pri);color:#000;font-weight:bold;}
+.panel{display:none;padding:16px;max-width:1100px;margin:0 auto;}
+.panel.active{display:block;}
+/* Drop zone */
+#drop-zone{border:3px dashed #555;border-radius:12px;padding:60px;text-align:center;color:var(--dim);cursor:pointer;transition:border-color .2s;}
+#drop-zone.hover{border-color:var(--pri);color:var(--pri);}
+#drop-zone input{display:none;}
+/* Canvas */
+.canvas-wrap{position:relative;overflow:auto;max-height:500px;background:#111;border:1px solid #333;margin:12px 0;}
+canvas{display:block;image-rendering:pixelated;}
+/* Controls */
+.ctrl-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0;}
+.ctrl-row label{color:var(--dim);min-width:100px;}
+.ctrl-row input[type=number],.ctrl-row select,.ctrl-row input[type=text]{background:var(--bg2);color:var(--txt);border:1px solid #555;padding:4px 8px;border-radius:4px;width:80px;}
+.ctrl-row select{width:120px;}
+button{background:var(--pri);color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;}
+button:hover{opacity:.85;}
+button.secondary{background:#555;color:var(--txt);}
+/* Frames preview */
+.frames-row{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:#111;border-radius:6px;min-height:48px;margin:8px 0;}
+.frame-thumb{border:2px solid #444;cursor:pointer;image-rendering:pixelated;}
+.frame-thumb.selected{border-color:var(--pri);}
+/* Anim preview */
+#anim-canvas{border:2px solid var(--pri);background:#111;margin:8px 0;}
+/* HSL sliders */
+.slider-row{display:flex;align-items:center;gap:8px;margin:6px 0;}
+.slider-row label{min-width:60px;color:var(--dim);text-align:right;}
+.slider-row input[type=range]{flex:1;max-width:300px;}
+.slider-row .val{width:50px;color:var(--pri);text-align:center;}
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+.preset-btn{padding:4px 10px;font-size:12px;border-radius:4px;}
+#variant-preview{border:1px solid #555;background:#111;image-rendering:pixelated;margin:8px 0;}
+.info{color:var(--dim);font-size:12px;margin:4px 0;}
+</style>
+</head>
+<body>
+
+<h1>Sprite Processor</h1>
+
+<div class="tabs">
+  <div class="tab active" data-tab="import">1. 読込</div>
+  <div class="tab" data-tab="detect">2. 検出</div>
+  <div class="tab" data-tab="output">3. 出力</div>
+  <div class="tab" data-tab="preview">4. プレビュー</div>
+  <div class="tab" data-tab="variant">5. バリアント</div>
+</div>
+
+<!-- TAB 1: Import -->
+<div id="tab-import" class="panel active">
+  <div id="drop-zone">
+    透過済みPNGをドラッグ＆ドロップ<br>またはクリックしてファイル選択
+    <input type="file" id="file-input" accept=".png">
+  </div>
+  <div class="canvas-wrap"><canvas id="src-canvas"></canvas></div>
+  <p class="info" id="src-info"></p>
+</div>
+
+<!-- TAB 2: Detect -->
+<div id="tab-detect" class="panel">
+  <div class="ctrl-row">
+    <label>最小フレームサイズ</label><input type="number" id="min-frame" value="16" min="4" max="256">
+    <label>最小ギャップ</label><input type="number" id="min-gap" value="1" min="0" max="32">
+    <button id="btn-detect">自動検出</button>
+    <button class="secondary" id="btn-add-frame">＋手動追加</button>
+    <button class="secondary" id="btn-clear-frames">全削除</button>
+  </div>
+  <div class="canvas-wrap"><canvas id="detect-canvas"></canvas></div>
+  <p class="info">フレーム: <span id="frame-count">0</span>個　（クリックで選択 → Deleteで削除）</p>
+</div>
+
+<!-- TAB 3: Output settings -->
+<div id="tab-output" class="panel">
+  <div class="ctrl-row">
+    <label>出力サイズ</label>
+    <select id="out-size">
+      <option value="16">16×16</option>
+      <option value="32" selected>32×32</option>
+      <option value="64">64×64</option>
+      <option value="custom">カスタム</option>
+    </select>
+    <input type="number" id="out-custom" value="32" min="8" max="512" style="display:none;">
+  </div>
+  <div class="ctrl-row">
+    <label>プレフィックス</label><input type="text" id="out-prefix" value="sprite" style="width:160px;">
+  </div>
+  <div class="ctrl-row">
+    <label>JSON名</label><input type="text" id="json-name" value="player_walk_down" style="width:200px;">
+  </div>
+  <button id="btn-process">フレーム生成</button>
+  <div class="frames-row" id="frames-row"></div>
+  <p class="info" id="out-info"></p>
+</div>
+
+<!-- TAB 4: Preview & Export -->
+<div id="tab-preview" class="panel">
+  <div class="ctrl-row">
+    <label>FPS</label><input type="number" id="anim-fps" value="8" min="1" max="60">
+    <button id="btn-play">▶ 再生</button>
+    <button id="btn-stop">■ 停止</button>
+  </div>
+  <canvas id="anim-canvas" width="128" height="128"></canvas>
+  <div class="ctrl-row" style="margin-top:12px;">
+    <button id="btn-export-zip">個別PNG (ZIP)</button>
+    <button id="btn-export-sheet">スプライトシート</button>
+    <button id="btn-export-engine">エンジン用データ</button>
+  </div>
+</div>
+
+<!-- TAB 5: HSL Variant -->
+<div id="tab-variant" class="panel">
+  <div class="slider-row"><label>Hue</label><input type="range" id="hsl-h" min="-180" max="180" value="0"><span class="val" id="hsl-h-val">0</span></div>
+  <div class="slider-row"><label>Sat</label><input type="range" id="hsl-s" min="-100" max="100" value="0"><span class="val" id="hsl-s-val">0</span></div>
+  <div class="slider-row"><label>Lit</label><input type="range" id="hsl-l" min="-100" max="100" value="0"><span class="val" id="hsl-l-val">0</span></div>
+  <div class="preset-row">
+    <button class="preset-btn" data-h="330" data-s="-10" data-l="5">桜</button>
+    <button class="preset-btn" data-h="180" data-s="10" data-l="10">氷</button>
+    <button class="preset-btn" data-h="0" data-s="30" data-l="15">黄金</button>
+    <button class="preset-btn" data-h="0" data-s="-15" data-l="-20">暗化1</button>
+    <button class="preset-btn" data-h="0" data-s="-30" data-l="-40">暗化2</button>
+    <button class="preset-btn" data-h="0" data-s="-50" data-l="-60">暗化3</button>
+    <button class="preset-btn" data-mode="tint" data-color="#DC3D3D" data-amt="0.7">赤化</button>
+    <button class="preset-btn" data-mode="silhouette" data-color="#FFFFFF">白化</button>
+    <button class="preset-btn" data-h="0" data-s="0" data-l="0">リセット</button>
+  </div>
+  <canvas id="variant-preview" width="256" height="64"></canvas>
+  <div class="ctrl-row"><button id="btn-variant-export">バリアント書出し</button></div>
+</div>
+
+<script>
+/* ============================================================
+   Sprite Processor - ミプリンの冒険 ツール
+   ============================================================ */
+(() => {
+  /* --- state --- */
+  let srcImg = null;
+  let srcData = null;
+  let frames = [];       // [{x,y,w,h}]
+  let outFrames = [];    // [canvas]
+  let selectedFrame = -1;
+  let animInterval = null;
+  let addingManual = false;
+  let manualStart = null;
+
+  /* --- DOM --- */
+  const $ = s => document.querySelector(s);
+  const srcCanvas = $('#src-canvas'), srcCtx = srcCanvas.getContext('2d');
+  const detCanvas = $('#detect-canvas'), detCtx = detCanvas.getContext('2d');
+  const animCanvas = $('#anim-canvas'), animCtx = animCanvas.getContext('2d');
+  const varCanvas = $('#variant-preview'), varCtx = varCanvas.getContext('2d');
+
+  /* --- tabs --- */
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      $(`#tab-${t.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  /* --- file input --- */
+  const dropZone = $('#drop-zone');
+  const fileInput = $('#file-input');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('hover'); loadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  function loadFile(file) {
+    if (!file || !file.type.includes('png')) { alert('PNGファイルを選択してください'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        srcImg = img;
+        srcCanvas.width = img.width; srcCanvas.height = img.height;
+        srcCtx.clearRect(0,0,img.width,img.height);
+        srcCtx.drawImage(img,0,0);
+        srcData = srcCtx.getImageData(0,0,img.width,img.height);
+        detCanvas.width = img.width; detCanvas.height = img.height;
+        $('#src-info').textContent = `${img.width}×${img.height} px`;
+        frames = []; outFrames = [];
+        _redrawDetect();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* --- auto detect --- */
+  $('#btn-detect').addEventListener('click', () => {
+    if (!srcData) return;
+    const minSize = +$('#min-frame').value || 16;
+    const minGap = +$('#min-gap').value || 1;
+    frames = detectFrames(srcData, minSize, minGap);
+    _redrawDetect();
+  });
+
+  function detectFrames(imgData, minSize, minGap) {
+    const {width:W, height:H, data:D} = imgData;
+    const visited = new Uint8Array(W*H);
+    const boxes = [];
+
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+      const i = (y*W+x)*4;
+      if (D[i+3] > 10 && !visited[y*W+x]) {
+        let x0=x,y0=y,x1=x,y1=y;
+        const stack = [[x,y]];
+        visited[y*W+x] = 1;
+        while (stack.length) {
+          const [cx,cy] = stack.pop();
+          if (cx<x0) x0=cx; if (cx>x1) x1=cx;
+          if (cy<y0) y0=cy; if (cy>y1) y1=cy;
+          for (const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+            const nx=cx+dx, ny=cy+dy;
+            if (nx>=0&&nx<W&&ny>=0&&ny<H&&!visited[ny*W+nx]) {
+              const ni=(ny*W+nx)*4;
+              if (D[ni+3]>10) { visited[ny*W+nx]=1; stack.push([nx,ny]); }
+            }
+          }
+        }
+        const bw=x1-x0+1, bh=y1-y0+1;
+        if (bw>=minSize && bh>=minSize) boxes.push({x:x0,y:y0,w:bw,h:bh});
+      }
+    }
+    // merge close boxes
+    const merged = [];
+    const used = new Uint8Array(boxes.length);
+    for (let i=0;i<boxes.length;i++) {
+      if (used[i]) continue;
+      let b = {...boxes[i]};
+      for (let j=i+1;j<boxes.length;j++) {
+        if (used[j]) continue;
+        const o = boxes[j];
+        if (Math.abs(b.x-o.x)<minGap+b.w && Math.abs(b.y-o.y)<minGap+b.h) {
+          const nx=Math.min(b.x,o.x), ny=Math.min(b.y,o.y);
+          b = {x:nx,y:ny,w:Math.max(b.x+b.w,o.x+o.w)-nx,h:Math.max(b.y+b.h,o.y+o.h)-ny};
+          used[j]=1;
+        }
+      }
+      merged.push(b);
+    }
+    // sort left-to-right, top-to-bottom
+    merged.sort((a,b) => a.y===b.y ? a.x-b.x : a.y-b.y);
+    return merged;
+  }
+
+  function _redrawDetect() {
+    if (!srcImg) return;
+    detCtx.clearRect(0,0,detCanvas.width,detCanvas.height);
+    detCtx.drawImage(srcImg,0,0);
+    for (let i=0;i<frames.length;i++) {
+      const f=frames[i];
+      detCtx.strokeStyle = i===selectedFrame ? '#0f0' : '#f00';
+      detCtx.lineWidth = i===selectedFrame ? 3 : 1;
+      detCtx.strokeRect(f.x,f.y,f.w,f.h);
+      detCtx.fillStyle = 'rgba(255,0,0,0.1)';
+      detCtx.fillRect(f.x,f.y,f.w,f.h);
+      detCtx.fillStyle='#fff'; detCtx.font='10px monospace';
+      detCtx.fillText(i,f.x+2,f.y+10);
+    }
+    $('#frame-count').textContent = frames.length;
+  }
+
+  /* detect canvas click → select */
+  detCanvas.addEventListener('click', e => {
+    if (addingManual) return;
+    const r = detCanvas.getBoundingClientRect();
+    const sx = detCanvas.width/r.width, sy = detCanvas.height/r.height;
+    const mx = (e.clientX-r.left)*sx, my = (e.clientY-r.top)*sy;
+    selectedFrame = -1;
+    for (let i=frames.length-1;i>=0;i--) {
+      const f=frames[i];
+      if (mx>=f.x&&mx<=f.x+f.w&&my>=f.y&&my<=f.y+f.h){selectedFrame=i;break;}
+    }
+    _redrawDetect();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key==='Delete'&&selectedFrame>=0){frames.splice(selectedFrame,1);selectedFrame=-1;_redrawDetect();}
+  });
+
+  /* manual add */
+  $('#btn-add-frame').addEventListener('click', () => {
+    addingManual = true; detCanvas.style.cursor='crosshair';
+  });
+  detCanvas.addEventListener('mousedown', e => {
+    if (!addingManual) return;
+    const r=detCanvas.getBoundingClientRect();
+    const sx=detCanvas.width/r.width,sy=detCanvas.height/r.height;
+    manualStart={x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};
+  });
+  detCanvas.addEventListener('mouseup', e => {
+    if (!addingManual||!manualStart) return;
+    const r=detCanvas.getBoundingClientRect();
+    const sx=detCanvas.width/r.width,sy=detCanvas.height/r.height;
+    const ex=(e.clientX-r.left)*sx,ey=(e.clientY-r.top)*sy;
+    const x=Math.min(manualStart.x,ex),y=Math.min(manualStart.y,ey);
+    const w=Math.abs(ex-manualStart.x),h=Math.abs(ey-manualStart.y);
+    if(w>4&&h>4) frames.push({x:Math.floor(x),y:Math.floor(y),w:Math.floor(w),h:Math.floor(h)});
+    manualStart=null; addingManual=false; detCanvas.style.cursor='default';
+    _redrawDetect();
+  });
+  $('#btn-clear-frames').addEventListener('click', () => { frames=[]; selectedFrame=-1; _redrawDetect(); });
+
+  /* --- output --- */
+  $('#out-size').addEventListener('change', e => {
+    $('#out-custom').style.display = e.target.value==='custom'?'inline':'none';
+  });
+
+  $('#btn-process').addEventListener('click', () => {
+    if (!srcImg||frames.length===0) return;
+    const sizeVal=$('#out-size').value;
+    const size = sizeVal==='custom'? (+$('#out-custom').value||32) : +sizeVal;
+    outFrames = [];
+    const row = $('#frames-row'); row.innerHTML='';
+
+    for (let i=0;i<frames.length;i++) {
+      const f=frames[i];
+      const c=document.createElement('canvas'); c.width=size; c.height=size;
+      const cx=c.getContext('2d');
+      cx.imageSmoothingEnabled=false;
+      const scale=Math.min(size/f.w,size/f.h);
+      const dw=f.w*scale, dh=f.h*scale;
+      cx.drawImage(srcImg, f.x,f.y,f.w,f.h, (size-dw)/2,(size-dh)/2,dw,dh);
+      outFrames.push(c);
+
+      const thumb=document.createElement('canvas');
+      thumb.width=48; thumb.height=48; thumb.className='frame-thumb';
+      const tx=thumb.getContext('2d'); tx.imageSmoothingEnabled=false;
+      tx.drawImage(c,0,0,48,48);
+      thumb.addEventListener('click',()=>{
+        document.querySelectorAll('.frame-thumb').forEach(x=>x.classList.remove('selected'));
+        thumb.classList.add('selected');
+      });
+      row.appendChild(thumb);
+    }
+    $('#out-info').textContent=`${outFrames.length}フレーム (${size}×${size}) 生成完了`;
+    // update anim canvas
+    animCanvas.width=size*2; animCanvas.height=size*2;
+    // update variant preview
+    _updateVariantPreview();
+  });
+
+  /* --- animation preview --- */
+  let animIdx=0;
+  $('#btn-play').addEventListener('click', () => {
+    if (outFrames.length===0) return;
+    if (animInterval) clearInterval(animInterval);
+    animIdx=0;
+    const fps=+$('#anim-fps').value||8;
+    const size=outFrames[0].width;
+    animInterval=setInterval(()=>{
+      animCtx.imageSmoothingEnabled=false;
+      animCtx.clearRect(0,0,animCanvas.width,animCanvas.height);
+      animCtx.drawImage(outFrames[animIdx],0,0,animCanvas.width,animCanvas.height);
+      animIdx=(animIdx+1)%outFrames.length;
+    },1000/fps);
+  });
+  $('#btn-stop').addEventListener('click', () => { if(animInterval){clearInterval(animInterval);animInterval=null;} });
+
+  /* --- export --- */
+  $('#btn-export-zip').addEventListener('click', async () => {
+    if (outFrames.length===0) return;
+    const prefix=$('#out-prefix').value||'sprite';
+    // simple ZIP using JSZip-like manual approach (minimal)
+    // For simplicity, download individual files
+    for (let i=0;i<outFrames.length;i++) {
+      const link=document.createElement('a');
+      link.download=`${prefix}_${String(i).padStart(2,'0')}.png`;
+      link.href=outFrames[i].toDataURL('image/png');
+      link.click();
+      await new Promise(r=>setTimeout(r,100));
+    }
+  });
+
+  $('#btn-export-sheet').addEventListener('click', () => {
+    if (outFrames.length===0) return;
+    const size=outFrames[0].width;
+    const sheetC=document.createElement('canvas');
+    sheetC.width=size*outFrames.length; sheetC.height=size;
+    const sx=sheetC.getContext('2d'); sx.imageSmoothingEnabled=false;
+    for (let i=0;i<outFrames.length;i++) sx.drawImage(outFrames[i],i*size,0);
+    const link=document.createElement('a');
+    link.download=($('#out-prefix').value||'sprite')+'_sheet.png';
+    link.href=sheetC.toDataURL('image/png'); link.click();
+  });
+
+  $('#btn-export-engine').addEventListener('click', () => {
+    if (outFrames.length===0) return;
+    const size=outFrames[0].width;
+    const prefix=$('#out-prefix').value||'sprite';
+    const jsonName=$('#json-name').value||'sprite_anim';
+    // sheet
+    const sheetC=document.createElement('canvas');
+    sheetC.width=size*outFrames.length; sheetC.height=size;
+    const sx=sheetC.getContext('2d'); sx.imageSmoothingEnabled=false;
+    for (let i=0;i<outFrames.length;i++) sx.drawImage(outFrames[i],i*size,0);
+    // download sheet
+    let link=document.createElement('a');
+    link.download=prefix+'_sheet.png';
+    link.href=sheetC.toDataURL('image/png'); link.click();
+    // JSON
+    const json = {
+      name: jsonName,
+      frameSize: [size,size],
+      frameCount: outFrames.length,
+      frames: outFrames.map((f,i)=>({index:i,sx:i*size,sy:0,sw:size,sh:size}))
+    };
+    setTimeout(()=>{
+      const blob=new Blob([JSON.stringify(json,null,2)],{type:'application/json'});
+      const link2=document.createElement('a');
+      link2.download=prefix+'.json'; link2.href=URL.createObjectURL(blob); link2.click();
+    },200);
+  });
+
+  /* --- HSL Variant --- */
+  function _rgb2hsl(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let h=0,s=0;if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);if(mx===r)h=((g-b)/d+(g<b?6:0))/6;else if(mx===g)h=((b-r)/d+2)/6;else h=((r-g)/d+4)/6;}return[h*360,s*100,l*100];}
+  function _hsl2rgb(h,s,l){h/=360;s/=100;l/=100;let r,g,b;if(s===0){r=g=b=l;}else{const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);}return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];}
+
+  function applyVariant(srcCanvas, hShift, sShift, lShift, mode, color, amount) {
+    const w=srcCanvas.width, h=srcCanvas.height;
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const cx=c.getContext('2d'); cx.drawImage(srcCanvas,0,0);
+    const id=cx.getImageData(0,0,w,h), d=id.data;
+
+    if (mode==='silhouette' && color) {
+      const cr=parseInt(color.slice(1,3),16),cg=parseInt(color.slice(3,5),16),cb=parseInt(color.slice(5,7),16);
+      for(let i=0;i<d.length;i+=4){if(d[i+3]>0){d[i]=cr;d[i+1]=cg;d[i+2]=cb;}}
+    } else if (mode==='tint' && color) {
+      const cr=parseInt(color.slice(1,3),16),cg=parseInt(color.slice(3,5),16),cb=parseInt(color.slice(5,7),16);
+      const a=amount||0.7;
+      for(let i=0;i<d.length;i+=4){if(d[i+3]>0){d[i]=Math.round(d[i]*(1-a)+cr*a);d[i+1]=Math.round(d[i+1]*(1-a)+cg*a);d[i+2]=Math.round(d[i+2]*(1-a)+cb*a);}}
+    } else {
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3]===0)continue;
+        let[hh,ss,ll]=_rgb2hsl(d[i],d[i+1],d[i+2]);
+        hh=(hh+hShift+360)%360;
+        ss=Math.max(0,Math.min(100,ss+sShift));
+        ll=Math.max(0,Math.min(100,ll+lShift));
+        const[rr,gg,bb]=_hsl2rgb(hh,ss,ll);
+        d[i]=rr;d[i+1]=gg;d[i+2]=bb;
+      }
+    }
+    cx.putImageData(id,0,0);
+    return c;
+  }
+
+  const hSlider=$('#hsl-h'), sSlider=$('#hsl-s'), lSlider=$('#hsl-l');
+  let varMode=null, varColor=null, varAmt=0;
+
+  function _updateVariantPreview() {
+    if (outFrames.length===0) return;
+    const size=outFrames[0].width;
+    varCanvas.width=size*Math.min(outFrames.length,8); varCanvas.height=size;
+    varCtx.imageSmoothingEnabled=false;
+    for(let i=0;i<Math.min(outFrames.length,8);i++){
+      const vc=applyVariant(outFrames[i],+hSlider.value,+sSlider.value,+lSlider.value,varMode,varColor,varAmt);
+      varCtx.drawImage(vc,i*size,0);
+    }
+  }
+
+  [hSlider,sSlider,lSlider].forEach(sl=>{
+    sl.addEventListener('input',()=>{
+      $('#hsl-h-val').textContent=hSlider.value;
+      $('#hsl-s-val').textContent=sSlider.value;
+      $('#hsl-l-val').textContent=lSlider.value;
+      varMode=null;
+      _updateVariantPreview();
+    });
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(btn.dataset.mode){
+        varMode=btn.dataset.mode;
+        varColor=btn.dataset.color||null;
+        varAmt=parseFloat(btn.dataset.amt)||0;
+        hSlider.value=0;sSlider.value=0;lSlider.value=0;
+      } else {
+        varMode=null; varColor=null; varAmt=0;
+        hSlider.value=btn.dataset.h||0;
+        sSlider.value=btn.dataset.s||0;
+        lSlider.value=btn.dataset.l||0;
+      }
+      $('#hsl-h-val').textContent=hSlider.value;
+      $('#hsl-s-val').textContent=sSlider.value;
+      $('#hsl-l-val').textContent=lSlider.value;
+      _updateVariantPreview();
+    });
+  });
+
+  $('#btn-variant-export').addEventListener('click',()=>{
+    if(outFrames.length===0) return;
+    const size=outFrames[0].width;
+    const prefix=$('#out-prefix').value||'sprite';
+    const sheetC=document.createElement('canvas');
+    sheetC.width=size*outFrames.length; sheetC.height=size;
+    const sx=sheetC.getContext('2d'); sx.imageSmoothingEnabled=false;
+    for(let i=0;i<outFrames.length;i++){
+      const vc=applyVariant(outFrames[i],+hSlider.value,+sSlider.value,+lSlider.value,varMode,varColor,varAmt);
+      sx.drawImage(vc,i*size,0);
+    }
+    const link=document.createElement('a');
+    link.download=prefix+'_variant_sheet.png';
+    link.href=sheetC.toDataURL('image/png'); link.click();
+  });
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+/**
+ * style.css - レイアウト・モバイルUI・アクセシビリティ・CSS変数
+ * ミプリンの冒険 v0.5.0
+ */
+
+/* ============ CSS変数 ============ */
+:root {
+  --color-primary: #F5A623;
+  --color-bg: #0d0d1a;
+  --color-bg-dark: #060610;
+  --color-text: #FFFFFF;
+  --color-text-dim: #888888;
+  --color-danger: #E74C3C;
+  --color-success: #2ECC71;
+  --color-info: #3498DB;
+  --color-bar-bg: #333;
+  --color-bar-fill: #F5A623;
+  --font-main: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'M PLUS Rounded 1c', monospace;
+  --canvas-w: 960px;
+  --canvas-h: 720px;
+}
+
+/* ============ リセット ============ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ============ Body ============ */
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============ キャンバスコンテナ ============ */
+#game-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg-dark);
+}
+
+#game-canvas {
+  display: none;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: #000;
+  /* デフォルト: PC幅そのまま */
+  width: var(--canvas-w);
+  height: var(--canvas-h);
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+}
+
+/* ============ ローディング画面 ============ */
+#loading {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-bg);
+  z-index: 100;
+}
+
+#loading-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--color-primary);
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+
+#loading-text {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  margin-bottom: 16px;
+}
+
+#loading-bar {
+  width: 240px;
+  height: 16px;
+  background: var(--color-bar-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #555;
+}
+
+#loading-bar-inner {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), #FFD700);
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+/* ============ モバイル仮想コントローラ ============ */
+#mobile-controls {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40vh;
+  pointer-events: none;
+  z-index: 50;
+}
+
+#dpad-area {
+  position: absolute;
+  left: 4vw;
+  bottom: 4vh;
+  width: 40vw;
+  height: 40vw;
+  max-width: 200px;
+  max-height: 200px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#dpad-visual {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(245, 166, 35, 0.3);
+  position: relative;
+}
+
+#dpad-stick {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  top: 35%;
+  left: 35%;
+  border-radius: 50%;
+  background: rgba(245, 166, 35, 0.5);
+  transition: transform 0.05s ease;
+}
+
+.btn-action {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+
+.btn-action:active {
+  background: rgba(245, 166, 35, 0.5) !important;
+}
+
+#btn-a {
+  right: 8vw;
+  bottom: 10vh;
+  width: 14vw;
+  height: 14vw;
+  max-width: 70px;
+  max-height: 70px;
+  background: rgba(245, 166, 35, 0.2);
+}
+
+#btn-b {
+  right: 24vw;
+  bottom: 6vh;
+  width: 14vw;
+  height: 14vw;
+  max-width: 70px;
+  max-height: 70px;
+  background: rgba(231, 76, 60, 0.2);
+}
+
+#btn-c {
+  right: 4vw;
+  bottom: 26vh;
+  width: 10vw;
+  height: 10vw;
+  max-width: 50px;
+  max-height: 50px;
+  background: rgba(52, 152, 219, 0.2);
+  font-size: 12px;
+}
+
+#btn-menu {
+  right: 4vw;
+  top: 4vh;
+  width: 8vw;
+  height: 8vw;
+  max-width: 40px;
+  max-height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  position: fixed;
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 51;
+}
+
+/* 長押しゲージ */
+.hold-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0; left: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--color-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.hold-ring.active {
+  opacity: 1;
+  animation: hold-spin 2s linear infinite;
+}
+
+@keyframes hold-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============ レスポンシブ ============ */
+
+/* PC: キャンバスをそのまま表示 */
+@media (min-width: 961px) {
+  #game-canvas {
+    width: var(--canvas-w);
+    height: var(--canvas-h);
+  }
+  #mobile-controls, #btn-menu {
+    display: none !important;
+  }
+}
+
+/* タブレット横 */
+@media (max-width: 960px) and (orientation: landscape) {
+  #game-canvas {
+    width: 100vw;
+    height: auto;
+    max-height: 100vh;
+  }
+}
+
+/* タブレット縦 */
+@media (max-width: 960px) and (orientation: portrait) {
+  #game-canvas {
+    width: 100vw;
+    height: auto;
+  }
+}
+
+/* スマートフォン */
+@media (max-width: 600px) {
+  #game-canvas {
+    width: 100vw;
+    height: auto;
+    max-height: 60vh;
+  }
+  #mobile-controls {
+    display: block;
+  }
+  #btn-menu {
+    display: flex;
+  }
+  #loading-title {
+    font-size: 20px;
+  }
+  #loading-bar {
+    width: 180px;
+    height: 12px;
+  }
+}
+
+/* ============ アクセシビリティ ============ */
+
+/* 色弱モード */
+body.colorblind #game-canvas {
+  filter: contrast(1.2) saturate(0.7);
+}
+
+/* フラッシュ軽減 */
+body.no-flash #game-canvas {
+  transition: filter 0.3s;
+}
+
+/* 画面揺れ無効 */
+body.no-shake #game-canvas {
+  transform: none !important;
+}
+
+/* フォーカスリング */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ハイコントラスト対応 */
+@media (prefers-contrast: high) {
+  :root {
+    --color-bg: #000000;
+    --color-text: #FFFFFF;
+    --color-text-dim: #CCCCCC;
+  }
+}
+
+/* 動きの低減 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============ その他 ============ */
+
+/* 静的ページ共通 */
+.page-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  color: var(--color-text);
+  font-family: var(--font-main);
+  line-height: 1.8;
+}
+
+.page-container h1 {
+  font-size: 24px;
+  color: var(--color-primary);
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 8px;
+}
+
+.page-container h2 {
+  font-size: 18px;
+  color: var(--color-primary);
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+.page-container p {
+  margin-bottom: 16px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.page-container a {
+  color: var(--color-info);
+  text-decoration: underline;
+}
+
+.page-container a:hover {
+  color: var(--color-primary);
+}
+
+.page-container .back-link {
+  display: inline-block;
+  margin-top: 40px;
+  color: var(--color-primary);
+  font-size: 14px;
+}

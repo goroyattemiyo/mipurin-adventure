@@ -217,7 +217,8 @@ const Game = (() => {
     ctx.restore();
 
     // キャプションテキスト
-    const key = 'prologue_' + (_prologueIndex + 1);
+    const idx = _prologueIndex + 1;
+    const key = 'prologue_' + (idx < 10 ? '0' + idx : '' + idx);
     const caption = Lang.t(key);
     if (caption && caption !== key && _prologueTextAlpha > 0) {
       _drawCaptionText(ctx, caption, CONFIG.CANVAS_HEIGHT - 80, _prologueTextAlpha);
@@ -327,7 +328,7 @@ const Game = (() => {
   // ──────────────────────────────
   //  メニュー画面
   // ──────────────────────────────
-  const _menuItems = ['story_mode', 'dungeon_mode', 'settings', 'credits'];
+  const _menuItems = ['menu_story', 'menu_dungeon', 'menu_settings', 'menu_credits'];
   let _menuCursor = 0;
   let _menuAlpha = 0;
 
@@ -351,17 +352,17 @@ const Game = (() => {
       if (CONFIG.DEBUG) console.log('メニュー選択:', selected);
 
       switch (selected) {
-        case 'story_mode':
+        case 'menu_story':
           // 仮: まだ村シーン未実装なのでログだけ
           if (CONFIG.DEBUG) console.log('→ ストーリーモード（未実装）');
           break;
-        case 'dungeon_mode':
+        case 'menu_dungeon':
           if (CONFIG.DEBUG) console.log('→ 無限巣窟（未実装）');
           break;
-        case 'settings':
+        case 'menu_settings':
           if (CONFIG.DEBUG) console.log('→ せってい（未実装）');
           break;
-        case 'credits':
+        case 'menu_credits':
           if (CONFIG.DEBUG) console.log('→ クレジット（未実装）');
           break;
       }

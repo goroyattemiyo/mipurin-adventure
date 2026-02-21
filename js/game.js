@@ -288,7 +288,7 @@ const Game = (() => {
 
     if (_titleReady) {
       if (Engine.consumePress('attack') || Engine.consumePress('interact') || Engine.consumeClick()) {
-        _changeScene(SCENE.MENU);
+        _changeScene(SCENE.PROLOGUE);
       }
     }
   }

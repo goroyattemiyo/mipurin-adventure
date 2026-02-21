@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ミプリンの冒険</title>
+<meta property="og:title" content="ミプリンの冒険">
+<meta property="og:description" content="ハチっ子ミプリンと冒険の旅へ！ブラウザで遊べるアクションRPG">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://goroyattemiyo.github.io/mipurin-adventure/">
+<meta property="og:image" content="https://goroyattemiyo.github.io/mipurin-adventure/assets/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#1a1a2a;
+  display:flex;justify-content:center;align-items:center;
+  min-height:100vh;overflow:hidden;
+  font-family:'Courier New',monospace;
+}
+#loading{color:#F5A623;font-size:18px;text-align:center}
+#loading-bar-outer{
+  width:240px;height:16px;border:2px solid #F5A623;
+  margin:12px auto 0;background:#2B1B0E;
+}
+#loading-bar-inner{
+  width:0%;height:100%;background:#F5A623;transition:width 0.2s;
+}
+#game-canvas{
+  display:none;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <p>ミプリンの冒険</p>
+  <p id="loading-text">よみこみちゅう...</p>
+  <div id="loading-bar-outer">
+    <div id="loading-bar-inner"></div>
+  </div>
+</div>
+
+<canvas id="game-canvas" width="960" height="720"></canvas>
+
+<script src="js/config.js"></script>
+<script src="js/lang.js"></script>
+<script src="js/tileEngine.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/game.js"></script>
+
+</body>
+</html>

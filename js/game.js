@@ -187,9 +187,9 @@ const Game = (() => {
         break;
     }
 
-    // 完了 → タイトルへ
+    // 完了 → メニューへ
     if (_prologuePhase === 'done') {
-      _changeScene(SCENE.TITLE);
+      _changeScene(SCENE.MENU);
     }
   }
 

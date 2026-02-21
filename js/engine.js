@@ -34,6 +34,7 @@ const Engine = (() => {
 
     // ── キーボード ──
     window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;  
       const action = _keyMap[e.key];
       if (action) {
         e.preventDefault();

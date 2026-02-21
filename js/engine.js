@@ -1,5 +1,6 @@
 /**
  * engine.js - ゲームループ・入力・描画
+ * ミプリンの冒険 v0.2.0
  */
 const Engine = (() => {
   let _canvas, _ctx;
@@ -9,6 +10,8 @@ const Engine = (() => {
 
   // 入力状態
   const _keys = {};
+  let _clicked = false;   // クリック／タップの1フレーム検出用
+
   const _keyMap = {
     ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
     w: 'up', s: 'down', a: 'left', d: 'right',
@@ -29,7 +32,7 @@ const Engine = (() => {
     _ctx = _canvas.getContext('2d');
     _ctx.imageSmoothingEnabled = CONFIG.IMAGE_SMOOTHING;
 
-    // キーボード
+    // ── キーボード ──
     window.addEventListener('keydown', (e) => {
       const action = _keyMap[e.key];
       if (action) {
@@ -42,19 +45,23 @@ const Engine = (() => {
       if (action) _keys[action] = false;
     });
 
-    // モバイルタッチ（後で拡張）
+    // ── マウスクリック ──
+    _canvas.addEventListener('click', () => {
+      _clicked = true;
+    });
+
+    // ── モバイルタッチ ──
     _canvas.addEventListener('touchstart', _handleTouch, { passive: false });
     _canvas.addEventListener('touchmove', _handleTouch, { passive: false });
-    _canvas.addEventListener('touchend', _handleTouchEnd, { passive: false });
+    _canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      _clicked = true;
+    }, { passive: false });
   }
 
   function _handleTouch(e) {
     e.preventDefault();
     // M9で仮想D-pad実装
-  }
-
-  function _handleTouchEnd(e) {
-    e.preventDefault();
   }
 
   function showCanvas() {
@@ -86,6 +93,9 @@ const Engine = (() => {
         skipped++;
       }
 
+      // クリックフラグは1フレームで消費されなければリセット
+      _clicked = false;
+
       // シェイク更新
       if (_shakeDuration > 0) _shakeDuration--;
 
@@ -109,13 +119,30 @@ const Engine = (() => {
     _running = false;
   }
 
+  /**
+   * キーが押されているか（押しっぱなし検出）
+   */
   function isPressed(action) {
     return !!_keys[action];
   }
 
+  /**
+   * キーを消費（1回だけ検出、すぐfalseにする）
+   */
   function consumePress(action) {
     if (_keys[action]) {
       _keys[action] = false;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * クリック／タップを消費（1回だけ検出）
+   */
+  function consumeClick() {
+    if (_clicked) {
+      _clicked = false;
       return true;
     }
     return false;
@@ -135,7 +162,7 @@ const Engine = (() => {
 
   return {
     init, showCanvas, start, stop,
-    isPressed, consumePress,
+    isPressed, consumePress, consumeClick,
     triggerShake, setShakeEnabled,
     getCtx, getCanvas
   };

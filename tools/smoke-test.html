@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mipurin smoke test</title>
+  <style>
+    body { font-family: monospace; background:#111; color:#eee; padding:16px; }
+    .pass { color:#7CFC00; }
+    .fail { color:#ff6b6b; }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>Smoke Test</h1>
+  <ul id="results"></ul>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/lang.js"></script>
+  <script src="../js/balance.js"></script>
+  <script src="../js/save.js"></script>
+  <script src="../js/inventory.js"></script>
+  <script src="../js/npc.js"></script>
+  <script src="../js/collection.js"></script>
+  <script src="../js/dungeon.js"></script>
+  <script src="../js/shop.js"></script>
+  <script src="../js/analytics.js"></script>
+  <script src="../js/audio.js"></script>
+  <script src="../js/tileEngine.js"></script>
+  <script src="../js/sprites.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/battle.js"></script>
+  <script src="../js/engine.js"></script>
+
+  <script>
+    const results = document.getElementById('results');
+    function addResult(name, ok, detail='') {
+      const li = document.createElement('li');
+      li.className = ok ? 'pass' : 'fail';
+      li.textContent = `${ok ? 'PASS' : 'FAIL'}: ${name}${detail ? ` - ${detail}` : ''}`;
+      results.appendChild(li);
+    }
+
+    async function checkFetch(url) {
+      try {
+        const res = await fetch(url, { method: 'HEAD' });
+        return res.ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    (async () => {
+      const globals = [
+        ['CONFIG', () => typeof CONFIG !== 'undefined'],
+        ['Engine', () => typeof Engine !== 'undefined'],
+        ['MapManager', () => typeof MapManager !== 'undefined'],
+        ['NpcManager', () => typeof NpcManager !== 'undefined'],
+        ['EnemyManager', () => typeof EnemyManager !== 'undefined'],
+        ['PlayerController', () => typeof PlayerController !== 'undefined'],
+        ['Audio', () => typeof Audio !== 'undefined'],
+        ['Inventory', () => typeof Inventory !== 'undefined'],
+        ['Lang', () => typeof Lang !== 'undefined']
+      ];
+      const missing = globals.filter(([, fn]) => !fn()).map(([name]) => name);
+      addResult('Global objects exist', missing.length === 0, missing.join(', '));
+
+      const mapNames = ['village','forest_south','forest_north','cave','flower_field'];
+      let mapOk = true;
+      for (const m of mapNames) {
+        if (!MapManager.loadMap(m)) mapOk = false;
+      }
+      addResult('All required maps load', mapOk);
+
+      await Lang.load('ja');
+      const talk = NpcManager.getTalk('hatch', { killCount:0, needleUseCount:0, quest_started:false }, Inventory);
+      addResult('NPC talk data retrievable', !!(talk && talk.lines));
+
+      const enemyTypes = ['poison_mushroom','green_slime','spider','bat','ice_worm','dark_flower','shadow_bee'];
+      const warn = console.warn;
+      const warns = [];
+      console.warn = (...args) => warns.push(args.join(' '));
+      EnemyManager.clear();
+      EnemyManager.spawnFromMap(enemyTypes.map((t, i) => ({ type:t, x:1+i, y:1 })));
+      console.warn = warn;
+      const unknown = warns.filter(w => w.includes('Unknown enemy'));
+      addResult('Enemy templates exist', unknown.length === 0, unknown.join(' | '));
+
+      const seFiles = [
+        'attack.mp3','needle.mp3','hit.mp3','player_hurt.mp3','enemy_die.mp3','item_get.mp3','dialog_open.mp3','dialog_close.mp3','menu_move.mp3','menu_select.mp3','save.mp3','level_up.mp3','boss_appear.mp3','game_over.mp3','door_open.mp3'
+      ];
+      const seChecks = await Promise.all(seFiles.map(f => checkFetch(`../assets/se/${f}`)));
+      addResult('SE files return HTTP 200', seChecks.every(Boolean), seFiles.filter((_,i)=>!seChecks[i]).join(', '));
+
+      const prologueFiles = Array.from({length:10}, (_,i)=>`prologue_${String(i+1).padStart(2,'0')}.webp`);
+      const prologueChecks = await Promise.all(prologueFiles.map(f => checkFetch(`../assets/prologue/${f}`)));
+      addResult('Prologue images exist', prologueChecks.every(Boolean), prologueFiles.filter((_,i)=>!prologueChecks[i]).join(', '));
+    })();
+  </script>
+</body>
+</html>

@@ -458,6 +458,7 @@ const Game = (() => {
             }
             break;
           case 'save':
+            player.hp = player.maxHp;
             _showDialog(Lang.t('save_point_text'));
             Audio.playSe('save');
             break;
@@ -526,6 +527,8 @@ const Game = (() => {
   }
 
   function _drawMapScene(ctx) {
+    ctx.save();
+
     // killCount世界演出
     const worldFx = NpcManager.getWorldEffects(flags);
     if (worldFx.saturationShift < 0) {
@@ -540,7 +543,7 @@ const Game = (() => {
     PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
 
-    ctx.filter = 'none';
+    ctx.restore(); // filterを完全にリセット
 
     // 針ペナルティ: ビネット
     const penalties = NpcManager.getNeedlePenalty(flags);
@@ -611,7 +614,9 @@ const Game = (() => {
   function _drawHud(ctx){
     const W=CONFIG.CANVAS_WIDTH;
     // HP
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(8,8,200,28);
+    const hpDanger = player.hp === 1;
+    const hpBg = hpDanger && Math.sin(Date.now() / 180) > 0 ? 'rgba(200,0,0,0.65)' : 'rgba(0,0,0,0.5)';
+    ctx.fillStyle=hpBg; ctx.fillRect(8,8,200,28);
     ctx.fillStyle='#F5A623';ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText('HP:',14,22);
     for(let i=0;i<player.maxHp;i++){
@@ -638,6 +643,12 @@ const Game = (() => {
     ctx.fillText(_currentMapName,14,74);
     // 巣窟HUD
     if(Dungeon.isActive()) Dungeon.drawHud(ctx);
+
+    // 操作ガイド
+    const guide='移動:矢印キー/WASD  攻撃:Z  必殺:X  会話:C/Enter  メニュー:Esc';
+    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
+    ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
   }
 
   /* ============ シーン管理 ============ */

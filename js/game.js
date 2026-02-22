@@ -571,6 +571,14 @@ const Game = (() => {
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
     _drawDialog(ctx);
+    if (CONFIG.DEBUG || location.search.includes('debug=1')) {
+    ctx.save();
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'right';
+    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_W - 8, CONFIG.CANVAS_H - 8);
+    ctx.restore();
+    }
   }
 
   function _drawVignette(ctx, intensity) {

@@ -53,6 +53,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(tL,cR1)&&!MapManager.isSolid(tR,cR1)&&!MapManager.isSolid(tL,cR2)&&!MapManager.isSolid(tR,cR2)
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
+      } else {
+        // タイル境界にスナップ
+        if (dx > 0) player.x = Math.floor((player.x + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dx < 0) player.x = Math.ceil((player.x + margin) / ts) * ts - margin;
       }
       // else: 壁なので現在位置を維持（スナップしない）
 
@@ -62,6 +66,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
+      } else {
+        // タイル境界にスナップ
+        if (dy > 0) player.y = Math.floor((player.y + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dy < 0) player.y = Math.ceil((player.y + margin) / ts) * ts - margin;
       }
       // else: 壁なので現在位置を維持（スナップしない）
     } else {
@@ -76,6 +84,8 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
+   function checkInteract(player) {
+    // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -183,13 +193,13 @@ const EnemyManager = (() => {
 
   /* 敵テンプレート */
   const TEMPLATES = {
-    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, pollen: 1, movePattern: 'wander' },
-    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, pollen: 1, movePattern: 'chase' },
-    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, pollen: 2, movePattern: 'chase' },
-    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, pollen: 1, movePattern: 'wander_fast' },
-    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, pollen: 3, movePattern: 'wander' },
-    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, pollen: 3, movePattern: 'stationary' },
-    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, pollen: 2, movePattern: 'chase' }
+    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, movePattern: 'wander' },
+    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, movePattern: 'chase' },
+    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, movePattern: 'chase' },
+    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, movePattern: 'wander_fast' },
+    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, movePattern: 'wander' },
+    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' },
+    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, movePattern: 'chase' }
   };
 
   function spawn(templateId, col, row) {

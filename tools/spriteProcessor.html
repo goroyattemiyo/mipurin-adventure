@@ -53,6 +53,16 @@ button.secondary{background:#555;color:var(--txt);}
 .color-pick-row input[type=color]{width:40px;height:32px;border:none;padding:0;cursor:pointer;background:transparent;}
 .color-pick-row input[type=range]{width:100px;}
 .checker-bg{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;}
+/* Anim definition improvements */
+.anim-preset-row{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+.anim-preset-row button{padding:4px 8px;font-size:11px;border-radius:4px;}
+.anim-entry{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;padding:6px 8px;background:var(--bg);border-radius:4px;border:1px solid #333;}
+.anim-entry .frame-mini-row{display:flex;gap:2px;align-items:center;margin-left:4px;}
+.anim-entry .frame-mini{width:24px;height:24px;border:1px solid #555;image-rendering:pixelated;border-radius:2px;}
+.anim-entry .play-anim{background:#4a9;padding:3px 8px;font-size:11px;min-width:auto;}
+.frame-thumb-numbered{position:relative;display:inline-block;}
+.frame-thumb-numbered .fnum{position:absolute;top:0;left:0;background:rgba(0,0,0,0.7);color:var(--pri);font-size:10px;font-weight:bold;padding:1px 4px;border-radius:0 0 4px 0;}
+.frame-select-hint{background:var(--pri);color:#000;padding:6px 12px;border-radius:4px;font-size:12px;display:none;margin:6px 0;}
 </style>
 </head>
 <body>
@@ -132,12 +142,35 @@ button.secondary{background:#555;color:var(--txt);}
   <div class="frames-row" id="frames-row"></div>
   <p class="info" id="out-info"></p>
 
-  <div class="anim-section" id="anim-section" style="display:none;">
+    <div class="anim-section" id="anim-section" style="display:none;">
     <h3>アニメーション定義</h3>
-    <p class="info">エンジン用JSONに含めるアニメーションを定義してください。フレーム番号は0始まりのカンマ区切り。</p>
+    <p class="info">エンジン用JSONに含めるアニメーションを定義します。プリセットから選ぶか、手動で追加してください。</p>
+
+    <p class="info" style="margin-top:4px;">プリセット（クリックで追加）:</p>
+    <div class="anim-preset-row" id="anim-preset-row">
+      <button data-name="idle_down" data-frames="0" data-fps="4">idle_down</button>
+      <button data-name="idle_up" data-frames="1" data-fps="4">idle_up</button>
+      <button data-name="idle_right" data-frames="2" data-fps="4">idle_right</button>
+      <button data-name="idle_left" data-frames="3" data-fps="4">idle_left</button>
+      <button data-name="walk_down" data-frames="0,4,5,6" data-fps="8">walk_down</button>
+      <button data-name="walk_up" data-frames="1,7,8,9" data-fps="8">walk_up</button>
+      <button data-name="walk_right" data-frames="2,10,11,12" data-fps="8">walk_right</button>
+      <button data-name="walk_left" data-frames="3,13,14,15" data-fps="8">walk_left</button>
+      <button data-name="attack_down" data-frames="16,17" data-fps="6">attack</button>
+      <button data-name="needle" data-frames="18,19" data-fps="6">needle</button>
+      <button data-name="hurt" data-frames="20" data-fps="4">hurt</button>
+      <button data-name="dead" data-frames="21" data-fps="4">dead</button>
+    </div>
+
+    <div class="frame-select-hint" id="frame-select-hint">フレームサムネイルをクリックして番号を追加中… (Escで終了)</div>
+
     <div id="anim-list"></div>
-    <button class="secondary" id="btn-add-anim" style="margin-top:8px;">＋アニメーション追加</button>
+    <div class="ctrl-row" style="margin-top:8px;">
+      <button class="secondary" id="btn-add-anim">＋手動追加</button>
+      <button class="secondary" id="btn-clear-anims">全定義クリア</button>
+    </div>
   </div>
+
 </div>
 
 <!-- TAB 4: Preview & Export -->
@@ -586,14 +619,14 @@ button.secondary{background:#555;color:var(--txt);}
     $('#out-info').textContent = `${outFrames.length}フレーム (${size}×${size}) 生成完了`;
     animCanvas.width = size * 2; animCanvas.height = size * 2;
     $('#anim-section').style.display = 'block';
-    if (animDefs.length === 0) {
-      _addAnimDef('idle', '0', 4, true);
-      _addAnimDef('walk_down', '0,1,2,3', 8, true);
+    if (animDefs.length === 0) {      
     }
     _updateVariantPreview();
   });
 
-  /* --- animation definitions UI --- */
+    /* --- animation definitions UI (v2) --- */
+  let selectingForIdx = -1; // which anim entry is receiving frame clicks
+
   function _addAnimDef(name, frameStr, fps, loop) {
     animDefs.push({ name: name || '', frames: frameStr || '0', fps: fps || 8, loop: loop !== false });
     _renderAnimDefs();
@@ -603,18 +636,50 @@ button.secondary{background:#555;color:var(--txt);}
     const list = $('#anim-list'); list.innerHTML = '';
     animDefs.forEach((def, i) => {
       const row = document.createElement('div'); row.className = 'anim-entry';
+
+      // parse frame indices for mini preview
+      const idxArr = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n));
+      let miniHtml = '<span class="frame-mini-row">';
+      idxArr.forEach(fi => {
+        if (outFrames[fi]) {
+          miniHtml += `<canvas class="frame-mini" data-fi="${fi}" width="24" height="24"></canvas>`;
+        } else {
+          miniHtml += `<span class="frame-mini" style="background:#333;display:inline-block;text-align:center;line-height:24px;font-size:9px;color:#888;">${fi}</span>`;
+        }
+      });
+      miniHtml += '</span>';
+
       row.innerHTML = `
-        <input type="text" placeholder="名前" value="${def.name}" data-i="${i}" data-f="name">
-        <label style="color:var(--dim);min-width:auto;">フレーム:</label>
-        <input type="text" placeholder="0,1,2,3" value="${def.frames}" data-i="${i}" data-f="frames" style="width:120px;">
-        <label style="color:var(--dim);min-width:auto;">FPS:</label>
-        <input type="number" value="${def.fps}" min="1" max="60" data-i="${i}" data-f="fps">
-        <label style="color:var(--dim);min-width:auto;"><input type="checkbox" ${def.loop ? 'checked' : ''} data-i="${i}" data-f="loop"> ループ</label>
-        <button class="remove-anim secondary" data-i="${i}">✕</button>`;
+        <input type="text" placeholder="名前" value="${def.name}" data-i="${i}" data-f="name" style="width:110px;">
+        <input type="text" placeholder="0,1,2,3" value="${def.frames}" data-i="${i}" data-f="frames" style="width:100px;" title="フレーム番号（カンマ区切り）">
+        ${miniHtml}
+        <button class="secondary pick-frames" data-i="${i}" title="サムネクリックで追加" style="padding:3px 8px;font-size:11px;">🎯</button>
+        <label style="color:var(--dim);min-width:auto;font-size:12px;">FPS:</label>
+        <input type="number" value="${def.fps}" min="1" max="60" data-i="${i}" data-f="fps" style="width:44px;">
+        <label style="color:var(--dim);min-width:auto;font-size:12px;"><input type="checkbox" ${def.loop ? 'checked' : ''} data-i="${i}" data-f="loop"> Loop</label>
+        <button class="play-anim" data-i="${i}" title="この定義だけ再生">▶</button>
+        <button class="remove-anim secondary" data-i="${i}" style="background:#a33;padding:3px 8px;font-size:11px;">✕</button>`;
       list.appendChild(row);
+
+      // draw mini canvases
+      row.querySelectorAll('canvas.frame-mini').forEach(mc => {
+        const fi = +mc.dataset.fi;
+        if (outFrames[fi]) {
+          const mx = mc.getContext('2d'); mx.imageSmoothingEnabled = false;
+          mx.drawImage(outFrames[fi], 0, 0, 24, 24);
+        }
+      });
     });
-    list.querySelectorAll('input[data-f="name"],input[data-f="frames"]').forEach(inp => {
-      inp.addEventListener('change', e => { animDefs[+e.target.dataset.i][e.target.dataset.f] = e.target.value; });
+
+    // bind events
+    list.querySelectorAll('input[data-f="name"]').forEach(inp => {
+      inp.addEventListener('change', e => { animDefs[+e.target.dataset.i].name = e.target.value; });
+    });
+    list.querySelectorAll('input[data-f="frames"]').forEach(inp => {
+      inp.addEventListener('change', e => {
+        animDefs[+e.target.dataset.i].frames = e.target.value;
+        _renderAnimDefs(); // re-render to update mini previews
+      });
     });
     list.querySelectorAll('input[data-f="fps"]').forEach(inp => {
       inp.addEventListener('change', e => { animDefs[+e.target.dataset.i].fps = +e.target.value || 8; });
@@ -625,8 +690,123 @@ button.secondary{background:#555;color:var(--txt);}
     list.querySelectorAll('.remove-anim').forEach(btn => {
       btn.addEventListener('click', e => { animDefs.splice(+e.target.dataset.i, 1); _renderAnimDefs(); });
     });
+
+    // pick-frames button: enter frame-selection mode
+    list.querySelectorAll('.pick-frames').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.target.dataset.i;
+        if (selectingForIdx === idx) {
+          _exitFrameSelect();
+        } else {
+          selectingForIdx = idx;
+          $('#frame-select-hint').style.display = 'block';
+          $('#frame-select-hint').textContent = `「${animDefs[idx].name || '(名前未設定)'}」にフレーム追加中… サムネイルをクリック (Escで終了)`;
+        }
+      });
+    });
+
+    // play single anim definition
+    list.querySelectorAll('.play-anim').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.target.dataset.i;
+        const def = animDefs[idx];
+        if (!def) return;
+        const idxArr2 = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n) && outFrames[n]);
+        if (idxArr2.length === 0) return;
+        if (animInterval) clearInterval(animInterval);
+        let ai = 0;
+        const fps = def.fps || 8;
+        // switch to preview tab
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+        document.querySelector('.tab[data-tab="preview"]').classList.add('active');
+        $('#tab-preview').classList.add('active');
+        animInterval = setInterval(() => {
+          animCtx.imageSmoothingEnabled = false;
+          animCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
+          animCtx.drawImage(outFrames[idxArr2[ai]], 0, 0, animCanvas.width, animCanvas.height);
+          ai = (ai + 1) % idxArr2.length;
+        }, 1000 / fps);
+      });
+    });
   }
+
+  function _exitFrameSelect() {
+    selectingForIdx = -1;
+    $('#frame-select-hint').style.display = 'none';
+  }
+
+  // Escape key exits frame-select mode
+  window.addEventListener('keydown', origKeydown => {
+    if (origKeydown.key === 'Escape' && selectingForIdx >= 0) {
+      _exitFrameSelect();
+    }
+  });
+
+  // override btn-process to add numbered thumbs + click-to-select
+  const origProcessHandler = $('#btn-process').onclick;
+  const _origBtnProcess = () => {
+    // after outFrames generated, add numbered thumbnails
+    const row = $('#frames-row');
+    row.innerHTML = '';
+    for (let i = 0; i < outFrames.length; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'frame-thumb-numbered';
+      const thumb = document.createElement('canvas');
+      thumb.width = 48; thumb.height = 48; thumb.className = 'frame-thumb';
+      thumb.style.display = 'block';
+      const tx = thumb.getContext('2d'); tx.imageSmoothingEnabled = false;
+      tx.drawImage(outFrames[i], 0, 0, 48, 48);
+      const numLabel = document.createElement('span');
+      numLabel.className = 'fnum';
+      numLabel.textContent = i;
+      wrap.appendChild(thumb);
+      wrap.appendChild(numLabel);
+
+      // click: if in select mode, append to anim def
+      wrap.addEventListener('click', () => {
+        if (selectingForIdx >= 0 && animDefs[selectingForIdx]) {
+          const def = animDefs[selectingForIdx];
+          const cur = def.frames.trim();
+          def.frames = cur ? cur + ',' + i : '' + i;
+          _renderAnimDefs();
+        } else {
+          // normal select behavior
+          document.querySelectorAll('.frame-thumb').forEach(x => x.classList.remove('selected'));
+          thumb.classList.add('selected');
+        }
+      });
+      row.appendChild(wrap);
+    }
+  };
+
+  // patch btn-process click to also call our numbered-thumb builder
+  const _realProcessBtn = $('#btn-process');
+  const _existingListeners = _realProcessBtn.cloneNode(true);
+  // We need to hook after process. Wrap original:
+  _realProcessBtn.addEventListener('click', () => {
+    // slight delay to let original handler finish
+    setTimeout(_origBtnProcess, 50);
+  });
+
+  // preset buttons
+  document.querySelectorAll('#anim-preset-row button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.name;
+      // don't add duplicates
+      if (animDefs.some(d => d.name === name)) return;
+      _addAnimDef(name, btn.dataset.frames, +btn.dataset.fps || 8, true);
+    });
+  });
+
   $('#btn-add-anim').addEventListener('click', () => _addAnimDef('', '0', 8, true));
+
+  // clear all
+  $('#btn-clear-anims').addEventListener('click', () => {
+    animDefs = [];
+    _renderAnimDefs();
+  });
+
 
   function _buildEngineJson() {
     const size = outFrames.length > 0 ? outFrames[0].width : 32;

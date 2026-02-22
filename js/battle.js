@@ -83,6 +83,7 @@ const PlayerController = (() => {
     if (player.needleCooldown > 0) player.needleCooldown -= dt;
   }
 
+  function checkInteract(player) {
    function checkInteract(player) {
     // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
@@ -209,7 +210,7 @@ const EnemyManager = (() => {
       id: templateId, name: t.name,
       x: col * ts, y: row * ts,
       hp: t.hp, maxHp: t.hp, atk: t.atk, speed: t.speed,
-      color: t.color, symbol: t.symbol, xp: t.xp,
+      color: t.color, symbol: t.symbol, xp: t.xp, pollen: t.pollen || 1,
       movePattern: t.movePattern,
       moveTimer: Math.random() * 2,
       moveDir: { x: 0, y: 0 },
@@ -304,6 +305,8 @@ const EnemyManager = (() => {
         if (e.hp <= 0) {
           e.dead = true;
           flags.killCount++;
+          if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+          if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
         }
       }
     }
@@ -316,7 +319,12 @@ const EnemyManager = (() => {
       if (e.dead) continue;
       e.hp -= damage;
       e.hurtTimer = 0.5;
-      if (e.hp <= 0) { e.dead = true; flags.killCount++; }
+      if (e.hp <= 0) {
+        e.dead = true;
+        flags.killCount++;
+        if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+        if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+      }
     }
     flags.needleUseCount++;
   }

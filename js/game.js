@@ -88,6 +88,7 @@ const Game = (() => {
           _showDialog(_dialogQueue.shift());
         } else {
           _dialogActive = false;
+          Shop.closeShop();
           Audio.playSe('dialog_close');
         }
       }
@@ -98,10 +99,26 @@ const Game = (() => {
     if (!_dialogActive) return;
     const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
     const vis = _dialogText.substring(0, _dialogChars);
-    const lines = vis.split('\n');
+    const rawLines = vis.split('\n');
     const lineH = 22;
     const padding = 16;
     const minH = 80;
+
+    // 横幅に収まるよう折り返し
+    ctx.font = '16px monospace';
+    const maxWidth = W - 40 - padding * 2;
+    const lines = [];
+    for (const raw of rawLines) {
+      if (!raw) { lines.push(''); continue; }
+      let rest = raw;
+      while (rest.length > 0) {
+        let cut = Math.min(28, rest.length);
+        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut);
+      }
+    }
+
     const neededH = padding * 2 + lines.length * lineH + 10;
     const bh = Math.max(minH, Math.min(neededH, H * 0.45));
     const bx = 20, by = H - bh - 20, bw = W - 40;
@@ -615,8 +632,13 @@ const Game = (() => {
     const W=CONFIG.CANVAS_WIDTH;
     // HP
     const hpDanger = player.hp === 1;
-    const hpBg = hpDanger && Math.sin(Date.now() / 180) > 0 ? 'rgba(200,0,0,0.65)' : 'rgba(0,0,0,0.5)';
+    const hpBg = hpDanger && Math.sin(Date.now() / 120) > -0.3 ? 'rgba(220,0,0,0.72)' : 'rgba(0,0,0,0.5)';
     ctx.fillStyle=hpBg; ctx.fillRect(8,8,200,28);
+    if (hpDanger) {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(8,8,200,28);
+    }
     ctx.fillStyle='#F5A623';ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText('HP:',14,22);
     for(let i=0;i<player.maxHp;i++){
@@ -644,11 +666,17 @@ const Game = (() => {
     // 巣窟HUD
     if(Dungeon.isActive()) Dungeon.drawHud(ctx);
 
-    // 操作ガイド
+    // 操作ガイド（開始60秒後からフェードアウト）
     const guide='移動:矢印キー/WASD  攻撃:Z  必殺:X  会話:C/Enter  メニュー:Esc';
-    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
-    ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+    const guideAlpha = Math.max(0, Math.min(1, 1 - Math.max(0, _playtime - 60) / 8));
+    if (guideAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = guideAlpha;
+      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
+      ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+      ctx.restore();
+    }
   }
 
   /* ============ シーン管理 ============ */

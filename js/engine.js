@@ -94,9 +94,6 @@ const Engine = (() => {
         skipped++;
       }
 
-      // クリックフラグは1フレームで消費されなければリセット
-      _clicked = false;
-
       // シェイク更新
       if (_shakeDuration > 0) _shakeDuration--;
 
@@ -109,6 +106,9 @@ const Engine = (() => {
       }
       drawFn(_ctx);
       _ctx.restore();
+
+      // クリックフラグはフレーム末尾でリセット
+      _clicked = false;
 
       requestAnimationFrame(loop);
     }

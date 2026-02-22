@@ -97,7 +97,7 @@ const Game = (() => {
 
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
-    const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
+    const W = CONFIG.CANVAS_WIDTHIDTHIDTH, H = CONFIG.CANVAS_HEIGHTEIGHT;
     const vis = _dialogText.substring(0, _dialogChars);
     const rawLines = vis.split('\n');
     const lineH = 22;
@@ -187,27 +187,27 @@ const Game = (() => {
   }
 
   function _drawPrologue(ctx) {
-    ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     if(_prologueIndex>=PROLOGUE_TOTAL)return;
     const img=_prologueImages[_prologueIndex];
     if(!img||!img.complete||!img.naturalWidth)return;
-    const sc=Math.min(CONFIG.CANVAS_WIDTH/img.naturalWidth,CONFIG.CANVAS_HEIGHT/img.naturalHeight);
+    const sc=Math.min(CONFIG.CANVAS_WIDTHIDTH/img.naturalWidth,CONFIG.CANVAS_HEIGHTEIGHT/img.naturalHeight);
     const w=img.naturalWidth*sc,h=img.naturalHeight*sc;
-    const x=(CONFIG.CANVAS_WIDTH-w)/2,y=(CONFIG.CANVAS_HEIGHT-h)/2;
+    const x=(CONFIG.CANVAS_WIDTHIDTH-w)/2,y=(CONFIG.CANVAS_HEIGHTEIGHT-h)/2;
     ctx.save();ctx.globalAlpha=_prologueAlpha;ctx.drawImage(img,x,y,w,h);ctx.restore();
     const idx2=_prologueIndex+1;const key='prologue_'+(idx2<10?'0'+idx2:''+idx2);
     const cap=Lang.t(key);
-    if(cap&&cap!==key&&_prologueTextAlpha>0) _drawCaptionText(ctx,cap,CONFIG.CANVAS_HEIGHT-80,_prologueTextAlpha);
+    if(cap&&cap!==key&&_prologueTextAlpha>0) _drawCaptionText(ctx,cap,CONFIG.CANVAS_HEIGHTEIGHT-80,_prologueTextAlpha);
     ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('Enter / タップ で次へ　　Esc でスキップ',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-16);ctx.restore();
+    ctx.fillText('Enter / タップ で次へ　　Esc でスキップ',CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT-16);ctx.restore();
   }
 
   function _drawCaptionText(ctx,text,baseY,alpha){
     const lines=text.split('\n'),lh=30,startY=baseY-(lines.length-1)*lh/2;
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='20px monospace';
     for(let i=0;i<lines.length;i++){const ly=startY+i*lh;
-      ctx.globalAlpha=alpha*0.6;ctx.fillStyle='#000';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2+2,ly+2);
-      ctx.globalAlpha=alpha;ctx.fillStyle='#FFFFFF';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,ly);}
+      ctx.globalAlpha=alpha*0.6;ctx.fillStyle='#000';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTHIDTH/2+2,ly+2);
+      ctx.globalAlpha=alpha;ctx.fillStyle='#FFFFFF';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTHIDTH/2,ly);}
     ctx.restore();
   }
 
@@ -224,12 +224,12 @@ const Game = (() => {
     }
   }
   function _drawTitle(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     ctx.save();ctx.globalAlpha=_titleAlpha;
     ctx.fillStyle='#F5A623';ctx.font='bold 48px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,280);
-    if(_titleReady&&Math.sin(_titleTimer*4)>0){ctx.fillStyle='#fff';ctx.font='18px monospace';ctx.fillText(Lang.t('press_start'),CONFIG.CANVAS_WIDTH/2,400);}
-    if(meta.golden_title){ctx.fillStyle='rgba(245,166,35,0.15)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);}
+    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTHIDTH/2,280);
+    if(_titleReady&&Math.sin(_titleTimer*4)>0){ctx.fillStyle='#fff';ctx.font='18px monospace';ctx.fillText(Lang.t('press_start'),CONFIG.CANVAS_WIDTHIDTH/2,400);}
+    if(meta.golden_title){ctx.fillStyle='rgba(245,166,35,0.15)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);}
     ctx.restore();
   }
 
@@ -257,21 +257,21 @@ const Game = (() => {
     if(Engine.consumePress('menu'))_changeScene(SCENE.TITLE);
   }
   function _drawMenu(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     ctx.save();ctx.globalAlpha=_menuAlpha;
     ctx.fillStyle='#F5A623';ctx.font='bold 32px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,100);
+    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTHIDTH/2,100);
     for(let i=0;i<_menuItems.length;i++){const y=220+i*50;const cur=(i===_menuCursor);
-      if(cur){ctx.fillStyle='#F5A623';ctx.font='22px monospace';ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTH/2-100,y);}
+      if(cur){ctx.fillStyle='#F5A623';ctx.font='22px monospace';ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTHIDTH/2-100,y);}
       ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?'bold 22px monospace':'20px monospace';ctx.textAlign='left';
       const label=Lang.t(_menuItems[i]);
       // 巣窟ロック表示
       if(_menuItems[i]==='menu_dungeon'&&!flags.dungeon_unlocked&&!meta.ending_a&&!meta.ending_b&&!meta.ending_c){
-        ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTH/2-90,y);
-      } else { ctx.fillText(label,CONFIG.CANVAS_WIDTH/2-90,y); }
+        ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTHIDTH/2-90,y);
+      } else { ctx.fillText(label,CONFIG.CANVAS_WIDTHIDTH/2-90,y); }
     }
     ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT-20);
     ctx.restore();
   }
 
@@ -306,9 +306,9 @@ const Game = (() => {
     }
   }
   function _drawSettings(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     ctx.fillStyle='#F5A623';ctx.font='bold 24px monospace';ctx.textAlign='center';
-    ctx.fillText('せってい',CONFIG.CANVAS_WIDTH/2,60);
+    ctx.fillText('せってい',CONFIG.CANVAS_WIDTHIDTH/2,60);
     const labels={bgm:'BGM おんりょう',se:'SE おんりょう',speed:'ゲームスピード',invincible:'むてきモード',shake:'がめんゆれ',flash:'フラッシュ',colorblind:'いろよわモード',back:'← もどる'};
     for(let i=0;i<_settingsItems.length;i++){
       const y=120+i*44; const cur=(i===_settingsCursor);
@@ -318,16 +318,16 @@ const Game = (() => {
       // 値
       ctx.textAlign='right';ctx.fillStyle=cur?'#fff':'#888';ctx.font='16px monospace';
       const item=_settingsItems[i];
-      if(item==='bgm') ctx.fillText(Math.round((_settings.bgmVolume||0.5)*100)+'%',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='se') ctx.fillText(Math.round((_settings.seVolume||0.7)*100)+'%',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='speed') ctx.fillText({slow:'ゆっくり',normal:'ふつう',fast:'はやい'}[_settings.gameSpeed||'normal'],CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='invincible') ctx.fillText(_settings.invincible?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='shake') ctx.fillText(_settings.screenShake!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='flash') ctx.fillText(_settings.flash!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='colorblind') ctx.fillText(_settings.colorblind?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
+      if(item==='bgm') ctx.fillText(Math.round((_settings.bgmVolume||0.5)*100)+'%',CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='se') ctx.fillText(Math.round((_settings.seVolume||0.7)*100)+'%',CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='speed') ctx.fillText({slow:'ゆっくり',normal:'ふつう',fast:'はやい'}[_settings.gameSpeed||'normal'],CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='invincible') ctx.fillText(_settings.invincible?'ON':'OFF',CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='shake') ctx.fillText(_settings.screenShake!==false?'ON':'OFF',CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='flash') ctx.fillText(_settings.flash!==false?'ON':'OFF',CONFIG.CANVAS_WIDTHIDTH-180,y);
+      else if(item==='colorblind') ctx.fillText(_settings.colorblind?'ON':'OFF',CONFIG.CANVAS_WIDTHIDTH-180,y);
     }
     ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　←→/Z: へんこう　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    ctx.fillText('↑↓: えらぶ　←→/Z: へんこう　Esc: もどる',CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT-20);
   }
 
   /* ============ クレジット ============ */
@@ -337,14 +337,14 @@ const Game = (() => {
     if(Engine.consumePress('menu')||Engine.consumePress('interact')||Engine.consumeClick())_changeScene(SCENE.MENU);
   }
   function _drawCredits(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     ctx.fillStyle='#F5A623';ctx.font='bold 24px monospace';ctx.textAlign='center';
-    ctx.fillText('クレジット',CONFIG.CANVAS_WIDTH/2,80);
+    ctx.fillText('クレジット',CONFIG.CANVAS_WIDTHIDTH/2,80);
     ctx.fillStyle='#ccc';ctx.font='16px monospace';
     const lines=['ミプリンの冒険','','企画・プログラム: goroyattemiyo','キャラクターデザイン: （クレジット）','音楽: Suno AI','',''+Lang.t('credits_thanks')];
-    for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,160+i*32);
+    for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],CONFIG.CANVAS_WIDTHIDTH/2,160+i*32);
     ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';
-    ctx.fillText('Esc / Enter でもどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    ctx.fillText('Esc / Enter でもどる',CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT-20);
   }
 
   /* ============ 図鑑シーン ============ */
@@ -353,7 +353,7 @@ const Game = (() => {
     if(!Collection.isOpen()) _changeScene(SCENE.MENU);
   }
   function _drawCollection(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     Collection.drawUI(ctx);
   }
 
@@ -576,13 +576,13 @@ const Game = (() => {
     ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.textAlign = 'right';
-    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - 8, CONFIG.CANVAS_HEIGHT - 8);
+    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTHIDTH - 8, CONFIG.CANVAS_HEIGHTEIGHT - 8);
     ctx.restore();
     }
   }
 
   function _drawVignette(ctx, intensity) {
-    const W=CONFIG.CANVAS_WIDTH, H=CONFIG.CANVAS_HEIGHT;
+    const W=CONFIG.CANVAS_WIDTHIDTH, H=CONFIG.CANVAS_HEIGHTEIGHT;
     const grd = ctx.createRadialGradient(W/2,H/2,W*0.3, W/2,H/2,W*0.7);
     grd.addColorStop(0, 'rgba(0,0,0,0)');
     grd.addColorStop(1, `rgba(0,0,0,${intensity})`);
@@ -602,12 +602,12 @@ const Game = (() => {
     }
   }
   function _drawGameover(ctx){
-    ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
+    ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);
     ctx.fillStyle='#e74c3c';ctx.font='bold 40px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('game_over'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2-30);
+    ctx.fillText(Lang.t('game_over'),CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT/2-30);
     if(_goTimer>1.5&&Math.sin(_goTimer*4)>0){
       ctx.fillStyle='#fff';ctx.font='18px monospace';
-      ctx.fillText(Lang.t('continue_prompt'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2+30);
+      ctx.fillText(Lang.t('continue_prompt'),CONFIG.CANVAS_WIDTHIDTH/2,CONFIG.CANVAS_HEIGHTEIGHT/2+30);
     }
   }
 
@@ -629,7 +629,7 @@ const Game = (() => {
 
   /* ============ HUD ============ */
   function _drawHud(ctx){
-    const W=CONFIG.CANVAS_WIDTH;
+    const W=CONFIG.CANVAS_WIDTHIDTH;
     // HP
     const hpDanger = player.hp === 1;
     const hpBg = hpDanger && Math.sin(Date.now() / 120) > -0.3 ? 'rgba(220,0,0,0.72)' : 'rgba(0,0,0,0.5)';
@@ -672,9 +672,9 @@ const Game = (() => {
     if (guideAlpha > 0) {
       ctx.save();
       ctx.globalAlpha = guideAlpha;
-      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
+      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHTEIGHT - 34, W - 16, 24);
       ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHTEIGHT - 22);
       ctx.restore();
     }
   }
@@ -751,17 +751,17 @@ const Game = (() => {
       case SCENE.DUNGEON:
         _drawMapScene(ctx);break;
       case SCENE.GAMEOVER: _drawGameover(ctx);break;
-      default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);break;
+      default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTHIDTH,CONFIG.CANVAS_HEIGHTEIGHT);break;
     }
     if(CONFIG.DEBUG){
       const txt = `v${CONFIG.VERSION}`;
       ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(CONFIG.CANVAS_WIDTH - 92, 6, 86, 18);
+      ctx.fillRect(CONFIG.CANVAS_WIDTHIDTH - 92, 6, 86, 18);
       ctx.fillStyle='#0f0';
       ctx.font='12px monospace';
       ctx.textAlign='right';
       ctx.textBaseline='middle';
-      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - 10, 15);
+      ctx.fillText(txt, CONFIG.CANVAS_WIDTHIDTH - 10, 15);
     }
   }
 

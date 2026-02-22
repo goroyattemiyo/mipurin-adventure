@@ -5,7 +5,26 @@
 const PlayerController = (() => {
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
+  /* スプライトアニメーター */
+  let _animator = null;
+  function _ensureAnimator() {
+    if (!_animator && SpriteManager.isLoaded('player')) {
+      _animator = SpriteManager.createAnimator('player');
+      _animator.play('idle_down');
+    }
+    return _animator;
+  }
 
+/* スプライトアニメーション更新 */
+    const anim = _ensureAnimator();
+    if (anim) {
+      if (dx !== 0 || dy !== 0) {
+        anim.play('walk_' + player.dir);
+      } else {
+        anim.play('idle_' + player.dir);
+      }
+      anim.update(dt);
+    }
 
   function _clampPlayerToMap(player) {
     const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
@@ -111,35 +130,54 @@ const PlayerController = (() => {
     return { x: ax - size/2, y: ay - size/2, w: size, h: size };
   }
 
-  function draw(ctx, player) {
+    function draw(ctx, player) {
     const ts = CONFIG.TILE_SIZE;
     const x = Math.round(player.x), y = Math.round(player.y);
 
     /* 影 */
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath(); ctx.ellipse(x+ts/2, y+ts-2, ts/3, ts/6, 0, 0, Math.PI*2); ctx.fill();
-
-    /* 被ダメ点滅 */
-    const hurt = player.knockback.timer > 0 && Math.floor(Date.now()/80) % 2;
-    if (hurt) return;
-
-    /* 体 */
-    ctx.fillStyle = P_COLOR; ctx.strokeStyle = P_OUTLINE; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x+ts/2, y+ts/2-2, ts/2-4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-
-    /* 方向三角 */
-    ctx.fillStyle = P_OUTLINE; ctx.beginPath();
-    const cx2 = x+ts/2, cy2 = y+ts/2-2, s = 5;
-    switch (player.dir) {
-      case 'up':    ctx.moveTo(cx2,cy2-s*2); ctx.lineTo(cx2-s,cy2-s); ctx.lineTo(cx2+s,cy2-s); break;
-      case 'down':  ctx.moveTo(cx2,cy2+s*2); ctx.lineTo(cx2-s,cy2+s); ctx.lineTo(cx2+s,cy2+s); break;
-      case 'left':  ctx.moveTo(cx2-s*2,cy2); ctx.lineTo(cx2-s,cy2-s); ctx.lineTo(cx2-s,cy2+s); break;
-      case 'right': ctx.moveTo(cx2+s*2,cy2); ctx.lineTo(cx2+s,cy2-s); ctx.lineTo(cx2+s,cy2+s); break;
-    }
+    ctx.beginPath();
+    ctx.ellipse(x + ts / 2, y + ts - 2, ts / 3, ts / 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    if (player.animFrame % 2 === 1) { ctx.fillStyle='#fff'; ctx.fillRect(x+ts/2-1,y+ts-4,3,3); }
+    /* 被ダメ点滅 */
+    const hurt = player.knockback.timer > 0 && Math.floor(Date.now() / 80) % 2;
+    if (hurt) return;
+
+    /* スプライト描画を試行 */
+    const anim = _ensureAnimator();
+    if (anim) {
+      ctx.save();
+      /* 被ダメ中は赤く光る */
+      if (player.invincibleTimer > 0 && Math.floor(Date.now() / 100) % 3 === 0) {
+        ctx.globalAlpha = 0.6;
+      }
+      const drawn = anim.draw(ctx, x, y, ts, ts);
+      ctx.restore();
+      if (drawn) return;
+    }
+
+    /* フォールバック: 図形描画（スプライト未読込時） */
+    ctx.fillStyle = P_COLOR;
+    ctx.strokeStyle = P_OUTLINE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + ts / 2, y + ts / 2 - 2, ts / 2 - 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = P_OUTLINE;
+    ctx.beginPath();
+    const cx2 = x + ts / 2, cy2 = y + ts / 2 - 2, s = 5;
+    switch (player.dir) {
+      case 'up':    ctx.moveTo(cx2, cy2 - s * 2); ctx.lineTo(cx2 - s, cy2 - s); ctx.lineTo(cx2 + s, cy2 - s); break;
+      case 'down':  ctx.moveTo(cx2, cy2 + s * 2); ctx.lineTo(cx2 - s, cy2 + s); ctx.lineTo(cx2 + s, cy2 + s); break;
+      case 'left':  ctx.moveTo(cx2 - s * 2, cy2); ctx.lineTo(cx2 - s, cy2 - s); ctx.lineTo(cx2 - s, cy2 + s); break;
+      case 'right': ctx.moveTo(cx2 + s * 2, cy2); ctx.lineTo(cx2 + s, cy2 - s); ctx.lineTo(cx2 + s, cy2 + s); break;
+    }
+    ctx.fill();
   }
+
 
   /* ── 攻撃エフェクト描画 ── */
   function drawAttackEffect(ctx, player, timer) {

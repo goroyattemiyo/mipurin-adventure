@@ -773,6 +773,11 @@ const Game = (() => {
     Engine.init();
     _setLoadingProgress(5);
 
+  /* スプライトシート読み込み */
+    if (typeof SpriteManager !== 'undefined') {
+      SpriteManager.loadAll().then(() => { console.log('Sprites loaded'); });
+    }
+    
     // 設定復元
     _settings = SaveManager.loadSettings();
     if(_settings.colorblind) document.body.classList.add('colorblind');

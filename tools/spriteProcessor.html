@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sprite Processor - ミプリンの冒険</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root { --pri:#F5A623; --bg:#1a1a2a; --bg2:#252540; --txt:#eee; --dim:#888; }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -219,71 +220,7 @@ button.secondary{background:#555;color:var(--txt);}
          バリアントJSON同梱, マージロジック改善
    ============================================================ */
 (() => {
-  /* ========== 簡易ZIPライブラリ ========== */
-  const SimpleZip = (() => {
-    function _crc32(buf) {
-      let crc = 0xFFFFFFFF;
-      for (let i = 0; i < buf.length; i++) {
-        crc ^= buf[i];
-        for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-      }
-      return (crc ^ 0xFFFFFFFF) >>> 0;
-    }
-    function _dosDateTime() {
-      const d = new Date();
-      const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
-      const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
-      return { date, time };
-    }
-    function _u16(v) { return [v & 0xFF, (v >> 8) & 0xFF]; }
-    function _u32(v) { return [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]; }
-    return {
-      create(entries) {
-        const parts = [], centralDir = [];
-        let offset = 0;
-        const { date, time } = _dosDateTime();
-        for (const entry of entries) {
-          const nameBytes = new TextEncoder().encode(entry.name);
-          const crc = _crc32(entry.data), size = entry.data.length;
-          const local = new Uint8Array([
-            0x50,0x4B,0x03,0x04,0x14,0x00,0x00,0x00,0x00,0x00,
-            ...(_u16(time)),...(_u16(date)),...(_u32(crc)),
-            ...(_u32(size)),...(_u32(size)),...(_u16(nameBytes.length)),0x00,0x00
-          ]);
-          parts.push(local, nameBytes, entry.data);
-          const central = new Uint8Array([
-            0x50,0x4B,0x01,0x02,0x14,0x00,0x14,0x00,0x00,0x00,0x00,0x00,
-            ...(_u16(time)),...(_u16(date)),...(_u32(crc)),
-            ...(_u32(size)),...(_u32(size)),...(_u16(nameBytes.length)),
-            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,...(_u32(offset))
-          ]);
-          centralDir.push(central, nameBytes);
-          offset += local.length + nameBytes.length + entry.data.length;
-        }
-        const centralStart = offset;
-        let centralSize = 0;
-        for (const c of centralDir) centralSize += c.length;
-        const eocd = new Uint8Array([
-          0x50,0x4B,0x05,0x06,0x00,0x00,0x00,0x00,
-          ...(_u16(entries.length)),...(_u16(entries.length)),
-          ...(_u32(centralSize)),...(_u32(centralStart)),0x00,0x00
-        ]);
-        const all = [...parts, ...centralDir, eocd];
-        let total = 0;
-        for (const a of all) total += a.length;
-        const buf = new Uint8Array(total);
-        let pos = 0;
-        for (const a of all) { buf.set(a, pos); pos += a.length; }
-        return buf;
-      }
-    };
-  })();
-
-  async function canvasToPngBytes(canvas) {
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-    return new Uint8Array(await blob.arrayBuffer());
-  }
-
+ 
   /* --- state --- */
   let srcImg = null;
   let srcData = null;
@@ -846,13 +783,14 @@ button.secondary{background:#555;color:var(--txt);}
   $('#btn-export-zip').addEventListener('click', async () => {
     if (outFrames.length === 0) return;
     const prefix = $('#out-prefix').value || 'sprite';
-    const entries = [];
+    const zip = new JSZip();
     for (let i = 0; i < outFrames.length; i++) {
-      entries.push({ name: `${prefix}_${String(i).padStart(2, '0')}.png`, data: await canvasToPngBytes(outFrames[i]) });
+      const blob = await new Promise(r => outFrames[i].toBlob(r, 'image/png'));
+      zip.file(`${prefix}_${String(i).padStart(2, '0')}.png`, blob);
     }
-    const blob = new Blob([SimpleZip.create(entries)], { type: 'application/zip' });
+    const content = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
-    link.download = prefix + '_frames.zip'; link.href = URL.createObjectURL(blob); link.click();
+    link.download = prefix + '_frames.zip'; link.href = URL.createObjectURL(content); link.click();
     URL.revokeObjectURL(link.href);
   });
 
@@ -876,14 +814,13 @@ button.secondary{background:#555;color:var(--txt);}
     const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
     for (let i = 0; i < outFrames.length; i++) sx.drawImage(outFrames[i], i * size, 0);
     const json = _buildEngineJson();
-    const sheetPng = await canvasToPngBytes(sheetC);
-    const jsonBytes = new TextEncoder().encode(JSON.stringify(json, null, 2));
-    const blob = new Blob([SimpleZip.create([
-      { name: prefix + '_sheet.png', data: sheetPng },
-      { name: prefix + '.json', data: jsonBytes }
-    ])], { type: 'application/zip' });
+    const sheetBlob = await new Promise(r => sheetC.toBlob(r, 'image/png'));
+    const zip = new JSZip();
+    zip.file(prefix + '_sheet.png', sheetBlob);
+    zip.file(prefix + '.json', JSON.stringify(json, null, 2));
+    const content = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
-    link.download = prefix + '_engine.zip'; link.href = URL.createObjectURL(blob); link.click();
+    link.download = prefix + '_engine.zip'; link.href = URL.createObjectURL(content); link.click();
     URL.revokeObjectURL(link.href);
   });
 
@@ -985,14 +922,13 @@ button.secondary{background:#555;color:var(--txt);}
     const json = _buildEngineJson();
     json.image = prefix + '_variant_sheet.png';
     json.variant = { mode: varMode || 'hsl', hue: +hSlider.value, saturation: +sSlider.value, lightness: +lSlider.value, tintColor: varColor || null, tintAmount: varAmt || 0 };
-    const sheetPng = await canvasToPngBytes(sheetC);
-    const jsonBytes = new TextEncoder().encode(JSON.stringify(json, null, 2));
-    const blob = new Blob([SimpleZip.create([
-      { name: prefix + '_variant_sheet.png', data: sheetPng },
-      { name: prefix + '_variant.json', data: jsonBytes }
-    ])], { type: 'application/zip' });
+    const sheetBlob = await new Promise(r => sheetC.toBlob(r, 'image/png'));
+    const zip = new JSZip();
+    zip.file(prefix + '_variant_sheet.png', sheetBlob);
+    zip.file(prefix + '_variant.json', JSON.stringify(json, null, 2));
+    const content = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
-    link.download = prefix + '_variant.zip'; link.href = URL.createObjectURL(blob); link.click();
+    link.download = prefix + '_variant.zip'; link.href = URL.createObjectURL(content); link.click();
     URL.revokeObjectURL(link.href);
   });
 

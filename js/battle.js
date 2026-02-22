@@ -46,6 +46,7 @@ const PlayerController = (() => {
         if (dx > 0) player.x = Math.floor((player.x + ts - margin - 1) / ts) * ts - ts + margin;
         if (dx < 0) player.x = Math.ceil((player.x + margin) / ts) * ts - margin;
       }
+      // else: 壁なので現在位置を維持（スナップしない）
 
       /* Y軸 */
       const cC1 = Math.floor((player.x + margin) / ts), cC2 = Math.floor((player.x + ts - margin - 1) / ts);
@@ -58,6 +59,7 @@ const PlayerController = (() => {
         if (dy > 0) player.y = Math.floor((player.y + ts - margin - 1) / ts) * ts - ts + margin;
         if (dy < 0) player.y = Math.ceil((player.y + margin) / ts) * ts - margin;
       }
+      // else: 壁なので現在位置を維持（スナップしない）
     } else {
       player.animFrame = 0; player.animTimer = 0;
     }

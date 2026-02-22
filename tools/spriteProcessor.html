@@ -38,13 +38,21 @@ button.secondary{background:#555;color:var(--txt);}
 .preset-btn{padding:4px 10px;font-size:12px;border-radius:4px;}
 #variant-preview{border:1px solid #555;background:#111;image-rendering:pixelated;margin:8px 0;}
 .info{color:var(--dim);font-size:12px;margin:4px 0;}
-.resize-handle{position:absolute;width:8px;height:8px;background:var(--pri);cursor:nwse-resize;z-index:10;}
 .anim-section{margin-top:12px;padding:12px;background:var(--bg2);border-radius:6px;}
 .anim-section h3{color:var(--pri);font-size:14px;margin-bottom:8px;}
 .anim-entry{display:flex;gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap;}
 .anim-entry input[type=text]{background:var(--bg);color:var(--txt);border:1px solid #555;padding:3px 6px;border-radius:3px;width:140px;}
 .anim-entry input[type=number]{background:var(--bg);color:var(--txt);border:1px solid #555;padding:3px 6px;border-radius:3px;width:50px;}
 .anim-entry .remove-anim{background:#a33;padding:4px 8px;font-size:11px;}
+/* BG remove */
+.bg-remove-section{margin:12px 0;padding:12px;background:var(--bg2);border-radius:6px;}
+.bg-remove-section h3{color:var(--pri);font-size:14px;margin-bottom:8px;}
+.color-pick-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0;}
+.color-pick-row .swatch{width:32px;height:32px;border:2px solid #888;border-radius:4px;cursor:pointer;}
+.color-pick-row .swatch.active{border-color:var(--pri);box-shadow:0 0 6px var(--pri);}
+.color-pick-row input[type=color]{width:40px;height:32px;border:none;padding:0;cursor:pointer;background:transparent;}
+.color-pick-row input[type=range]{width:100px;}
+.checker-bg{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;}
 </style>
 </head>
 <body>
@@ -62,11 +70,30 @@ button.secondary{background:#555;color:var(--txt);}
 <!-- TAB 1: Import -->
 <div id="tab-import" class="panel active">
   <div id="drop-zone">
-    透過済みPNGをドラッグ＆ドロップ<br>またはクリックしてファイル選択
-    <input type="file" id="file-input" accept=".png">
+    PNGをドラッグ＆ドロップ（透過・非透過どちらもOK）<br>またはクリックしてファイル選択
+    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp">
   </div>
-  <div class="canvas-wrap"><canvas id="src-canvas"></canvas></div>
+  <div class="canvas-wrap checker-bg"><canvas id="src-canvas"></canvas></div>
   <p class="info" id="src-info"></p>
+
+  <!-- Background removal section -->
+  <div class="bg-remove-section" id="bg-remove-section" style="display:none;">
+    <h3>背景色を透過にする</h3>
+    <p class="info">画像をクリックして背景色をスポイト取得、または手動で色を指定してください。</p>
+    <div class="color-pick-row">
+      <button id="btn-eyedropper" class="secondary">スポイトモード</button>
+      <label style="color:var(--dim);">背景色:</label>
+      <div class="swatch" id="bg-swatch" style="background:#808080;"></div>
+      <input type="color" id="bg-color-input" value="#808080">
+      <label style="color:var(--dim);">許容値:</label>
+      <input type="range" id="bg-tolerance" min="0" max="100" value="30">
+      <span class="val" id="bg-tolerance-val">30</span>
+    </div>
+    <div class="ctrl-row">
+      <button id="btn-remove-bg">背景を透過にする</button>
+      <button id="btn-undo-bg" class="secondary">元に戻す</button>
+    </div>
+  </div>
 </div>
 
 <!-- TAB 2: Detect -->
@@ -105,7 +132,6 @@ button.secondary{background:#555;color:var(--txt);}
   <div class="frames-row" id="frames-row"></div>
   <p class="info" id="out-info"></p>
 
-  <!-- Animation definitions -->
   <div class="anim-section" id="anim-section" style="display:none;">
     <h3>アニメーション定義</h3>
     <p class="info">エンジン用JSONに含めるアニメーションを定義してください。フレーム番号は0始まりのカンマ区切り。</p>
@@ -154,12 +180,13 @@ button.secondary{background:#555;color:var(--txt);}
 
 <script>
 /* ============================================================
-   Sprite Processor - ミプリンの冒険 ツール v2.0
-   修正: ZIP書出し, エンジンJSON animations, フレームリサイズ,
+   Sprite Processor - ミプリンの冒険 ツール v2.1
+   v2.1: 背景色透過化（スポイト＋許容値）機能追加
+   v2.0: ZIP書出し, エンジンJSON animations, フレームリサイズ,
          バリアントJSON同梱, マージロジック改善
    ============================================================ */
 (() => {
-  /* ========== 簡易ZIPライブラリ（インライン） ========== */
+  /* ========== 簡易ZIPライブラリ ========== */
   const SimpleZip = (() => {
     function _crc32(buf) {
       let crc = 0xFFFFFFFF;
@@ -177,68 +204,37 @@ button.secondary{background:#555;color:var(--txt);}
     }
     function _u16(v) { return [v & 0xFF, (v >> 8) & 0xFF]; }
     function _u32(v) { return [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]; }
-
     return {
       create(entries) {
-        // entries: [{name:string, data:Uint8Array}]
-        const parts = [];
-        const centralDir = [];
+        const parts = [], centralDir = [];
         let offset = 0;
         const { date, time } = _dosDateTime();
-
         for (const entry of entries) {
           const nameBytes = new TextEncoder().encode(entry.name);
-          const crc = _crc32(entry.data);
-          const size = entry.data.length;
-
-          // Local file header
+          const crc = _crc32(entry.data), size = entry.data.length;
           const local = new Uint8Array([
-            0x50,0x4B,0x03,0x04, // signature
-            0x14,0x00,           // version needed
-            0x00,0x00,           // flags
-            0x00,0x00,           // compression (store)
-            ...(_u16(time)), ...(_u16(date)),
-            ...(_u32(crc)),
-            ...(_u32(size)),     // compressed
-            ...(_u32(size)),     // uncompressed
-            ...(_u16(nameBytes.length)),
-            0x00,0x00            // extra length
+            0x50,0x4B,0x03,0x04,0x14,0x00,0x00,0x00,0x00,0x00,
+            ...(_u16(time)),...(_u16(date)),...(_u32(crc)),
+            ...(_u32(size)),...(_u32(size)),...(_u16(nameBytes.length)),0x00,0x00
           ]);
           parts.push(local, nameBytes, entry.data);
-
-          // Central directory entry
           const central = new Uint8Array([
-            0x50,0x4B,0x01,0x02,
-            0x14,0x00, 0x14,0x00,
-            0x00,0x00, 0x00,0x00,
-            ...(_u16(time)), ...(_u16(date)),
-            ...(_u32(crc)),
-            ...(_u32(size)), ...(_u32(size)),
-            ...(_u16(nameBytes.length)),
-            0x00,0x00, 0x00,0x00,
-            0x00,0x00,
-            0x00,0x00,0x00,0x00,
-            ...(_u32(offset))
+            0x50,0x4B,0x01,0x02,0x14,0x00,0x14,0x00,0x00,0x00,0x00,0x00,
+            ...(_u16(time)),...(_u16(date)),...(_u32(crc)),
+            ...(_u32(size)),...(_u32(size)),...(_u16(nameBytes.length)),
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,...(_u32(offset))
           ]);
           centralDir.push(central, nameBytes);
           offset += local.length + nameBytes.length + entry.data.length;
         }
-
         const centralStart = offset;
         let centralSize = 0;
         for (const c of centralDir) centralSize += c.length;
-
-        // End of central directory
         const eocd = new Uint8Array([
-          0x50,0x4B,0x05,0x06,
-          0x00,0x00, 0x00,0x00,
-          ...(_u16(entries.length)),
-          ...(_u16(entries.length)),
-          ...(_u32(centralSize)),
-          ...(_u32(centralStart)),
-          0x00,0x00
+          0x50,0x4B,0x05,0x06,0x00,0x00,0x00,0x00,
+          ...(_u16(entries.length)),...(_u16(entries.length)),
+          ...(_u32(centralSize)),...(_u32(centralStart)),0x00,0x00
         ]);
-
         const all = [...parts, ...centralDir, eocd];
         let total = 0;
         for (const a of all) total += a.length;
@@ -250,7 +246,6 @@ button.secondary{background:#555;color:var(--txt);}
     };
   })();
 
-  /* canvas → Uint8Array (PNG) */
   async function canvasToPngBytes(canvas) {
     const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     return new Uint8Array(await blob.arrayBuffer());
@@ -259,15 +254,17 @@ button.secondary{background:#555;color:var(--txt);}
   /* --- state --- */
   let srcImg = null;
   let srcData = null;
-  let frames = [];       // [{x,y,w,h}]
-  let outFrames = [];    // [canvas]
+  let origImgBackup = null;   // for undo bg removal
+  let frames = [];
+  let outFrames = [];
   let selectedFrame = -1;
   let animInterval = null;
   let addingManual = false;
   let manualStart = null;
   let resizing = false;
   let resizeIdx = -1;
-  let animDefs = [];     // [{name, frames:string, fps:number, loop:boolean}]
+  let animDefs = [];
+  let eyedropperMode = false;
 
   /* --- DOM --- */
   const $ = s => document.querySelector(s);
@@ -296,7 +293,7 @@ button.secondary{background:#555;color:var(--txt);}
   fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
   function loadFile(file) {
-    if (!file || !file.type.includes('png')) { alert('PNGファイルを選択してください'); return; }
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
@@ -306,9 +303,18 @@ button.secondary{background:#555;color:var(--txt);}
         srcCtx.clearRect(0, 0, img.width, img.height);
         srcCtx.drawImage(img, 0, 0);
         srcData = srcCtx.getImageData(0, 0, img.width, img.height);
+        // backup for undo
+        origImgBackup = srcCtx.getImageData(0, 0, img.width, img.height);
         detCanvas.width = img.width; detCanvas.height = img.height;
         $('#src-info').textContent = `${img.width}×${img.height} px`;
         frames = []; outFrames = [];
+        // show bg remove section
+        $('#bg-remove-section').style.display = 'block';
+        // auto-detect bg color from top-left corner
+        const tlR = srcData.data[0], tlG = srcData.data[1], tlB = srcData.data[2];
+        const hex = '#' + [tlR, tlG, tlB].map(v => v.toString(16).padStart(2, '0')).join('');
+        $('#bg-color-input').value = hex;
+        $('#bg-swatch').style.background = hex;
         _redrawDetect();
       };
       img.src = ev.target.result;
@@ -316,7 +322,94 @@ button.secondary{background:#555;color:var(--txt);}
     reader.readAsDataURL(file);
   }
 
-  /* --- auto detect --- */
+  /* ========== BACKGROUND REMOVAL ========== */
+
+  // eyedropper on src canvas
+  $('#btn-eyedropper').addEventListener('click', () => {
+    eyedropperMode = !eyedropperMode;
+    srcCanvas.style.cursor = eyedropperMode ? 'crosshair' : 'default';
+    $('#btn-eyedropper').textContent = eyedropperMode ? 'スポイト ON（画像をクリック）' : 'スポイトモード';
+    if (eyedropperMode) $('#btn-eyedropper').style.background = '#F5A623';
+    else $('#btn-eyedropper').style.background = '#555';
+  });
+
+  srcCanvas.addEventListener('click', e => {
+    if (!eyedropperMode || !srcData) return;
+    const r = srcCanvas.getBoundingClientRect();
+    const sx = srcCanvas.width / r.width, sy = srcCanvas.height / r.height;
+    const px = Math.floor((e.clientX - r.left) * sx);
+    const py = Math.floor((e.clientY - r.top) * sy);
+    const i = (py * srcCanvas.width + px) * 4;
+    const cr = srcData.data[i], cg = srcData.data[i + 1], cb = srcData.data[i + 2];
+    const hex = '#' + [cr, cg, cb].map(v => v.toString(16).padStart(2, '0')).join('');
+    $('#bg-color-input').value = hex;
+    $('#bg-swatch').style.background = hex;
+    // auto-exit eyedropper
+    eyedropperMode = false;
+    srcCanvas.style.cursor = 'default';
+    $('#btn-eyedropper').textContent = 'スポイトモード';
+    $('#btn-eyedropper').style.background = '#555';
+  });
+
+  $('#bg-color-input').addEventListener('input', e => {
+    $('#bg-swatch').style.background = e.target.value;
+  });
+
+  $('#bg-tolerance').addEventListener('input', () => {
+    $('#bg-tolerance-val').textContent = $('#bg-tolerance').value;
+  });
+
+  // remove background
+  $('#btn-remove-bg').addEventListener('click', () => {
+    if (!srcData) return;
+    const hex = $('#bg-color-input').value;
+    const tR = parseInt(hex.slice(1, 3), 16);
+    const tG = parseInt(hex.slice(3, 5), 16);
+    const tB = parseInt(hex.slice(5, 7), 16);
+    const tolerance = +$('#bg-tolerance').value;
+
+    const id = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+    const d = id.data;
+    let removed = 0;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const dr = d[i] - tR, dg = d[i + 1] - tG, db = d[i + 2] - tB;
+      const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (dist <= tolerance) {
+        d[i + 3] = 0; // set alpha to 0
+        removed++;
+      }
+    }
+
+    srcCtx.putImageData(id, 0, 0);
+    srcData = id;
+    // rebuild srcImg from canvas
+    const newImg = new Image();
+    newImg.onload = () => {
+      srcImg = newImg;
+      detCanvas.width = newImg.width; detCanvas.height = newImg.height;
+      _redrawDetect();
+    };
+    newImg.src = srcCanvas.toDataURL('image/png');
+
+    $('#src-info').textContent = `${srcCanvas.width}×${srcCanvas.height} px — ${removed}px 透過化済み`;
+  });
+
+  // undo
+  $('#btn-undo-bg').addEventListener('click', () => {
+    if (!origImgBackup) return;
+    srcCtx.putImageData(origImgBackup, 0, 0);
+    srcData = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+    const newImg = new Image();
+    newImg.onload = () => {
+      srcImg = newImg;
+      _redrawDetect();
+    };
+    newImg.src = srcCanvas.toDataURL('image/png');
+    $('#src-info').textContent = `${srcCanvas.width}×${srcCanvas.height} px — 元画像に復元`;
+  });
+
+  /* ========== AUTO DETECT ========== */
   $('#btn-detect').addEventListener('click', () => {
     if (!srcData) return;
     const minSize = +$('#min-frame').value || 16;
@@ -330,7 +423,6 @@ button.secondary{background:#555;color:var(--txt);}
     const { width: W, height: H, data: D } = imgData;
     const visited = new Uint8Array(W * H);
     const boxes = [];
-
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = (y * W + x) * 4;
       if (D[i + 3] > 10 && !visited[y * W + x]) {
@@ -353,8 +445,7 @@ button.secondary{background:#555;color:var(--txt);}
         if (bw >= minSize && bh >= minSize) boxes.push({ x: x0, y: y0, w: bw, h: bh });
       }
     }
-
-    // improved merge: check edge-to-edge distance
+    // improved merge
     const merged = [];
     const used = new Uint8Array(boxes.length);
     for (let i = 0; i < boxes.length; i++) {
@@ -371,8 +462,7 @@ button.secondary{background:#555;color:var(--txt);}
           if (gapX <= minGap && gapY <= minGap) {
             const nx = Math.min(b.x, o.x), ny = Math.min(b.y, o.y);
             b = { x: nx, y: ny, w: Math.max(b.x + b.w, o.x + o.w) - nx, h: Math.max(b.y + b.h, o.y + o.h) - ny };
-            used[j] = 1;
-            changed = true;
+            used[j] = 1; changed = true;
           }
         }
       }
@@ -387,7 +477,6 @@ button.secondary{background:#555;color:var(--txt);}
 
   /* --- detect canvas drawing --- */
   const HANDLE_SIZE = 8;
-
   function _getHandleRect(f) {
     return { x: f.x + f.w - HANDLE_SIZE, y: f.y + f.h - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE };
   }
@@ -404,13 +493,10 @@ button.secondary{background:#555;color:var(--txt);}
       detCtx.strokeRect(f.x, f.y, f.w, f.h);
       detCtx.fillStyle = sel ? 'rgba(0,255,0,0.08)' : 'rgba(255,0,0,0.08)';
       detCtx.fillRect(f.x, f.y, f.w, f.h);
-      // frame number
       detCtx.fillStyle = '#fff'; detCtx.font = '10px monospace';
       detCtx.fillText(i, f.x + 2, f.y + 10);
-      // resize handle
       if (sel) {
         const h = _getHandleRect(f);
-        detCtx.fillStyle = 'var(--pri)';
         detCtx.fillStyle = '#F5A623';
         detCtx.fillRect(h.x, h.y, h.w, h.h);
       }
@@ -427,30 +513,17 @@ button.secondary{background:#555;color:var(--txt);}
 
   detCanvas.addEventListener('mousedown', e => {
     const m = _canvasCoords(e);
-
-    // check resize handle of selected frame
     if (selectedFrame >= 0) {
       const h = _getHandleRect(frames[selectedFrame]);
       if (m.x >= h.x && m.x <= h.x + h.w && m.y >= h.y && m.y <= h.y + h.h) {
-        resizing = true;
-        resizeIdx = selectedFrame;
-        return;
+        resizing = true; resizeIdx = selectedFrame; return;
       }
     }
-
-    // manual add mode
-    if (addingManual) {
-      manualStart = { x: m.x, y: m.y };
-      return;
-    }
-
-    // select frame
+    if (addingManual) { manualStart = { x: m.x, y: m.y }; return; }
     selectedFrame = -1;
     for (let i = frames.length - 1; i >= 0; i--) {
       const f = frames[i];
-      if (m.x >= f.x && m.x <= f.x + f.w && m.y >= f.y && m.y <= f.y + f.h) {
-        selectedFrame = i; break;
-      }
+      if (m.x >= f.x && m.x <= f.x + f.w && m.y >= f.y && m.y <= f.y + f.h) { selectedFrame = i; break; }
     }
     _redrawDetect();
   });
@@ -459,19 +532,13 @@ button.secondary{background:#555;color:var(--txt);}
     if (!resizing || resizeIdx < 0) return;
     const m = _canvasCoords(e);
     const f = frames[resizeIdx];
-    const newW = Math.max(8, Math.round(m.x - f.x));
-    const newH = Math.max(8, Math.round(m.y - f.y));
-    f.w = newW;
-    f.h = newH;
+    f.w = Math.max(8, Math.round(m.x - f.x));
+    f.h = Math.max(8, Math.round(m.y - f.y));
     _redrawDetect();
   });
 
   detCanvas.addEventListener('mouseup', e => {
-    if (resizing) {
-      resizing = false;
-      resizeIdx = -1;
-      return;
-    }
+    if (resizing) { resizing = false; resizeIdx = -1; return; }
     if (!addingManual || !manualStart) return;
     const m = _canvasCoords(e);
     const x = Math.min(manualStart.x, m.x), y = Math.min(manualStart.y, m.y);
@@ -482,17 +549,12 @@ button.secondary{background:#555;color:var(--txt);}
   });
 
   window.addEventListener('keydown', e => {
-    if (e.key === 'Delete' && selectedFrame >= 0) {
-      frames.splice(selectedFrame, 1); selectedFrame = -1; _redrawDetect();
-    }
+    if (e.key === 'Delete' && selectedFrame >= 0) { frames.splice(selectedFrame, 1); selectedFrame = -1; _redrawDetect(); }
   });
-
-  $('#btn-add-frame').addEventListener('click', () => {
-    addingManual = true; detCanvas.style.cursor = 'crosshair';
-  });
+  $('#btn-add-frame').addEventListener('click', () => { addingManual = true; detCanvas.style.cursor = 'crosshair'; });
   $('#btn-clear-frames').addEventListener('click', () => { frames = []; selectedFrame = -1; _redrawDetect(); });
 
-  /* --- output --- */
+  /* ========== OUTPUT ========== */
   $('#out-size').addEventListener('change', e => {
     $('#out-custom').style.display = e.target.value === 'custom' ? 'inline' : 'none';
   });
@@ -503,17 +565,14 @@ button.secondary{background:#555;color:var(--txt);}
     const size = sizeVal === 'custom' ? (+$('#out-custom').value || 32) : +sizeVal;
     outFrames = [];
     const row = $('#frames-row'); row.innerHTML = '';
-
     for (let i = 0; i < frames.length; i++) {
       const f = frames[i];
       const c = document.createElement('canvas'); c.width = size; c.height = size;
-      const cx = c.getContext('2d');
-      cx.imageSmoothingEnabled = false;
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
       const scale = Math.min(size / f.w, size / f.h);
       const dw = f.w * scale, dh = f.h * scale;
       cx.drawImage(srcImg, f.x, f.y, f.w, f.h, (size - dw) / 2, (size - dh) / 2, dw, dh);
       outFrames.push(c);
-
       const thumb = document.createElement('canvas');
       thumb.width = 48; thumb.height = 48; thumb.className = 'frame-thumb';
       const tx = thumb.getContext('2d'); tx.imageSmoothingEnabled = false;
@@ -526,30 +585,24 @@ button.secondary{background:#555;color:var(--txt);}
     }
     $('#out-info').textContent = `${outFrames.length}フレーム (${size}×${size}) 生成完了`;
     animCanvas.width = size * 2; animCanvas.height = size * 2;
-
-    // show animation definition section
     $('#anim-section').style.display = 'block';
     if (animDefs.length === 0) {
       _addAnimDef('idle', '0', 4, true);
       _addAnimDef('walk_down', '0,1,2,3', 8, true);
     }
-
     _updateVariantPreview();
   });
 
   /* --- animation definitions UI --- */
   function _addAnimDef(name, frameStr, fps, loop) {
-    const def = { name: name || '', frames: frameStr || '0', fps: fps || 8, loop: loop !== false };
-    animDefs.push(def);
+    animDefs.push({ name: name || '', frames: frameStr || '0', fps: fps || 8, loop: loop !== false });
     _renderAnimDefs();
   }
 
   function _renderAnimDefs() {
-    const list = $('#anim-list');
-    list.innerHTML = '';
+    const list = $('#anim-list'); list.innerHTML = '';
     animDefs.forEach((def, i) => {
-      const row = document.createElement('div');
-      row.className = 'anim-entry';
+      const row = document.createElement('div'); row.className = 'anim-entry';
       row.innerHTML = `
         <input type="text" placeholder="名前" value="${def.name}" data-i="${i}" data-f="name">
         <label style="color:var(--dim);min-width:auto;">フレーム:</label>
@@ -557,11 +610,9 @@ button.secondary{background:#555;color:var(--txt);}
         <label style="color:var(--dim);min-width:auto;">FPS:</label>
         <input type="number" value="${def.fps}" min="1" max="60" data-i="${i}" data-f="fps">
         <label style="color:var(--dim);min-width:auto;"><input type="checkbox" ${def.loop ? 'checked' : ''} data-i="${i}" data-f="loop"> ループ</label>
-        <button class="remove-anim secondary" data-i="${i}">✕</button>
-      `;
+        <button class="remove-anim secondary" data-i="${i}">✕</button>`;
       list.appendChild(row);
     });
-    // bind events
     list.querySelectorAll('input[data-f="name"],input[data-f="frames"]').forEach(inp => {
       inp.addEventListener('change', e => { animDefs[+e.target.dataset.i][e.target.dataset.f] = e.target.value; });
     });
@@ -575,37 +626,27 @@ button.secondary{background:#555;color:var(--txt);}
       btn.addEventListener('click', e => { animDefs.splice(+e.target.dataset.i, 1); _renderAnimDefs(); });
     });
   }
-
   $('#btn-add-anim').addEventListener('click', () => _addAnimDef('', '0', 8, true));
 
-  /* --- build engine JSON --- */
   function _buildEngineJson() {
     const size = outFrames.length > 0 ? outFrames[0].width : 32;
     const prefix = $('#out-prefix').value || 'sprite';
     const jsonName = $('#json-name').value || 'sprite';
-
     const animations = {};
     for (const def of animDefs) {
       if (!def.name) continue;
       const idxArr = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n));
-      animations[def.name] = {
-        frames: idxArr,
-        fps: def.fps,
-        loop: def.loop
-      };
+      animations[def.name] = { frames: idxArr, fps: def.fps, loop: def.loop };
     }
-
     return {
-      name: jsonName,
-      image: prefix + '_sheet.png',
-      frameSize: [size, size],
-      frameCount: outFrames.length,
+      name: jsonName, image: prefix + '_sheet.png',
+      frameSize: [size, size], frameCount: outFrames.length,
       frames: outFrames.map((f, i) => ({ index: i, sx: i * size, sy: 0, sw: size, sh: size })),
-      animations: animations
+      animations
     };
   }
 
-  /* --- animation preview --- */
+  /* ========== ANIMATION PREVIEW ========== */
   let animIdx = 0;
   $('#btn-play').addEventListener('click', () => {
     if (outFrames.length === 0) return;
@@ -621,26 +662,20 @@ button.secondary{background:#555;color:var(--txt);}
   });
   $('#btn-stop').addEventListener('click', () => { if (animInterval) { clearInterval(animInterval); animInterval = null; } });
 
-  /* --- export: ZIP --- */
+  /* ========== EXPORT ========== */
   $('#btn-export-zip').addEventListener('click', async () => {
     if (outFrames.length === 0) return;
     const prefix = $('#out-prefix').value || 'sprite';
     const entries = [];
     for (let i = 0; i < outFrames.length; i++) {
-      const name = `${prefix}_${String(i).padStart(2, '0')}.png`;
-      const data = await canvasToPngBytes(outFrames[i]);
-      entries.push({ name, data });
+      entries.push({ name: `${prefix}_${String(i).padStart(2, '0')}.png`, data: await canvasToPngBytes(outFrames[i]) });
     }
-    const zipData = SimpleZip.create(entries);
-    const blob = new Blob([zipData], { type: 'application/zip' });
+    const blob = new Blob([SimpleZip.create(entries)], { type: 'application/zip' });
     const link = document.createElement('a');
-    link.download = prefix + '_frames.zip';
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    link.download = prefix + '_frames.zip'; link.href = URL.createObjectURL(blob); link.click();
     URL.revokeObjectURL(link.href);
   });
 
-  /* --- export: sheet --- */
   $('#btn-export-sheet').addEventListener('click', () => {
     if (outFrames.length === 0) return;
     const size = outFrames[0].width;
@@ -653,37 +688,26 @@ button.secondary{background:#555;color:var(--txt);}
     link.href = sheetC.toDataURL('image/png'); link.click();
   });
 
-  /* --- export: engine data (sheet + JSON with animations) --- */
   $('#btn-export-engine').addEventListener('click', async () => {
     if (outFrames.length === 0) return;
-    const size = outFrames[0].width;
-    const prefix = $('#out-prefix').value || 'sprite';
-
-    // sheet PNG
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
     const sheetC = document.createElement('canvas');
     sheetC.width = size * outFrames.length; sheetC.height = size;
     const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
     for (let i = 0; i < outFrames.length; i++) sx.drawImage(outFrames[i], i * size, 0);
-
-    // build JSON
     const json = _buildEngineJson();
-
-    // ZIP them together
     const sheetPng = await canvasToPngBytes(sheetC);
     const jsonBytes = new TextEncoder().encode(JSON.stringify(json, null, 2));
-    const zipData = SimpleZip.create([
+    const blob = new Blob([SimpleZip.create([
       { name: prefix + '_sheet.png', data: sheetPng },
       { name: prefix + '.json', data: jsonBytes }
-    ]);
-    const blob = new Blob([zipData], { type: 'application/zip' });
+    ])], { type: 'application/zip' });
     const link = document.createElement('a');
-    link.download = prefix + '_engine.zip';
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    link.download = prefix + '_engine.zip'; link.href = URL.createObjectURL(blob); link.click();
     URL.revokeObjectURL(link.href);
   });
 
-  /* --- HSL Variant --- */
+  /* ========== HSL VARIANT ========== */
   function _rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0; if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6; else if (mx === g) h = ((b - r) / d + 2) / 6; else h = ((r - g) / d + 4) / 6; } return [h * 360, s * 100, l * 100]; }
   function _hsl2rgb(h, s, l) { h /= 360; s /= 100; l /= 100; let r, g, b; if (s === 0) { r = g = b = l; } else { const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; }; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3); } return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]; }
 
@@ -692,7 +716,6 @@ button.secondary{background:#555;color:var(--txt);}
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const cx = c.getContext('2d'); cx.drawImage(srcCanvas, 0, 0);
     const id = cx.getImageData(0, 0, w, h), d = id.data;
-
     if (mode === 'silhouette' && color) {
       const cr = parseInt(color.slice(1, 3), 16), cg = parseInt(color.slice(3, 5), 16), cb = parseInt(color.slice(5, 7), 16);
       for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 0) { d[i] = cr; d[i + 1] = cg; d[i + 2] = cb; } }
@@ -720,8 +743,7 @@ button.secondary{background:#555;color:var(--txt);}
 
   function _updateVariantPreview() {
     if (outFrames.length === 0) return;
-    const size = outFrames[0].width;
-    const count = Math.min(outFrames.length, 8);
+    const size = outFrames[0].width, count = Math.min(outFrames.length, 8);
     varCanvas.width = size * count; varCanvas.height = size;
     varCtx.imageSmoothingEnabled = false;
     for (let i = 0; i < count; i++) {
@@ -743,15 +765,12 @@ button.secondary{background:#555;color:var(--txt);}
   document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.dataset.mode) {
-        varMode = btn.dataset.mode;
-        varColor = btn.dataset.color || null;
+        varMode = btn.dataset.mode; varColor = btn.dataset.color || null;
         varAmt = parseFloat(btn.dataset.amt) || 0;
         hSlider.value = 0; sSlider.value = 0; lSlider.value = 0;
       } else {
         varMode = null; varColor = null; varAmt = 0;
-        hSlider.value = btn.dataset.h || 0;
-        sSlider.value = btn.dataset.s || 0;
-        lSlider.value = btn.dataset.l || 0;
+        hSlider.value = btn.dataset.h || 0; sSlider.value = btn.dataset.s || 0; lSlider.value = btn.dataset.l || 0;
       }
       $('#hsl-h-val').textContent = hSlider.value;
       $('#hsl-s-val').textContent = sSlider.value;
@@ -760,61 +779,40 @@ button.secondary{background:#555;color:var(--txt);}
     });
   });
 
-  /* --- variant export: PNG only --- */
   $('#btn-variant-export').addEventListener('click', () => {
     if (outFrames.length === 0) return;
-    const size = outFrames[0].width;
-    const prefix = $('#out-prefix').value || 'sprite';
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
     const sheetC = document.createElement('canvas');
     sheetC.width = size * outFrames.length; sheetC.height = size;
     const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
     for (let i = 0; i < outFrames.length; i++) {
-      const vc = applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt);
-      sx.drawImage(vc, i * size, 0);
+      sx.drawImage(applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt), i * size, 0);
     }
     const link = document.createElement('a');
     link.download = prefix + '_variant_sheet.png';
     link.href = sheetC.toDataURL('image/png'); link.click();
   });
 
-  /* --- variant export: PNG + JSON --- */
   $('#btn-variant-export-engine').addEventListener('click', async () => {
     if (outFrames.length === 0) return;
-    const size = outFrames[0].width;
-    const prefix = $('#out-prefix').value || 'sprite';
-
-    // build variant sheet
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
     const sheetC = document.createElement('canvas');
     sheetC.width = size * outFrames.length; sheetC.height = size;
     const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
     for (let i = 0; i < outFrames.length; i++) {
-      const vc = applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt);
-      sx.drawImage(vc, i * size, 0);
+      sx.drawImage(applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt), i * size, 0);
     }
-
-    // JSON with variant info
     const json = _buildEngineJson();
     json.image = prefix + '_variant_sheet.png';
-    json.variant = {
-      mode: varMode || 'hsl',
-      hue: +hSlider.value,
-      saturation: +sSlider.value,
-      lightness: +lSlider.value,
-      tintColor: varColor || null,
-      tintAmount: varAmt || 0
-    };
-
+    json.variant = { mode: varMode || 'hsl', hue: +hSlider.value, saturation: +sSlider.value, lightness: +lSlider.value, tintColor: varColor || null, tintAmount: varAmt || 0 };
     const sheetPng = await canvasToPngBytes(sheetC);
     const jsonBytes = new TextEncoder().encode(JSON.stringify(json, null, 2));
-    const zipData = SimpleZip.create([
+    const blob = new Blob([SimpleZip.create([
       { name: prefix + '_variant_sheet.png', data: sheetPng },
       { name: prefix + '_variant.json', data: jsonBytes }
-    ]);
-    const blob = new Blob([zipData], { type: 'application/zip' });
+    ])], { type: 'application/zip' });
     const link = document.createElement('a');
-    link.download = prefix + '_variant.zip';
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    link.download = prefix + '_variant.zip'; link.href = URL.createObjectURL(blob); link.click();
     URL.revokeObjectURL(link.href);
   });
 

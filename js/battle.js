@@ -63,12 +63,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
-      } else {
-        // タイル境界にスナップ
-        if (dy > 0) player.y = Math.floor((player.y + ts - margin - 1) / ts) * ts - ts + margin;
-        if (dy < 0) player.y = Math.ceil((player.y + margin) / ts) * ts - margin;
+      } if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
+        &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
+        player.y = newPy;
       }
-      // else: 壁なので現在位置を維持（スナップしない）
     } else {
       player.animFrame = 0; player.animTimer = 0;
     }

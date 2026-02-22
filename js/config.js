@@ -40,6 +40,7 @@ const CONFIG = {
   IMAGE_SMOOTHING: false,
 
   // 音響
+  AUDIO_ENABLED: true, // 音声アセット未配置時はfalse
   BGM_VOLUME: 0.5,
   SE_VOLUME: 0.7,
 
@@ -66,5 +67,5 @@ const CONFIG = {
   DEBUG: new URLSearchParams(window.location.search).get('debug') === '1',
 
   // バージョン
-  VERSION: '0.1.0'
+  VERSION: '0.3.0'
 };

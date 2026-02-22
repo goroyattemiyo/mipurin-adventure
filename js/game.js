@@ -88,6 +88,7 @@ const Game = (() => {
           _showDialog(_dialogQueue.shift());
         } else {
           _dialogActive = false;
+          Shop.closeShop();
           Audio.playSe('dialog_close');
         }
       }
@@ -97,15 +98,49 @@ const Game = (() => {
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
     const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const bx=20, by=H-150, bw=W-40, bh=130;
-    ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(bx,by,bw,bh);
-    ctx.strokeStyle='#F5A623'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
-    ctx.fillStyle='#fff'; ctx.font='16px monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
     const vis = _dialogText.substring(0, _dialogChars);
-    const lines = vis.split('\n');
-    for (let i=0; i<lines.length; i++) ctx.fillText(lines[i], bx+16, by+16+i*22);
-    if (_dialogChars >= _dialogText.length && Math.sin(Date.now()/300)>0) {
-      ctx.fillStyle='#F5A623'; ctx.fillText('▼', bx+bw-32, by+bh-24);
+    const rawLines = vis.split('\n');
+    const lineH = 22;
+    const padding = 16;
+    const minH = 80;
+
+    // 横幅に収まるよう折り返し
+    ctx.font = '16px monospace';
+    const maxWidth = W - 40 - padding * 2;
+    const lines = [];
+    for (const raw of rawLines) {
+      if (!raw) { lines.push(''); continue; }
+      let rest = raw;
+      while (rest.length > 0) {
+        let cut = Math.min(28, rest.length);
+        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut);
+      }
+    }
+
+    const neededH = padding * 2 + lines.length * lineH + 10;
+    const bh = Math.max(minH, Math.min(neededH, H * 0.45));
+    const bx = 20, by = H - bh - 20, bw = W - 40;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#F5A623';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const maxLines = Math.floor((bh - padding * 2) / lineH);
+    for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      ctx.fillText(lines[i], bx + padding, by + padding + i * lineH);
+    }
+
+    if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
+      ctx.fillStyle = '#F5A623';
+      ctx.fillText('▼', bx + bw - 32, by + bh - 24);
     }
   }
 
@@ -325,6 +360,7 @@ const Game = (() => {
   /* ============ 共通マップシーン ============ */
   let _pendingSpawn = null;
   let _currentMapName = '';
+  let _pendingBossId = null;
 
   function _initMapScene(mapName) {
     _currentMapName = mapName;
@@ -334,6 +370,7 @@ const Game = (() => {
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
     _dialogActive = false; _dialogQueue = [];
+    Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
     if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
     Collection.onAreaVisit(mapName);
@@ -387,6 +424,7 @@ const Game = (() => {
 
     // プレイヤー移動
     PlayerController.update(player, dt);
+    if (PlayerController.updateAnimation) PlayerController.updateAnimation(player, dt);
 
     // 攻撃（Zキー）
     if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
@@ -439,10 +477,18 @@ const Game = (() => {
             }
             break;
           case 'save':
+            player.hp = player.maxHp;
             _showDialog(Lang.t('save_point_text'));
             Audio.playSe('save');
             break;
           case 'sign':
+            if (_currentMapName === 'flower_field' && !flags.piece_c) {
+              flags.piece_c = true;
+              Inventory.addItem('piece_c');
+              Collection.onItemGet('piece_c');
+              _showDialog('黄金蜂蜜のかけらCを手に入れた！');
+              break;
+            }
             const signKey = 'sign_' + _currentMapName;
             const signText = Lang.t(signKey);
             _showDialog(signText !== signKey ? signText : '…なにも書かれていない');
@@ -492,6 +538,9 @@ const Game = (() => {
       if (nextScene) {
         _pendingSpawn = { x:exit.spawnX, y:exit.spawnY };
         _changeScene(nextScene);
+      } else if (exit.to === 'boss_mushroom' || exit.to === 'boss_leila') {
+        _pendingBossId = exit.to === 'boss_mushroom' ? 'mushroom_king' : 'dark_queen';
+        _changeScene(SCENE.BOSS);
       } else {
         _showDialog(Lang.t('area_locked'));
         player.y += (exit.spawnY > 7 ? -1 : 1) * CONFIG.TILE_SIZE;
@@ -506,13 +555,88 @@ const Game = (() => {
     }
   }
 
-  function _drawMapScene(ctx) {
-    // killCount世界演出
-    const worldFx = NpcManager.getWorldEffects(flags);
-    if (worldFx.saturationShift < 0) {
-      // 簡易彩度低下（CSS filter相当をcanvasで近似）
-      ctx.filter = `saturate(${Math.max(0, 100 + worldFx.saturationShift)}%)`;
+
+  function _initBossScene() {
+    const bossId = _pendingBossId || 'mushroom_king';
+    if (bossId === 'dark_queen') {
+      _currentMapName = 'flower_field';
+      MapManager.loadMap('flower_field');
+      player.x = 9 * CONFIG.TILE_SIZE;
+      player.y = 12 * CONFIG.TILE_SIZE;
+    } else {
+      _currentMapName = 'forest_north';
+      MapManager.loadMap('forest_north');
+      player.x = 9 * CONFIG.TILE_SIZE;
+      player.y = 12 * CONFIG.TILE_SIZE;
     }
+    BossManager.start(bossId);
+    _dialogActive = false; _dialogQueue = [];
+  }
+
+  function _updateBossScene(dt) {
+    if (_dialogActive) { _updateDialog(dt); return; }
+    PlayerController.update(player, dt);
+    if (PlayerController.updateAnimation) PlayerController.updateAnimation(player, dt);
+
+    if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
+      player.attackCooldown = Balance.PLAYER.ATTACK_COOLDOWN_SEC;
+      const box = PlayerController.getAttackBox(player);
+      if (BossManager.checkHit(box, Inventory.getEffectiveAtk(player), flags)) Audio.playSe('hit');
+      else Audio.playSe('attack');
+    }
+
+    if (Engine.consumePress('needle') && player.needleCooldown <= 0 && player.hp > Balance.PLAYER.NEEDLE_HP_COST) {
+      player.hp -= Balance.PLAYER.NEEDLE_HP_COST;
+      player.needleCooldown = Balance.PLAYER.NEEDLE_COOLDOWN_SEC;
+      BossManager.needleHit(player.needleDmg, flags);
+      Audio.playSe('needle');
+    }
+
+    if (Engine.consumePress('interact') && flags.killCount === 0) {
+      BossManager.chooseWait();
+    }
+
+    BossManager.update(dt, player, flags);
+
+    if (BossManager.isBossDead()) {
+      if (_pendingBossId === 'mushroom_king') {
+        flags.piece_a = true;
+        Inventory.addItem('piece_a');
+        Collection.onItemGet('piece_a');
+        _showDialog('かけらが光を放ち…\n黄金蜂蜜のかけらAを手に入れた！');
+        _pendingSpawn = { x: 9, y: 1 };
+        BossManager.clear();
+        _changeScene(SCENE.CAVE);
+      } else {
+        const trig = BossManager.getEndingTrigger();
+        const endingType = NpcManager.getEndingType(flags, trig);
+        flags[endingType + '_seen'] = true;
+        BossManager.clear();
+        _showDialog('ボスを倒した！');
+        _changeScene(SCENE.CREDITS);
+      }
+      return;
+    }
+
+    if (player.hp <= 0) {
+      Audio.playSe('game_over');
+      BossManager.clear();
+      _changeScene(SCENE.GAMEOVER);
+    }
+  }
+
+  function _drawBossScene(ctx) {
+    MapManager.draw(ctx);
+    EnemyManager.draw(ctx);
+    MapManager.drawNpcs(ctx);
+    PlayerController.draw(ctx, player);
+    BossManager.draw(ctx);
+    _drawHud(ctx);
+    _drawDialog(ctx);
+  }
+
+  function _drawMapScene(ctx) {
+    ctx.save();
 
     MapManager.draw(ctx);
     EnemyManager.draw(ctx);
@@ -521,7 +645,7 @@ const Game = (() => {
     PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
 
-    ctx.filter = 'none';
+    ctx.restore(); // filterを完全にリセット
 
     // 針ペナルティ: ビネット
     const penalties = NpcManager.getNeedlePenalty(flags);
@@ -532,6 +656,14 @@ const Game = (() => {
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
     _drawDialog(ctx);
+    if (CONFIG.DEBUG || location.search.includes('debug=1')) {
+    ctx.save();
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'right';
+    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - 8, CONFIG.CANVAS_HEIGHT - 8);
+    ctx.restore();
+    }
   }
 
   function _drawVignette(ctx, intensity) {
@@ -584,7 +716,14 @@ const Game = (() => {
   function _drawHud(ctx){
     const W=CONFIG.CANVAS_WIDTH;
     // HP
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(8,8,200,28);
+    const hpDanger = player.hp === 1;
+    const hpBg = hpDanger && Math.sin(Date.now() / 120) > -0.3 ? 'rgba(220,0,0,0.72)' : 'rgba(0,0,0,0.5)';
+    ctx.fillStyle=hpBg; ctx.fillRect(8,8,200,28);
+    if (hpDanger) {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(8,8,200,28);
+    }
     ctx.fillStyle='#F5A623';ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText('HP:',14,22);
     for(let i=0;i<player.maxHp;i++){
@@ -611,6 +750,18 @@ const Game = (() => {
     ctx.fillText(_currentMapName,14,74);
     // 巣窟HUD
     if(Dungeon.isActive()) Dungeon.drawHud(ctx);
+
+    // 操作ガイド（開始60秒後からフェードアウト）
+    const guide='移動:矢印キー/WASD  攻撃:Z  必殺:X  会話:C/Enter  メニュー:Esc';
+    const guideAlpha = Math.max(0, Math.min(1, 1 - Math.max(0, _playtime - 60) / 8));
+    if (guideAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = guideAlpha;
+      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
+      ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+      ctx.restore();
+    }
   }
 
   /* ============ シーン管理 ============ */
@@ -628,6 +779,7 @@ const Game = (() => {
       case SCENE.VILLAGE:
         _initMapScene('village');
         if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        Shop.closeShop();
         if(!flags.quest_started) setTimeout(()=>_showDialog(Lang.t('mipurin_home')),500);
         break;
       case SCENE.FOREST_SOUTH:
@@ -646,6 +798,7 @@ const Game = (() => {
         _initMapScene('flower_field');
         if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
         break;
+      case SCENE.BOSS: _initBossScene(); break;
       case SCENE.DUNGEON: _initDungeon(); break;
       case SCENE.GAMEOVER: _resetGameover(); break;
       case SCENE.SETTINGS: _resetSettings(); break;
@@ -666,6 +819,7 @@ const Game = (() => {
       case SCENE.VILLAGE: case SCENE.FOREST_SOUTH: case SCENE.FOREST_NORTH:
       case SCENE.CAVE: case SCENE.FLOWER_FIELD:
         _updateMapScene(dt);break;
+      case SCENE.BOSS: _updateBossScene(dt);break;
       case SCENE.DUNGEON: _updateMapScene(dt);break;
       case SCENE.GAMEOVER: _updateGameover(dt);break;
     }
@@ -683,12 +837,20 @@ const Game = (() => {
       case SCENE.CAVE: case SCENE.FLOWER_FIELD:
       case SCENE.DUNGEON:
         _drawMapScene(ctx);break;
+      case SCENE.BOSS:
+        _drawBossScene(ctx);break;
       case SCENE.GAMEOVER: _drawGameover(ctx);break;
       default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);break;
     }
     if(CONFIG.DEBUG){
-      ctx.fillStyle='#0f0';ctx.font='12px monospace';ctx.textAlign='left';
-      ctx.fillText('Scene:'+_currentScene+' v'+CONFIG.VERSION+' Kill:'+flags.killCount+' Needle:'+flags.needleUseCount,4,CONFIG.CANVAS_HEIGHT-6);
+      const txt = `v${CONFIG.VERSION}`;
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      ctx.fillRect(CONFIG.CANVAS_WIDTH - 92, 6, 86, 18);
+      ctx.fillStyle='#0f0';
+      ctx.font='12px monospace';
+      ctx.textAlign='right';
+      ctx.textBaseline='middle';
+      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - 10, 15);
     }
   }
 

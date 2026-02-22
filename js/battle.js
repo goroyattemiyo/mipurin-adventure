@@ -6,6 +6,17 @@ const PlayerController = (() => {
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
 
+
+  function _clampPlayerToMap(player) {
+    const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
+    if (!map) return;
+    const ts = CONFIG.TILE_SIZE;
+    const maxX = map.cols * ts - ts;
+    const maxY = map.rows * ts - ts;
+    player.x = Math.max(0, Math.min(player.x, maxX));
+    player.y = Math.max(0, Math.min(player.y, maxY));
+  }
+
   function update(player, dt) {
     if (player.hitStopFrames > 0) { player.hitStopFrames--; return; }
 
@@ -13,6 +24,7 @@ const PlayerController = (() => {
     if (player.knockback.timer > 0) {
       player.x += player.knockback.x * dt * 60;
       player.y += player.knockback.y * dt * 60;
+      _clampPlayerToMap(player);
       player.knockback.timer -= dt;
       return;
     }
@@ -54,13 +66,41 @@ const PlayerController = (() => {
       player.animFrame = 0; player.animTimer = 0;
     }
 
+    _clampPlayerToMap(player);
+
     /* クールダウン（秒ベース） */
     if (player.attackCooldown > 0) player.attackCooldown -= dt;
     if (player.needleCooldown > 0) player.needleCooldown -= dt;
   }
 
+
+  function _ensureAnimator() {
+    return (typeof playerAnimator !== 'undefined') ? playerAnimator : null;
+  }
+
+  function updateAnimation(player, dt) {
+    const anim = _ensureAnimator();
+    if (!anim) return;
+
+    if (player.hp <= 0) {
+      anim.play('dead');
+    } else if (player.knockback.timer > 0) {
+      anim.play('hurt');
+    } else if (player.attackCooldown > 0.3) {
+      anim.play('attack_down');
+    } else if (player.needleCooldown > 1.5) {
+      anim.play('needle');
+    } else {
+      const moving = Engine.isPressed('up') || Engine.isPressed('down')
+                  || Engine.isPressed('left') || Engine.isPressed('right');
+      if (moving) anim.play('walk_' + player.dir);
+      else anim.play('idle_' + player.dir);
+    }
+    anim.update(dt);
+  }
+
   function checkInteract(player) {
-    if (!Engine.consumePress('interact')) return null;
+  // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -71,6 +111,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SAVE_POINT) return { type: 'save' };
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
+    if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
     return null;
   }
 
@@ -156,7 +197,7 @@ const PlayerController = (() => {
     ctx.restore();
   }
 
-  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect };
+  return { update, updateAnimation, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect, clampToMap: _clampPlayerToMap };
 })();
 
 /* ============================================================
@@ -167,12 +208,15 @@ const EnemyManager = (() => {
 
   /* 敵テンプレート */
   const TEMPLATES = {
-    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, movePattern: 'wander' },
-    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, movePattern: 'chase' },
-    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, movePattern: 'chase' },
-    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, movePattern: 'wander_fast' },
-    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, movePattern: 'wander' },
-    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' }
+    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, pollen: 1, movePattern: 'wander' },
+    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, pollen: 1, movePattern: 'chase' },
+    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, pollen: 2, movePattern: 'ambush' },
+    bomb_mushroom:   { name: 'バクダンキノコ', hp: 6, atk: 3, speed: 0.6, color: '#E74C3C', symbol: '💥', xp: 3, pollen: 2, movePattern: 'explode' },
+    dark_slime:      { name: 'ヤミスライム', hp: 8, atk: 2, speed: 1.2, color: '#8E44AD', symbol: '🟣', xp: 3, pollen: 2, movePattern: 'chase' },
+    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, pollen: 1, movePattern: 'swoop' },
+    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, pollen: 3, movePattern: 'burrow' },
+    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, pollen: 3, movePattern: 'root_attack' },
+    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, pollen: 2, movePattern: 'dive' }
   };
 
   function spawn(templateId, col, row) {
@@ -183,7 +227,7 @@ const EnemyManager = (() => {
       id: templateId, name: t.name,
       x: col * ts, y: row * ts,
       hp: t.hp, maxHp: t.hp, atk: t.atk, speed: t.speed,
-      color: t.color, symbol: t.symbol, xp: t.xp,
+      color: t.color, symbol: t.symbol, xp: t.xp, pollen: t.pollen || 1,
       movePattern: t.movePattern,
       moveTimer: Math.random() * 2,
       moveDir: { x: 0, y: 0 },
@@ -206,6 +250,7 @@ const EnemyManager = (() => {
       const dx = player.x - e.x, dy = player.y - e.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
 
+      e.speed = TEMPLATES[e.id]?.speed ?? e.speed;
       e.moveTimer -= dt;
       if (e.moveTimer <= 0) {
         e.moveTimer = 1 + Math.random();
@@ -221,6 +266,99 @@ const EnemyManager = (() => {
             break;
           case 'stationary':
             e.moveDir.x = 0; e.moveDir.y = 0;
+            break;
+          case 'ambush':
+            if (dist < ts * 3 && dist > 0) {
+              e.moveDir.x = dx/dist; e.moveDir.y = dy/dist;
+              e.speed = (TEMPLATES[e.id]?.speed || e.speed) * 2;
+            } else {
+              e.moveDir.x = 0; e.moveDir.y = 0;
+              e.speed = 0;
+            }
+            break;
+          case 'explode':
+            if (dist < ts * 1.5 && !e._exploding) {
+              e._exploding = true;
+              e._explodeTimer = 1.0;
+            }
+            if (e._exploding) {
+              e._explodeTimer -= dt;
+              e.moveDir.x = 0; e.moveDir.y = 0;
+              if (e._explodeTimer <= 0) {
+                if (dist < ts * 2) _damagePlayer(player, e);
+                e.dead = true;
+                flags.killCount++;
+              }
+            } else {
+              e.moveDir.x = (Math.random()-0.5) * 2;
+              e.moveDir.y = (Math.random()-0.5) * 2;
+            }
+            break;
+          case 'swoop':
+            if (e.moveTimer <= 0) {
+              if (dist < ts * 5 && dist > 0) {
+                e.moveDir.x = dx/dist; e.moveDir.y = dy/dist;
+              } else {
+                const angle = Math.random() * Math.PI * 2;
+                e.moveDir.x = Math.cos(angle);
+                e.moveDir.y = Math.sin(angle);
+              }
+              e.moveTimer = 0.5 + Math.random() * 0.5;
+            }
+            break;
+          case 'burrow':
+            if (!e._burrowed && e.moveTimer <= 0 && dist < ts * 5) {
+              e._burrowed = true;
+              e._burrowTimer = 1.0;
+              e._targetX = player.x + (Math.random()-0.5) * ts * 2;
+              e._targetY = player.y + (Math.random()-0.5) * ts * 2;
+            }
+            if (e._burrowed) {
+              e._burrowTimer -= dt;
+              if (e._burrowTimer <= 0) {
+                e.x = e._targetX; e.y = e._targetY;
+                e._burrowed = false;
+                e.moveTimer = 2.0;
+              }
+              e.moveDir.x = 0; e.moveDir.y = 0;
+            } else {
+              e.moveDir.x = (Math.random()-0.5);
+              e.moveDir.y = (Math.random()-0.5);
+            }
+            break;
+          case 'root_attack':
+            e.moveDir.x = 0; e.moveDir.y = 0;
+            if (!e._rootTimer) e._rootTimer = 0;
+            e._rootTimer -= dt;
+            if (e._rootTimer <= 0 && dist < ts * 4) {
+              if (dist < ts * 1.5) _damagePlayer(player, e);
+              e._rootTimer = 2.0;
+            }
+            break;
+          case 'dive':
+            if (!e._divePhase) e._divePhase = 'approach';
+            if (e._divePhase === 'approach' && dist < ts * 4 && dist > 0) {
+              e._divePhase = 'dive';
+              e._diveDir = { x: dx/dist, y: dy/dist };
+              e._diveTimer = 0.5;
+            }
+            if (e._divePhase === 'dive') {
+              e.moveDir.x = e._diveDir.x * 3;
+              e.moveDir.y = e._diveDir.y * 3;
+              e._diveTimer -= dt;
+              if (e._diveTimer <= 0) {
+                e._divePhase = 'retreat';
+                e._diveTimer = 1.0;
+              }
+            } else if (e._divePhase === 'retreat') {
+              e.moveDir.x = -dx/(dist||1);
+              e.moveDir.y = -dy/(dist||1);
+              e._diveTimer -= dt;
+              if (e._diveTimer <= 0) e._divePhase = 'approach';
+            } else {
+              e.moveDir.x = (Math.random()-0.5);
+              e.moveDir.y = (Math.random()-0.5);
+            }
             break;
         }
       }
@@ -250,9 +388,10 @@ const EnemyManager = (() => {
   }
 
   function _damagePlayer(player, enemy) {
-    if (player.knockback.timer > 0) return; /* 無敵時間 */
+    if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
     player.hp -= enemy.atk;
     if (player.hp < 0) player.hp = 0;
+    player.invincibleTimer = 1.0; // 被ダメ後1秒間無敵
     /* ノックバック */
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
@@ -277,6 +416,8 @@ const EnemyManager = (() => {
         if (e.hp <= 0) {
           e.dead = true;
           flags.killCount++;
+          if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+          if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
         }
       }
     }
@@ -289,9 +430,32 @@ const EnemyManager = (() => {
       if (e.dead) continue;
       e.hp -= damage;
       e.hurtTimer = 0.5;
-      if (e.hp <= 0) { e.dead = true; flags.killCount++; }
+      if (e.hp <= 0) {
+        e.dead = true;
+        flags.killCount++;
+        if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+        if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+      }
     }
     flags.needleUseCount++;
+  }
+
+  function damageAllInRadius(cx, cy, radius, damage, flags) {
+    const ts = CONFIG.TILE_SIZE;
+    for (const e of _enemies) {
+      if (e.dead) continue;
+      const dx = e.x + ts/2 - cx, dy = e.y + ts/2 - cy;
+      if (Math.sqrt(dx*dx + dy*dy) <= radius) {
+        e.hp -= damage;
+        e.hurtTimer = 0.3;
+        if (e.hp <= 0) {
+          e.dead = true;
+          flags.killCount++;
+          if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+          if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+        }
+      }
+    }
   }
 
   function draw(ctx) {
@@ -325,5 +489,5 @@ const EnemyManager = (() => {
   function getAliveCount() { return _enemies.filter(e => !e.dead).length; }
   function clear() { _enemies = []; }
 
-  return { spawn, spawnFromMap, update, checkAttackHit, needleBlast, draw, getAliveCount, clear };
+  return { spawn, spawnFromMap, update, checkAttackHit, needleBlast, damageAllInRadius, draw, getAliveCount, clear };
 })();

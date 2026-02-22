@@ -71,6 +71,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SAVE_POINT) return { type: 'save' };
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
+    if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
     return null;
   }
 

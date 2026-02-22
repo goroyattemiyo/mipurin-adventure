@@ -88,6 +88,7 @@ const Game = (() => {
           _showDialog(_dialogQueue.shift());
         } else {
           _dialogActive = false;
+          Shop.closeShop();
           Audio.playSe('dialog_close');
         }
       }
@@ -97,15 +98,49 @@ const Game = (() => {
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
     const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const bx=20, by=H-150, bw=W-40, bh=130;
-    ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(bx,by,bw,bh);
-    ctx.strokeStyle='#F5A623'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
-    ctx.fillStyle='#fff'; ctx.font='16px monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
     const vis = _dialogText.substring(0, _dialogChars);
-    const lines = vis.split('\n');
-    for (let i=0; i<lines.length; i++) ctx.fillText(lines[i], bx+16, by+16+i*22);
-    if (_dialogChars >= _dialogText.length && Math.sin(Date.now()/300)>0) {
-      ctx.fillStyle='#F5A623'; ctx.fillText('▼', bx+bw-32, by+bh-24);
+    const rawLines = vis.split('\n');
+    const lineH = 22;
+    const padding = 16;
+    const minH = 80;
+
+    // 横幅に収まるよう折り返し
+    ctx.font = '16px monospace';
+    const maxWidth = W - 40 - padding * 2;
+    const lines = [];
+    for (const raw of rawLines) {
+      if (!raw) { lines.push(''); continue; }
+      let rest = raw;
+      while (rest.length > 0) {
+        let cut = Math.min(28, rest.length);
+        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut);
+      }
+    }
+
+    const neededH = padding * 2 + lines.length * lineH + 10;
+    const bh = Math.max(minH, Math.min(neededH, H * 0.45));
+    const bx = 20, by = H - bh - 20, bw = W - 40;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#F5A623';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const maxLines = Math.floor((bh - padding * 2) / lineH);
+    for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      ctx.fillText(lines[i], bx + padding, by + padding + i * lineH);
+    }
+
+    if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
+      ctx.fillStyle = '#F5A623';
+      ctx.fillText('▼', bx + bw - 32, by + bh - 24);
     }
   }
 
@@ -334,6 +369,7 @@ const Game = (() => {
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
     _dialogActive = false; _dialogQueue = [];
+    Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
     if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
     Collection.onAreaVisit(mapName);
@@ -439,6 +475,7 @@ const Game = (() => {
             }
             break;
           case 'save':
+            player.hp = player.maxHp;
             _showDialog(Lang.t('save_point_text'));
             Audio.playSe('save');
             break;
@@ -507,6 +544,8 @@ const Game = (() => {
   }
 
   function _drawMapScene(ctx) {
+    ctx.save();
+
     // killCount世界演出
     const worldFx = NpcManager.getWorldEffects(flags);
     if (worldFx.saturationShift < 0) {
@@ -521,7 +560,7 @@ const Game = (() => {
     PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
 
-    ctx.filter = 'none';
+    ctx.restore(); // filterを完全にリセット
 
     // 針ペナルティ: ビネット
     const penalties = NpcManager.getNeedlePenalty(flags);
@@ -584,7 +623,14 @@ const Game = (() => {
   function _drawHud(ctx){
     const W=CONFIG.CANVAS_WIDTH;
     // HP
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(8,8,200,28);
+    const hpDanger = player.hp === 1;
+    const hpBg = hpDanger && Math.sin(Date.now() / 120) > -0.3 ? 'rgba(220,0,0,0.72)' : 'rgba(0,0,0,0.5)';
+    ctx.fillStyle=hpBg; ctx.fillRect(8,8,200,28);
+    if (hpDanger) {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(8,8,200,28);
+    }
     ctx.fillStyle='#F5A623';ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
     ctx.fillText('HP:',14,22);
     for(let i=0;i<player.maxHp;i++){
@@ -611,6 +657,18 @@ const Game = (() => {
     ctx.fillText(_currentMapName,14,74);
     // 巣窟HUD
     if(Dungeon.isActive()) Dungeon.drawHud(ctx);
+
+    // 操作ガイド（開始60秒後からフェードアウト）
+    const guide='移動:矢印キー/WASD  攻撃:Z  必殺:X  会話:C/Enter  メニュー:Esc';
+    const guideAlpha = Math.max(0, Math.min(1, 1 - Math.max(0, _playtime - 60) / 8));
+    if (guideAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = guideAlpha;
+      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
+      ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+      ctx.restore();
+    }
   }
 
   /* ============ シーン管理 ============ */
@@ -628,6 +686,7 @@ const Game = (() => {
       case SCENE.VILLAGE:
         _initMapScene('village');
         if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        Shop.closeShop();
         if(!flags.quest_started) setTimeout(()=>_showDialog(Lang.t('mipurin_home')),500);
         break;
       case SCENE.FOREST_SOUTH:
@@ -687,8 +746,14 @@ const Game = (() => {
       default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);break;
     }
     if(CONFIG.DEBUG){
-      ctx.fillStyle='#0f0';ctx.font='12px monospace';ctx.textAlign='left';
-      ctx.fillText('Scene:'+_currentScene+' v'+CONFIG.VERSION+' Kill:'+flags.killCount+' Needle:'+flags.needleUseCount,4,CONFIG.CANVAS_HEIGHT-6);
+      const txt = `v${CONFIG.VERSION}`;
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      ctx.fillRect(CONFIG.CANVAS_WIDTH - 92, 6, 86, 18);
+      ctx.fillStyle='#0f0';
+      ctx.font='12px monospace';
+      ctx.textAlign='right';
+      ctx.textBaseline='middle';
+      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - 10, 15);
     }
   }
 

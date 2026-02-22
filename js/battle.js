@@ -6,6 +6,17 @@ const PlayerController = (() => {
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
 
+
+  function _clampPlayerToMap(player) {
+    const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
+    if (!map) return;
+    const ts = CONFIG.TILE_SIZE;
+    const maxX = map.cols * ts - ts;
+    const maxY = map.rows * ts - ts;
+    player.x = Math.max(0, Math.min(player.x, maxX));
+    player.y = Math.max(0, Math.min(player.y, maxY));
+  }
+
   function update(player, dt) {
     if (player.hitStopFrames > 0) { player.hitStopFrames--; return; }
 
@@ -13,6 +24,7 @@ const PlayerController = (() => {
     if (player.knockback.timer > 0) {
       player.x += player.knockback.x * dt * 60;
       player.y += player.knockback.y * dt * 60;
+      _clampPlayerToMap(player);
       player.knockback.timer -= dt;
       return;
     }
@@ -42,6 +54,7 @@ const PlayerController = (() => {
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
       }
+      // else: 壁なので現在位置を維持（スナップしない）
 
       /* Y軸 */
       const cC1 = Math.floor((player.x + margin) / ts), cC2 = Math.floor((player.x + ts - margin - 1) / ts);
@@ -50,9 +63,12 @@ const PlayerController = (() => {
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
       }
+      // else: 壁なので現在位置を維持（スナップしない）
     } else {
       player.animFrame = 0; player.animTimer = 0;
     }
+
+    _clampPlayerToMap(player);
 
     /* クールダウン（秒ベース） */
     if (player.attackCooldown > 0) player.attackCooldown -= dt;
@@ -60,7 +76,6 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-    if (!Engine.consumePress('interact')) return null;
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -71,6 +86,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SAVE_POINT) return { type: 'save' };
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
+    if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
     return null;
   }
 
@@ -156,7 +172,7 @@ const PlayerController = (() => {
     ctx.restore();
   }
 
-  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect };
+  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect, clampToMap: _clampPlayerToMap };
 })();
 
 /* ============================================================
@@ -167,12 +183,13 @@ const EnemyManager = (() => {
 
   /* 敵テンプレート */
   const TEMPLATES = {
-    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, movePattern: 'wander' },
-    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, movePattern: 'chase' },
-    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, movePattern: 'chase' },
-    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, movePattern: 'wander_fast' },
-    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, movePattern: 'wander' },
-    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' }
+    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, pollen: 1, movePattern: 'wander' },
+    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, pollen: 1, movePattern: 'chase' },
+    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, pollen: 2, movePattern: 'chase' },
+    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, pollen: 1, movePattern: 'wander_fast' },
+    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, pollen: 3, movePattern: 'wander' },
+    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, pollen: 3, movePattern: 'stationary' },
+    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, pollen: 2, movePattern: 'chase' }
   };
 
   function spawn(templateId, col, row) {
@@ -183,7 +200,7 @@ const EnemyManager = (() => {
       id: templateId, name: t.name,
       x: col * ts, y: row * ts,
       hp: t.hp, maxHp: t.hp, atk: t.atk, speed: t.speed,
-      color: t.color, symbol: t.symbol, xp: t.xp,
+      color: t.color, symbol: t.symbol, xp: t.xp, pollen: t.pollen || 1,
       movePattern: t.movePattern,
       moveTimer: Math.random() * 2,
       moveDir: { x: 0, y: 0 },
@@ -250,9 +267,10 @@ const EnemyManager = (() => {
   }
 
   function _damagePlayer(player, enemy) {
-    if (player.knockback.timer > 0) return; /* 無敵時間 */
+    if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
     player.hp -= enemy.atk;
     if (player.hp < 0) player.hp = 0;
+    player.invincibleTimer = 1.0; // 被ダメ後1秒間無敵
     /* ノックバック */
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
@@ -277,6 +295,8 @@ const EnemyManager = (() => {
         if (e.hp <= 0) {
           e.dead = true;
           flags.killCount++;
+          if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+          if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
         }
       }
     }
@@ -289,7 +309,12 @@ const EnemyManager = (() => {
       if (e.dead) continue;
       e.hp -= damage;
       e.hurtTimer = 0.5;
-      if (e.hp <= 0) { e.dead = true; flags.killCount++; }
+      if (e.hp <= 0) {
+        e.dead = true;
+        flags.killCount++;
+        if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
+        if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+      }
     }
     flags.needleUseCount++;
   }

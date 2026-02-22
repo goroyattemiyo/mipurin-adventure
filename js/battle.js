@@ -53,6 +53,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(tL,cR1)&&!MapManager.isSolid(tR,cR1)&&!MapManager.isSolid(tL,cR2)&&!MapManager.isSolid(tR,cR2)
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
+      } else {
+        // タイル境界にスナップ
+        if (dx > 0) player.x = Math.floor((player.x + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dx < 0) player.x = Math.ceil((player.x + margin) / ts) * ts - margin;
       }
       // else: 壁なので現在位置を維持（スナップしない）
 
@@ -62,6 +66,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
+      } else {
+        // タイル境界にスナップ
+        if (dy > 0) player.y = Math.floor((player.y + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dy < 0) player.y = Math.ceil((player.y + margin) / ts) * ts - margin;
       }
       // else: 壁なので現在位置を維持（スナップしない）
     } else {
@@ -75,7 +83,8 @@ const PlayerController = (() => {
     if (player.needleCooldown > 0) player.needleCooldown -= dt;
   }
 
-  function checkInteract(player) {
+   function checkInteract(player) {
+    // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;

@@ -97,15 +97,33 @@ const Game = (() => {
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
     const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const bx=20, by=H-150, bw=W-40, bh=130;
-    ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(bx,by,bw,bh);
-    ctx.strokeStyle='#F5A623'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
-    ctx.fillStyle='#fff'; ctx.font='16px monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
     const vis = _dialogText.substring(0, _dialogChars);
     const lines = vis.split('\n');
-    for (let i=0; i<lines.length; i++) ctx.fillText(lines[i], bx+16, by+16+i*22);
-    if (_dialogChars >= _dialogText.length && Math.sin(Date.now()/300)>0) {
-      ctx.fillStyle='#F5A623'; ctx.fillText('▼', bx+bw-32, by+bh-24);
+    const lineH = 22;
+    const padding = 16;
+    const minH = 80;
+    const neededH = padding * 2 + lines.length * lineH + 10;
+    const bh = Math.max(minH, Math.min(neededH, H * 0.45));
+    const bx = 20, by = H - bh - 20, bw = W - 40;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#F5A623';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const maxLines = Math.floor((bh - padding * 2) / lineH);
+    for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+      ctx.fillText(lines[i], bx + padding, by + padding + i * lineH);
+    }
+
+    if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
+      ctx.fillStyle = '#F5A623';
+      ctx.fillText('▼', bx + bw - 32, by + bh - 24);
     }
   }
 
@@ -334,6 +352,7 @@ const Game = (() => {
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
     _dialogActive = false; _dialogQueue = [];
+    Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
     if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
     Collection.onAreaVisit(mapName);
@@ -628,6 +647,7 @@ const Game = (() => {
       case SCENE.VILLAGE:
         _initMapScene('village');
         if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        Shop.closeShop();
         if(!flags.quest_started) setTimeout(()=>_showDialog(Lang.t('mipurin_home')),500);
         break;
       case SCENE.FOREST_SOUTH:

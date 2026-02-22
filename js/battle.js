@@ -60,7 +60,6 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-    if (!Engine.consumePress('interact')) return null;
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -71,6 +70,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SAVE_POINT) return { type: 'save' };
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
+    if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
     return null;
   }
 

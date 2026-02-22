@@ -31,6 +31,10 @@ const Audio = (() => {
   let _seVolume = 0.7;
   let _muted = false;
 
+  function _audioDisabled() {
+    return CONFIG && CONFIG.AUDIO_ENABLED === false;
+  }
+
   /* BGMマッピング */
   const BGM_MAP = {
     title:         'assets/music/title.mp3',
@@ -70,6 +74,7 @@ const Audio = (() => {
 
   /* ============ 初期化 ============ */
   function init() {
+    if (_audioDisabled()) return;
     // AudioContextはユーザー操作後に作成
     const settings = SaveManager.loadSettings();
     _bgmVolume = settings.bgmVolume !== undefined ? settings.bgmVolume : 0.5;
@@ -77,7 +82,7 @@ const Audio = (() => {
   }
 
   function _ensureContext() {
-    if (_ctx) return;
+    if (_audioDisabled() || _ctx) return;
     try {
       _ctx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -107,6 +112,7 @@ const Audio = (() => {
 
   /** AudioContextをユーザー操作で解除（iOS Safari対策） */
   function resume() {
+    if (_audioDisabled()) return;
     _ensureContext();
     if (_ctx && _ctx.state === 'suspended') {
       _ctx.resume();
@@ -128,6 +134,7 @@ const Audio = (() => {
 
   /** BGMプリロード（起動時に必要なものだけ） */
   async function preloadBgm(names) {
+    if (_audioDisabled()) return;
     _ensureContext();
     if (!_ctx) return;
     for (const name of names) {
@@ -141,6 +148,7 @@ const Audio = (() => {
 
   /** SE プリロード */
   async function preloadSe(names) {
+    if (_audioDisabled()) return;
     _ensureContext();
     if (!_ctx) return;
     for (const name of names) {
@@ -159,6 +167,7 @@ const Audio = (() => {
 
   /* ============ BGM再生 ============ */
   function playBgm(name, fadeInSec) {
+    if (_audioDisabled()) return;
     _ensureContext();
     if (!_ctx) return;
     if (_bgmName === name && _bgmPlaying) return; // 同じ曲が再生中
@@ -212,6 +221,7 @@ const Audio = (() => {
   }
 
   function stopBgm() {
+    if (_audioDisabled()) return;
     if (_bgmSource) {
       try { _bgmSource.stop(); } catch (e) {}
       _bgmSource.disconnect();
@@ -223,12 +233,14 @@ const Audio = (() => {
   }
 
   function fadeToBgm(name, crossFadeSec) {
+    if (_audioDisabled()) return;
     crossFadeSec = crossFadeSec || 1.0;
     _fadeOutBgm(crossFadeSec * 0.5, () => _startBgm(name, crossFadeSec * 0.5));
   }
 
   /* ============ SE再生 ============ */
   function playSe(name) {
+    if (_audioDisabled()) return;
     _ensureContext();
     if (!_ctx || _muted) return;
 
@@ -303,6 +315,7 @@ const Audio = (() => {
 
   /* ============ ボリューム制御 ============ */
   function setBgmVolume(v) {
+    if (_audioDisabled()) return;
     _bgmVolume = Math.max(0, Math.min(1, v));
     if (_bgmGain && !_bgmFading) {
       _bgmGain.gain.setTargetAtTime(_muted ? 0 : _bgmVolume, _ctx ? _ctx.currentTime : 0, 0.1);
@@ -311,6 +324,7 @@ const Audio = (() => {
   }
 
   function setSeVolume(v) {
+    if (_audioDisabled()) return;
     _seVolume = Math.max(0, Math.min(1, v));
     if (_seGain) {
       _seGain.gain.setTargetAtTime(_muted ? 0 : _seVolume, _ctx ? _ctx.currentTime : 0, 0.1);

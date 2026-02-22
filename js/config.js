@@ -40,7 +40,7 @@ const CONFIG = {
   IMAGE_SMOOTHING: false,
 
   // 音響
-  AUDIO_ENABLED: false, // 音声アセット未配置時はfalse
+  AUDIO_ENABLED: true, // 音声アセット未配置時はfalse
   BGM_VOLUME: 0.5,
   SE_VOLUME: 0.7,
 

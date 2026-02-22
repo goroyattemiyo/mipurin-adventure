@@ -54,11 +54,8 @@ const PlayerController = (() => {
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
       } else {
-        // タイル境界にスナップ
-        if (dx > 0) player.x = Math.floor((player.x + ts - margin - 1) / ts) * ts - ts + margin;
-        if (dx < 0) player.x = Math.ceil((player.x + margin) / ts) * ts - margin;
+        
       }
-      // else: 壁なので現在位置を維持（スナップしない）
 
       /* Y軸 */
       const cC1 = Math.floor((player.x + margin) / ts), cC2 = Math.floor((player.x + ts - margin - 1) / ts);

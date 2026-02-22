@@ -576,7 +576,7 @@ const Game = (() => {
     ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.textAlign = 'right';
-    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_W - 8, CONFIG.CANVAS_H - 8);
+    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - 8, CONFIG.CANVAS_HEIGHT - 8);
     ctx.restore();
     }
   }

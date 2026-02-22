@@ -1,14 +1,15 @@
 /**
  * battle.js - プレイヤー操作・移動・攻撃・敵管理
- * ミプリンの冒険 v0.4.0
+ * ミプリンの冒険 v0.6.0
  */
 const PlayerController = (() => {
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
+
   /* スプライトアニメーター */
   let _animator = null;
   function _ensureAnimator() {
-    if (!_animator && SpriteManager.isLoaded('player')) {
+    if (!_animator && typeof SpriteManager !== 'undefined' && SpriteManager.isLoaded('player')) {
       _animator = SpriteManager.createAnimator('player');
       _animator.play('idle_down');
     }
@@ -23,6 +24,42 @@ const PlayerController = (() => {
     const maxY = map.rows * ts - ts;
     player.x = Math.max(0, Math.min(player.x, maxX));
     player.y = Math.max(0, Math.min(player.y, maxY));
+  }
+
+  /* ---- アニメーション状態を更新（updateとは独立して毎フレーム呼ぶ） ---- */
+  function updateAnimation(player, dt) {
+    const anim = _ensureAnimator();
+    if (!anim) return;
+
+    // ノックバック中・被ダメ中
+    if (player.knockback.timer > 0) {
+      anim.play('hurt');
+      anim.update(dt);
+      return;
+    }
+
+    // 死亡中
+    if (player.hp <= 0) {
+      anim.play('dead');
+      anim.update(dt);
+      return;
+    }
+
+    // 攻撃中
+    if (player.attackCooldown > 0.15) {
+      anim.play('attack_down');
+      anim.update(dt);
+      return;
+    }
+
+    // 移動中 or idle
+    const moving = Engine.isPressed('up') || Engine.isPressed('down') || Engine.isPressed('left') || Engine.isPressed('right');
+    if (moving) {
+      anim.play('walk_' + player.dir);
+    } else {
+      anim.play('idle_' + player.dir);
+    }
+    anim.update(dt);
   }
 
   function update(player, dt) {
@@ -61,8 +98,6 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(tL,cR1)&&!MapManager.isSolid(tR,cR1)&&!MapManager.isSolid(tL,cR2)&&!MapManager.isSolid(tR,cR2)
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
-      } else {
-        
       }
 
       /* Y軸 */
@@ -73,16 +108,6 @@ const PlayerController = (() => {
         player.y = newPy;
       }
     }
-    /* スプライトアニメーション更新 */
-    const anim = _ensureAnimator();
-    if (anim) {
-      if (dx !== 0 || dy !== 0) {
-        anim.play('walk_' + player.dir);
-      } else {
-        anim.play('idle_' + player.dir);
-      }
-      anim.update(dt);
-    }
 
     _clampPlayerToMap(player);
 
@@ -92,7 +117,6 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-  // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -129,7 +153,7 @@ const PlayerController = (() => {
     return { x: ax - size/2, y: ay - size/2, w: size, h: size };
   }
 
-    function draw(ctx, player) {
+  function draw(ctx, player) {
     const ts = CONFIG.TILE_SIZE;
     const x = Math.round(player.x), y = Math.round(player.y);
 
@@ -147,9 +171,9 @@ const PlayerController = (() => {
     const anim = _ensureAnimator();
     if (anim) {
       ctx.save();
-      /* 被ダメ中は赤く光る */
+      /* 無敵中は点滅 */
       if (player.invincibleTimer > 0 && Math.floor(Date.now() / 100) % 3 === 0) {
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = 0.4;
       }
       const drawn = anim.draw(ctx, x, y, ts, ts);
       ctx.restore();
@@ -176,7 +200,6 @@ const PlayerController = (() => {
     }
     ctx.fill();
   }
-
 
   /* ── 攻撃エフェクト描画 ── */
   function drawAttackEffect(ctx, player, timer) {
@@ -208,7 +231,7 @@ const PlayerController = (() => {
     ctx.restore();
   }
 
-  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect, clampToMap: _clampPlayerToMap };
+  return { update, updateAnimation, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect, clampToMap: _clampPlayerToMap };
 })();
 
 /* ============================================================
@@ -217,7 +240,6 @@ const PlayerController = (() => {
 const EnemyManager = (() => {
   let _enemies = [];
 
-  /* 敵テンプレート */
   const TEMPLATES = {
     poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, movePattern: 'wander' },
     green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, movePattern: 'chase' },
@@ -278,7 +300,6 @@ const EnemyManager = (() => {
         }
       }
 
-      /* 移動 */
       if (e.speed > 0) {
         const nx = e.x + e.moveDir.x * e.speed * dt * 60;
         const ny = e.y + e.moveDir.y * e.speed * dt * 60;
@@ -292,13 +313,10 @@ const EnemyManager = (() => {
         }
       }
 
-      /* プレイヤーとの接触ダメージ */
       if (dist < ts * 0.7) {
         _damagePlayer(player, e);
       }
     }
-
-    /* 死亡除去 */
     _enemies = _enemies.filter(e => !e.dead);
   }
 
@@ -306,8 +324,7 @@ const EnemyManager = (() => {
     if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
     player.hp -= enemy.atk;
     if (player.hp < 0) player.hp = 0;
-    player.invincibleTimer = 1.0; // 被ダメ後1秒間無敵
-    /* ノックバック */
+    player.invincibleTimer = 1.0;
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
     player.knockback.x = (dx/dist) * 3;
@@ -317,7 +334,6 @@ const EnemyManager = (() => {
     Engine.triggerShake(4, 6);
   }
 
-  /* ── 攻撃ヒット判定 ── */
   function checkAttackHit(box, damage, flags) {
     let hitAny = false;
     for (const e of _enemies) {
@@ -339,7 +355,6 @@ const EnemyManager = (() => {
     return hitAny;
   }
 
-  /* ── 針の一撃（全画面ダメージ） ── */
   function needleBlast(damage, flags) {
     for (const e of _enemies) {
       if (e.dead) continue;
@@ -360,21 +375,13 @@ const EnemyManager = (() => {
     for (const e of _enemies) {
       if (e.dead) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
-
-      /* 被ダメ点滅 */
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
-
-      /* 体 */
       ctx.fillStyle = e.color;
       ctx.beginPath(); ctx.arc(x+ts/2, y+ts/2, ts/2-3, 0, Math.PI*2); ctx.fill();
       ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(x+ts/2, y+ts/2, ts/2-3, 0, Math.PI*2); ctx.stroke();
-
-      /* 記号 */
       ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(e.symbol, x+ts/2, y+ts/2);
-
-      /* HPバー */
       if (e.hp < e.maxHp) {
         const bw = ts-4, bh = 3;
         ctx.fillStyle = '#333'; ctx.fillRect(x+2, y-4, bw, bh);

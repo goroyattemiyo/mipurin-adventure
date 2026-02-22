@@ -423,6 +423,7 @@ const Game = (() => {
 
     // プレイヤー移動
     PlayerController.update(player, dt);
+    PlayerController.updateAnimation(player, dt);
 
     // 攻撃（Zキー）
     if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
@@ -777,7 +778,7 @@ const Game = (() => {
     if (typeof SpriteManager !== 'undefined') {
       SpriteManager.loadAll().then(() => { console.log('Sprites loaded'); });
     }
-    
+
     // 設定復元
     _settings = SaveManager.loadSettings();
     if(_settings.colorblind) document.body.classList.add('colorblind');

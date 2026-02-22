@@ -84,8 +84,7 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-   function checkInteract(player) {
-    // consumePressはgame.js側で済んでいるのでここでは不要
+  // consumePressはgame.js側で済んでいるのでここでは不要
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;

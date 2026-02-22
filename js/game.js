@@ -726,8 +726,14 @@ const Game = (() => {
       default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);break;
     }
     if(CONFIG.DEBUG){
-      ctx.fillStyle='#0f0';ctx.font='12px monospace';ctx.textAlign='left';
-      ctx.fillText('Scene:'+_currentScene+' v'+CONFIG.VERSION+' Kill:'+flags.killCount+' Needle:'+flags.needleUseCount,4,CONFIG.CANVAS_HEIGHT-6);
+      const txt = `v${CONFIG.VERSION}`;
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      ctx.fillRect(CONFIG.CANVAS_WIDTH - 92, 6, 86, 18);
+      ctx.fillStyle='#0f0';
+      ctx.font='12px monospace';
+      ctx.textAlign='right';
+      ctx.textBaseline='middle';
+      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - 10, 15);
     }
   }
 

@@ -6,6 +6,17 @@ const PlayerController = (() => {
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
 
+
+  function _clampPlayerToMap(player) {
+    const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
+    if (!map) return;
+    const ts = CONFIG.TILE_SIZE;
+    const maxX = map.cols * ts - ts;
+    const maxY = map.rows * ts - ts;
+    player.x = Math.max(0, Math.min(player.x, maxX));
+    player.y = Math.max(0, Math.min(player.y, maxY));
+  }
+
   function update(player, dt) {
     if (player.hitStopFrames > 0) { player.hitStopFrames--; return; }
 
@@ -13,6 +24,7 @@ const PlayerController = (() => {
     if (player.knockback.timer > 0) {
       player.x += player.knockback.x * dt * 60;
       player.y += player.knockback.y * dt * 60;
+      _clampPlayerToMap(player);
       player.knockback.timer -= dt;
       return;
     }
@@ -63,6 +75,8 @@ const PlayerController = (() => {
     } else {
       player.animFrame = 0; player.animTimer = 0;
     }
+
+    _clampPlayerToMap(player);
 
     /* クールダウン（秒ベース） */
     if (player.attackCooldown > 0) player.attackCooldown -= dt;
@@ -167,7 +181,7 @@ const PlayerController = (() => {
     ctx.restore();
   }
 
-  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect };
+  return { update, checkInteract, checkExit, getAttackBox, draw, drawAttackEffect, drawNeedleEffect, clampToMap: _clampPlayerToMap };
 })();
 
 /* ============================================================

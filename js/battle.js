@@ -15,17 +15,6 @@ const PlayerController = (() => {
     return _animator;
   }
 
-/* スプライトアニメーション更新 */
-    const anim = _ensureAnimator();
-    if (anim) {
-      if (dx !== 0 || dy !== 0) {
-        anim.play('walk_' + player.dir);
-      } else {
-        anim.play('idle_' + player.dir);
-      }
-      anim.update(dt);
-    }
-
   function _clampPlayerToMap(player) {
     const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
     if (!map) return;
@@ -83,6 +72,16 @@ const PlayerController = (() => {
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
       }
+    }
+    /* スプライトアニメーション更新 */
+    const anim = _ensureAnimator();
+    if (anim) {
+      if (dx !== 0 || dy !== 0) {
+        anim.play('walk_' + player.dir);
+      } else {
+        anim.play('idle_' + player.dir);
+      }
+      anim.update(dt);
     }
 
     _clampPlayerToMap(player);

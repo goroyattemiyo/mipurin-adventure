@@ -67,5 +67,5 @@ const CONFIG = {
   DEBUG: new URLSearchParams(window.location.search).get('debug') === '1',
 
   // バージョン
-  VERSION: '0.1.0'
+  VERSION: '0.2.0'
 };

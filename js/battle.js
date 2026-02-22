@@ -41,6 +41,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(tL,cR1)&&!MapManager.isSolid(tR,cR1)&&!MapManager.isSolid(tL,cR2)&&!MapManager.isSolid(tR,cR2)
         &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
         player.x = newPx;
+      } else {
+        // タイル境界にスナップ
+        if (dx > 0) player.x = Math.floor((player.x + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dx < 0) player.x = Math.ceil((player.x + margin) / ts) * ts - margin;
       }
 
       /* Y軸 */
@@ -49,6 +53,10 @@ const PlayerController = (() => {
       if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
+      } else {
+        // タイル境界にスナップ
+        if (dy > 0) player.y = Math.floor((player.y + ts - margin - 1) / ts) * ts - ts + margin;
+        if (dy < 0) player.y = Math.ceil((player.y + margin) / ts) * ts - margin;
       }
     } else {
       player.animFrame = 0; player.animTimer = 0;
@@ -60,7 +68,6 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-    if (!Engine.consumePress('interact')) return null;
     const ts = CONFIG.TILE_SIZE;
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
@@ -71,6 +78,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SAVE_POINT) return { type: 'save' };
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
+    if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
     return null;
   }
 
@@ -172,7 +180,8 @@ const EnemyManager = (() => {
     spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, movePattern: 'chase' },
     bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, movePattern: 'wander_fast' },
     ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, movePattern: 'wander' },
-    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' }
+    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' },
+    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, movePattern: 'chase' }
   };
 
   function spawn(templateId, col, row) {
@@ -250,9 +259,10 @@ const EnemyManager = (() => {
   }
 
   function _damagePlayer(player, enemy) {
-    if (player.knockback.timer > 0) return; /* 無敵時間 */
+    if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
     player.hp -= enemy.atk;
     if (player.hp < 0) player.hp = 0;
+    player.invincibleTimer = 1.0; // 被ダメ後1秒間無敵
     /* ノックバック */
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;

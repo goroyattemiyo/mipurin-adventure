@@ -158,11 +158,10 @@ const Inventory = (() => {
 
   function drawUI(ctx) {
     if (!_isOpen) return;
-    const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const bx = 80, by = 40, bw = W - 160, bh = H - 80;
+    const bx = 640 + 10, by = 10, bw = 300, bh = 460;
 
     // 背景
-    ctx.fillStyle = 'rgba(0,0,0,0.9)';
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.strokeStyle = '#F5A623'; ctx.lineWidth = 2;
     ctx.strokeRect(bx, by, bw, bh);
@@ -170,16 +169,16 @@ const Inventory = (() => {
     // タイトル
     ctx.fillStyle = '#F5A623'; ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('もちもの', W / 2, by + 12);
+    ctx.fillText('もちもの', bx + bw / 2, by + 12);
 
     // アイテムリスト
     ctx.textAlign = 'left'; ctx.font = '16px monospace';
     const startY = by + 50;
-    const lineH = 28;
+    const lineH = 24;
 
     if (_items.length === 0) {
       ctx.fillStyle = '#888';
-      ctx.fillText('なにも もっていない', bx + 30, startY);
+      ctx.fillText('なにも もっていない', bx + 20, startY);
     }
 
     for (let i = 0; i < _items.length; i++) {
@@ -197,14 +196,14 @@ const Inventory = (() => {
       ctx.fillStyle = def.color || '#fff';
       ctx.fillText(def.icon, bx + 36, y);
       ctx.fillStyle = selected ? '#fff' : '#ccc';
-      ctx.fillText(def.name, bx + 60, y);
+      ctx.fillText(def.name, bx + 58, y);
       if (def.stackable && item.count > 1) {
         ctx.fillStyle = '#aaa';
-        ctx.fillText('×' + item.count, bx + bw - 80, y);
+        ctx.fillText('×' + item.count, bx + bw - 70, y);
       }
       if (def.type === 'key') {
         ctx.fillStyle = '#F5A623';
-        ctx.fillText('[キー]', bx + bw - 80, y);
+        ctx.fillText('[キー]', bx + bw - 70, y);
       }
     }
 
@@ -212,21 +211,21 @@ const Inventory = (() => {
     if (_items[_cursor]) {
       const def = ITEM_DEFS[_items[_cursor].id];
       ctx.fillStyle = 'rgba(0,0,0,0.8)';
-      ctx.fillRect(bx + 10, by + bh - 60, bw - 20, 50);
+      ctx.fillRect(bx + 10, by + bh - 64, bw - 20, 54);
       ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
-      ctx.strokeRect(bx + 10, by + bh - 60, bw - 20, 50);
+      ctx.strokeRect(bx + 10, by + bh - 64, bw - 20, 54);
       ctx.fillStyle = '#ddd'; ctx.font = '13px monospace';
       ctx.textAlign = 'left';
-      const descLines = def.desc.match(/.{1,40}/g) || [def.desc];
+      const descLines = def.desc.match(/.{1,26}/g) || [def.desc];
       for (let i = 0; i < descLines.length && i < 2; i++) {
-        ctx.fillText(descLines[i], bx + 20, by + bh - 46 + i * 18);
+        ctx.fillText(descLines[i], bx + 18, by + bh - 50 + i * 18);
       }
     }
 
     // 操作ガイド
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('↑↓: えらぶ　Z: つかう　I/Esc: とじる', W / 2, by + bh - 8);
+    ctx.fillText('↑↓: えらぶ　Z: つかう　I/Esc: とじる', bx + bw / 2, by + bh - 8);
   }
 
   return {

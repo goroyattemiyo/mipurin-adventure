@@ -147,11 +147,10 @@ const Shop = (() => {
 
   function drawShopUI(ctx, pollenCount) {
     if (!_shopOpen) return;
-    const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const bx = 100, by = 50, bw = W - 200, bh = H - 100;
+    const bx = 640 + 8, by = 8, bw = 304, bh = 464;
 
     // 背景
-    ctx.fillStyle = 'rgba(0,0,0,0.92)';
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.strokeStyle = '#E67E22'; ctx.lineWidth = 2;
     ctx.strokeRect(bx, by, bw, bh);
@@ -159,30 +158,30 @@ const Shop = (() => {
     // タイトル
     ctx.fillStyle = '#E67E22'; ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('マルシェの おみせ', W / 2, by + 10);
+    ctx.fillText('マルシェの おみせ', bx + bw / 2, by + 10);
 
     // 所持ポーレン
     ctx.fillStyle = '#F1C40F'; ctx.font = '14px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText('ポーレン: ' + pollenCount, bx + bw - 16, by + 12);
+    ctx.fillText('ポーレン: ' + pollenCount, bx + bw - 14, by + 12);
 
     // タブ
     const tabY = by + 38;
     const tabs = ['アイテム', 'スキン'];
     for (let i = 0; i < tabs.length; i++) {
-      const tx = bx + 20 + i * 140;
+      const tx = bx + 14 + i * 120;
       const active = (i === _shopTab);
       ctx.fillStyle = active ? 'rgba(230,126,34,0.3)' : 'transparent';
-      ctx.fillRect(tx, tabY, 120, 22);
+      ctx.fillRect(tx, tabY, 110, 22);
       ctx.fillStyle = active ? '#E67E22' : '#888';
       ctx.font = active ? 'bold 14px monospace' : '14px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(tabs[i], tx + 60, tabY + 4);
+      ctx.fillText(tabs[i], tx + 55, tabY + 4);
     }
 
     const listY = tabY + 34;
     const lineH = 28;
-    ctx.textAlign = 'left'; ctx.font = '15px monospace';
+    ctx.textAlign = 'left'; ctx.font = '14px monospace';
 
     if (_shopTab === 0) {
       // アイテム一覧
@@ -206,9 +205,9 @@ const Shop = (() => {
 
         ctx.textAlign = 'right';
         ctx.fillStyle = pollenCount >= entry.price ? '#F1C40F' : '#C0392B';
-        ctx.fillText(entry.price + 'P', bx + bw - 80, y);
+        ctx.fillText(entry.price + 'P', bx + bw - 70, y);
         ctx.fillStyle = entry.remaining > 0 ? '#aaa' : '#666';
-        ctx.fillText('残' + entry.remaining, bx + bw - 20, y);
+        ctx.fillText('残' + entry.remaining, bx + bw - 12, y);
         ctx.textAlign = 'left';
       }
 
@@ -217,9 +216,9 @@ const Shop = (() => {
         const def = Inventory.ITEM_DEFS[_shopStock[_shopCursor].itemId];
         if (def) {
           ctx.fillStyle = 'rgba(0,0,0,0.7)';
-          ctx.fillRect(bx + 10, by + bh - 55, bw - 20, 40);
+          ctx.fillRect(bx + 10, by + bh - 60, bw - 20, 44);
           ctx.fillStyle = '#ddd'; ctx.font = '12px monospace'; ctx.textAlign = 'left';
-          ctx.fillText(def.desc.substring(0, 50), bx + 18, by + bh - 40);
+          ctx.fillText(def.desc.substring(0, 34), bx + 18, by + bh - 42);
         }
       }
     } else {
@@ -240,28 +239,28 @@ const Shop = (() => {
         }
 
         ctx.fillStyle = selected ? '#fff' : '#ccc';
-        ctx.fillText(skinDef.name, bx + 36, y);
+        ctx.fillText(skinDef.name, bx + 34, y);
 
         ctx.textAlign = 'right';
         if (equipped) {
-          ctx.fillStyle = '#2ECC71'; ctx.fillText('そうびちゅう', bx + bw - 20, y);
+          ctx.fillStyle = '#2ECC71'; ctx.fillText('そうびちゅう', bx + bw - 12, y);
         } else if (owned) {
-          ctx.fillStyle = '#3498DB'; ctx.fillText('そうびする', bx + bw - 20, y);
+          ctx.fillStyle = '#3498DB'; ctx.fillText('そうびする', bx + bw - 12, y);
         } else {
-          ctx.fillStyle = '#F1C40F'; ctx.fillText('¥' + skinDef.price, bx + bw - 20, y);
+          ctx.fillStyle = '#F1C40F'; ctx.fillText('¥' + skinDef.price, bx + bw - 12, y);
         }
         ctx.textAlign = 'left';
       }
 
       // Pay-to-Win禁止の注意書き
       ctx.fillStyle = '#888'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('スキンは見た目だけの変更です', W / 2, by + bh - 55);
+      ctx.fillText('スキンは見た目だけの変更です', bx + bw / 2, by + bh - 60);
     }
 
     // 操作ガイド
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('←→: タブ　↑↓: えらぶ　Z: けってい　Esc: とじる', W / 2, by + bh - 8);
+    ctx.fillText('←→: タブ　↑↓: えらぶ　Z: けってい　Esc: とじる', bx + bw / 2, by + bh - 8);
   }
 
   /* ============ ハイスコア送信 ============ */

@@ -128,6 +128,7 @@ const PlayerController = (() => {
     if (tile === MapManager.TILE.SIGN) return { type: 'sign' };
     if (tile === MapManager.TILE.CHEST) return { type: 'chest' };
     if (tile === MapManager.TILE.STUMP) return { type: 'stump' };
+    if (tile === MapManager.TILE.SEAL_WALL) return { type: 'seal_wall', col: tc, row: tr };
     return null;
   }
 
@@ -240,15 +241,19 @@ const PlayerController = (() => {
 const EnemyManager = (() => {
   let _enemies = [];
 
-  const TEMPLATES = {
-    poison_mushroom: { name: 'どくキノコ', hp: 3, atk: 1, speed: 0.8, color: '#9B59B6', symbol: '🍄', xp: 1, movePattern: 'wander' },
-    green_slime:     { name: 'みどりスライム', hp: 4, atk: 1, speed: 0.6, color: '#2ECC71', symbol: '🟢', xp: 1, movePattern: 'chase' },
-    spider:          { name: 'ハエトリグモ', hp: 5, atk: 2, speed: 1.2, color: '#E74C3C', symbol: '🕷', xp: 2, movePattern: 'chase' },
-    bat:             { name: 'コウモリ', hp: 3, atk: 1, speed: 1.5, color: '#8E44AD', symbol: '🦇', xp: 1, movePattern: 'wander_fast' },
-    ice_worm:        { name: 'アイスワーム', hp: 6, atk: 2, speed: 0.5, color: '#3498DB', symbol: '🐛', xp: 2, movePattern: 'wander' },
-    dark_flower:     { name: 'ダークフラワー', hp: 4, atk: 2, speed: 0, color: '#C0392B', symbol: '🌺', xp: 2, movePattern: 'stationary' },
-    shadow_bee:      { name: 'シャドウビー', hp: 5, atk: 2, speed: 1.3, color: '#2C3E50', symbol: '🐝', xp: 2, movePattern: 'chase' }
-  };
+  const TEMPLATES = Balance.ENEMIES;
+
+  function _normalizePattern(pattern) {
+    switch (pattern) {
+      case 'ambush': return 'chase';
+      case 'explode': return 'wander_fast';
+      case 'swoop': return 'wander_fast';
+      case 'burrow': return 'wander';
+      case 'root_attack': return 'stationary';
+      case 'dive': return 'chase';
+      default: return pattern || 'wander';
+    }
+  }
 
   function spawn(templateId, col, row) {
     const t = TEMPLATES[templateId];
@@ -259,7 +264,7 @@ const EnemyManager = (() => {
       x: col * ts, y: row * ts,
       hp: t.hp, maxHp: t.hp, atk: t.atk, speed: t.speed,
       color: t.color, symbol: t.symbol, xp: t.xp, pollen: t.pollen || 1,
-      movePattern: t.movePattern,
+      movePattern: _normalizePattern(t.pattern || t.movePattern),
       moveTimer: Math.random() * 2,
       moveDir: { x: 0, y: 0 },
       hurtTimer: 0, dead: false

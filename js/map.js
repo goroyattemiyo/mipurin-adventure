@@ -42,6 +42,53 @@ const MapManager = (() => {
   const _maps = {};
   let _currentMap = null;
   let _currentMapName = '';
+  let _bgCanvas = null;
+  let _bgCtx = null;
+  let _bgDirty = true;
+
+  function _ensureBgCanvas(map) {
+    const ts = CONFIG.TILE_SIZE;
+    const w = map.cols * ts;
+    const h = map.rows * ts;
+    if (!_bgCanvas) _bgCanvas = document.createElement('canvas');
+    if (_bgCanvas.width !== w || _bgCanvas.height !== h) {
+      _bgCanvas.width = w;
+      _bgCanvas.height = h;
+    }
+    if (!_bgCtx) _bgCtx = _bgCanvas.getContext('2d');
+  }
+
+  function _renderBackground() {
+    if (!_currentMap || !_bgCtx || !_bgCanvas) return;
+    const ts = CONFIG.TILE_SIZE;
+    _bgCtx.clearRect(0, 0, _bgCanvas.width, _bgCanvas.height);
+    _bgCtx.font = '16px sans-serif';
+    _bgCtx.textAlign = 'center';
+    _bgCtx.textBaseline = 'middle';
+    for (let row=0; row<_currentMap.rows; row++) {
+      for (let col=0; col<_currentMap.cols; col++) {
+        const tile = _currentMap.data[row*_currentMap.cols+col];
+        const x = col*ts, y = row*ts;
+        _bgCtx.fillStyle = TILE_COLORS[tile]||'#333'; _bgCtx.fillRect(x,y,ts,ts);
+        _bgCtx.strokeStyle = 'rgba(0,0,0,0.1)'; _bgCtx.strokeRect(x,y,ts,ts);
+        const sym = TILE_SYMBOLS[tile];
+        if (sym) { _bgCtx.fillStyle='#fff'; _bgCtx.fillText(sym,x+ts/2,y+ts/2); }
+      }
+    }
+  }
+
+  function _prepareNpcCanvas(npc) {
+    const ts = CONFIG.TILE_SIZE;
+    const canvas = document.createElement('canvas');
+    canvas.width = ts;
+    canvas.height = ts;
+    const c = canvas.getContext('2d');
+    c.fillStyle = npc.color||'#fff';
+    c.beginPath(); c.arc(ts/2, ts/2, ts/2-2, 0, Math.PI*2); c.fill();
+    c.font = '18px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(npc.symbol||'?', ts/2, ts/2);
+    npc._canvas = canvas;
+  }
 
   /* ── 村マップ ── */
   _maps.village = {
@@ -221,7 +268,14 @@ const MapManager = (() => {
   function loadMap(name) {
     const map = _maps[name];
     if (!map) { console.warn('マップが見つかりません:', name); return null; }
-    _currentMap = map; _currentMapName = name; return map;
+    _currentMap = map; _currentMapName = name;
+    _ensureBgCanvas(map);
+    _renderBackground();
+    _bgDirty = false;
+    if (_currentMap.npcs) {
+      for (const npc of _currentMap.npcs) { _prepareNpcCanvas(npc); }
+    }
+    return map;
   }
 
   function getTile(col, row) {
@@ -234,6 +288,7 @@ const MapManager = (() => {
     if (!_currentMap) return false;
     if (col<0||col>=_currentMap.cols||row<0||row>=_currentMap.rows) return false;
     _currentMap.data[row * _currentMap.cols + col] = tile;
+    _bgDirty = true;
     return true;
   }
 
@@ -243,17 +298,11 @@ const MapManager = (() => {
 
   function draw(ctx) {
     if (!_currentMap) return;
-    const ts = CONFIG.TILE_SIZE;
-    for (let row=0; row<_currentMap.rows; row++) {
-      for (let col=0; col<_currentMap.cols; col++) {
-        const tile = _currentMap.data[row*_currentMap.cols+col];
-        const x = col*ts, y = row*ts;
-        ctx.fillStyle = TILE_COLORS[tile]||'#333'; ctx.fillRect(x,y,ts,ts);
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.strokeRect(x,y,ts,ts);
-        const sym = TILE_SYMBOLS[tile];
-        if (sym) { ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.fillText(sym,x+ts/2,y+ts/2); }
-      }
+    if (_bgDirty) {
+      _renderBackground();
+      _bgDirty = false;
     }
+    if (_bgCanvas) ctx.drawImage(_bgCanvas, 0, 0);
   }
 
   function drawNpcs(ctx) {
@@ -261,8 +310,11 @@ const MapManager = (() => {
     const ts = CONFIG.TILE_SIZE;
     for (const npc of _currentMap.npcs) {
       const x=npc.x*ts, y=npc.y*ts;
-      ctx.fillStyle=npc.color||'#fff'; ctx.beginPath(); ctx.arc(x+ts/2,y+ts/2,ts/2-2,0,Math.PI*2); ctx.fill();
-      ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(npc.symbol||'?',x+ts/2,y+ts/2);
+      if (npc._canvas) ctx.drawImage(npc._canvas, x, y);
+      else {
+        ctx.fillStyle=npc.color||'#fff'; ctx.beginPath(); ctx.arc(x+ts/2,y+ts/2,ts/2-2,0,Math.PI*2); ctx.fill();
+        ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(npc.symbol||'?',x+ts/2,y+ts/2);
+      }
     }
   }
 

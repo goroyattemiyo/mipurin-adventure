@@ -73,6 +73,7 @@ const Game = (() => {
   const _areaBannerDuration = 2.0;
   let _pendingPlayerPosition = null;
   let _logEntries = [];
+  let _autoSaveCooldown = 0;
 
   /* ============ ダイアログ ============ */
   let _dialogText = '';
@@ -541,6 +542,7 @@ const Game = (() => {
     _areaBannerText = _getMapDisplayName(mapName);
     _areaBannerTimer = _areaBannerDuration;
     _miniMapDirty = true;
+    _autoSaveCooldown = 0;
     _addLog('エリア到達: ' + _getMapDisplayName(mapName));
     if (_pendingBossDialog) {
       const msg = _pendingBossDialog;
@@ -684,6 +686,31 @@ const Game = (() => {
     // 設定の無敵モード
     if (_settings.invincible) player.hp = player.maxHp;
 
+    // Auto-save when stepping on save point
+    if (_autoSaveCooldown > 0) _autoSaveCooldown -= dt;
+    const ts = CONFIG.TILE_SIZE;
+    const playerCol = Math.floor((player.x + ts/2) / ts);
+    const playerRow = Math.floor((player.y + ts/2) / ts);
+    const currentTile = MapManager.getTile(playerCol, playerRow);
+    if (currentTile === MapManager.TILE.SAVE_POINT && _autoSaveCooldown <= 0) {
+      _autoSaveCooldown = 3.0; // 3 second cooldown to avoid repeated saves
+      player.hp = player.maxHp;
+      if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
+        const saveState = {
+          scene: _currentScene,
+          player,
+          flags,
+          inventory: Inventory.serialize(),
+          mapName: _currentMapName,
+          playtime: _playtime
+        };
+        SaveManager.saveGame(0, saveState);
+      }
+      _showDialog(Lang.t('save_success'));
+      _addLog('セーブしました');
+      Audio.playSe('save');
+    }
+
     // インタラクション
     if (Engine.consumePress('interact')) {
       const interact = PlayerController.checkInteract(player);
@@ -700,21 +727,24 @@ const Game = (() => {
             }
             break;
           case 'save':
-            player.hp = player.maxHp;
-            if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
-              const saveState = {
-                scene: _currentScene,
-                player,
-                flags,
-                inventory: Inventory.serialize(),
-                mapName: _currentMapName,
-                playtime: _playtime
-              };
-              SaveManager.saveGame(0, saveState);
+            if (_autoSaveCooldown <= 0) {
+              _autoSaveCooldown = 3.0;
+              player.hp = player.maxHp;
+              if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
+                const saveState = {
+                  scene: _currentScene,
+                  player,
+                  flags,
+                  inventory: Inventory.serialize(),
+                  mapName: _currentMapName,
+                  playtime: _playtime
+                };
+                SaveManager.saveGame(0, saveState);
+              }
+              _showDialog(Lang.t('save_success'));
+              _addLog('セーブしました');
+              Audio.playSe('save');
             }
-            _showDialog(Lang.t('save_success'));
-            _addLog('セーブしました');
-            Audio.playSe('save');
             break;
           case 'sign':
             const signKey = 'sign_' + _currentMapName;

@@ -13,6 +13,12 @@ const Game = (() => {
     GAMEOVER:'gameover', COLLECTION:'collection', CREDITS:'credits'
   };
 
+  const PANEL = {
+    MAP_W: 640, MAP_H: 480,
+    RIGHT_X: 640, RIGHT_Y: 0, RIGHT_W: 320, RIGHT_H: 480,
+    BOTTOM_X: 0, BOTTOM_Y: 480, BOTTOM_W: 960, BOTTOM_H: 240
+  };
+
   let _currentScene = SCENE.LOADING;
   let _prevScene = null;
   let _prologueSeen = false;
@@ -56,9 +62,17 @@ const Game = (() => {
   let _needleEffectTimer = 0;
   let _vignetteGradient = null;
   let _vignetteIntensityLast = null;
-  let _hudCanvas = null;
-  let _hudCtx = null;
-  let _hudCacheKey = '';
+  let _rightPanelBg = null;
+  let _bottomPanelBg = null;
+  let _miniMapCanvas = null;
+  let _miniMapCtx = null;
+  let _miniMapDirty = true;
+  let _miniMapKey = '';
+  let _areaBannerText = '';
+  let _areaBannerTimer = 0;
+  const _areaBannerDuration = 2.0;
+  let _pendingPlayerPosition = null;
+  let _logEntries = [];
 
   /* ============ ダイアログ ============ */
   let _dialogText = '';
@@ -78,6 +92,24 @@ const Game = (() => {
     _dialogLineEndsRaw = null;
     _dialogTextLast = null;
     Audio.playSe('dialog_open');
+  }
+
+  function _getMapDisplayName(mapName) {
+    const names = {
+      village: 'ミプリンの村',
+      forest_south: '南の森',
+      forest_north: '北の森',
+      cave: '洞窟',
+      flower_field: '花畑',
+      dungeon: '巣窟'
+    };
+    return names[mapName] || mapName;
+  }
+
+  function _addLog(text) {
+    if (!text) return;
+    _logEntries.unshift({ text, time: Date.now() });
+    if (_logEntries.length > 5) _logEntries.length = 5;
   }
 
   function _queueDialogs(lines) {
@@ -136,14 +168,14 @@ const Game = (() => {
 
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
-    const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
+    const W = PANEL.BOTTOM_W, H = PANEL.BOTTOM_H;
     const lineH = 22;
     const padding = 16;
-    const minH = 80;
+    const minH = 100;
 
     // 横幅に収まるよう折り返し
     ctx.font = '16px monospace';
-    const maxWidth = W - 40 - padding * 2;
+    const maxWidth = W - 32 - padding * 2;
     if (_dialogText !== _dialogTextLast) {
       const wrapped = _wrapDialogLines(ctx, _dialogText, maxWidth);
       _dialogLinesCached = wrapped.lines;
@@ -173,8 +205,8 @@ const Game = (() => {
     }
 
     const neededH = padding * 2 + lines.length * lineH + 10;
-    const bh = Math.max(minH, Math.min(neededH, H * 0.45));
-    const bx = 20, by = H - bh - 20, bw = W - 40;
+    const bh = Math.max(minH, Math.min(neededH, H - 20));
+    const bx = PANEL.BOTTOM_X + 16, by = PANEL.BOTTOM_Y + 10, bw = W - 32;
 
     ctx.fillStyle = 'rgba(0,0,0,0.88)';
     ctx.fillRect(bx, by, bw, bh);
@@ -193,7 +225,7 @@ const Game = (() => {
 
     if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
       ctx.fillStyle = '#F5A623';
-      ctx.fillText('▼', bx + bw - 32, by + bh - 24);
+      ctx.fillText('▼', bx + bw - 28, by + bh - 26);
     }
   }
 
@@ -289,15 +321,37 @@ const Game = (() => {
   /* ============ メニュー ============ */
   const _menuItems=['menu_story','menu_dungeon','menu_collection','menu_settings','menu_credits'];
   let _menuCursor=0,_menuAlpha=0;
-  function _resetMenu(){_menuCursor=0;_menuAlpha=0;}
+  let _menuStorySub=false,_menuStoryCursor=0;
+  function _resetMenu(){_menuCursor=0;_menuAlpha=0;_menuStorySub=false;_menuStoryCursor=0;}
   function _updateMenu(dt){
     _menuAlpha=Math.min(1,_menuAlpha+dt*2);
+    if(_menuStorySub){
+      if(Engine.consumePress('up')||Engine.consumePress('down')){_menuStoryCursor=(_menuStoryCursor+1)%2;Audio.playSe('menu_move');}
+      if(Engine.consumePress('menu')){_menuStorySub=false;return;}
+      if(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick()){
+        Audio.playSe('menu_select');
+        if(_menuStoryCursor===0){
+          _changeScene(SCENE.VILLAGE);
+        }else{
+          const data = SaveManager.loadGame(0);
+          if (data) {
+            _restoreFromSave(data);
+          } else {
+            _changeScene(SCENE.VILLAGE);
+          }
+        }
+      }
+      return;
+    }
     if(Engine.consumePress('up')){_menuCursor=(_menuCursor-1+_menuItems.length)%_menuItems.length;Audio.playSe('menu_move');}
     if(Engine.consumePress('down')){_menuCursor=(_menuCursor+1)%_menuItems.length;Audio.playSe('menu_move');}
     if(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick()){
       Audio.playSe('menu_select');
       switch(_menuItems[_menuCursor]){
-        case'menu_story': _changeScene(SCENE.VILLAGE); break;
+        case'menu_story':
+          if (SaveManager.getSaveInfo(0)) { _menuStorySub=true; _menuStoryCursor=0; }
+          else { _changeScene(SCENE.VILLAGE); }
+          break;
         case'menu_dungeon':
           if(flags.dungeon_unlocked||meta.ending_a||meta.ending_b||meta.ending_c){_changeScene(SCENE.DUNGEON);}
           else{_showDialog('ストーリーモードをクリアすると\n解放されます');}
@@ -325,6 +379,21 @@ const Game = (() => {
     }
     ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='center';
     ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    if(_menuStorySub){
+      const bx=CONFIG.CANVAS_WIDTH/2-140, by=360, bw=280, bh=120;
+      ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(bx,by,bw,bh);
+      ctx.strokeStyle='#F5A623';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+      const opts=['はじめから','つづきから'];
+      for(let i=0;i<opts.length;i++){
+        const y=by+40+i*36;
+        const cur=(i===_menuStoryCursor);
+        if(cur){ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.font='18px monospace';ctx.fillText('▶',bx+36,y);}
+        ctx.fillStyle=cur?'#fff':'#aaa';ctx.textAlign='left';ctx.font=cur?'bold 18px monospace':'16px monospace';
+        ctx.fillText(opts[i],bx+50,y);
+      }
+      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='11px monospace';ctx.textAlign='center';
+      ctx.fillText('Esc: もどる',bx+bw/2,by+bh-12);
+    }
     ctx.restore();
   }
 
@@ -422,6 +491,33 @@ const Game = (() => {
   let _endingTimer = 0;
   let _endingReady = false;
 
+  function _sceneFromMapName(mapName) {
+    const sceneMap = {
+      'village':SCENE.VILLAGE, 'forest_south':SCENE.FOREST_SOUTH,
+      'forest_north':SCENE.FOREST_NORTH, 'cave':SCENE.CAVE,
+      'flower_field':SCENE.FLOWER_FIELD
+    };
+    return sceneMap[mapName] || SCENE.VILLAGE;
+  }
+
+  function _restoreFromSave(data) {
+    if (!data) { _changeScene(SCENE.VILLAGE); return; }
+    const pd = data.player || {};
+    player.hp = pd.hp ?? player.hp;
+    player.maxHp = pd.maxHp ?? player.maxHp;
+    player.atk = pd.atk ?? player.atk;
+    player.speed = pd.speed ?? player.speed;
+    player.needleDmg = pd.needleDmg ?? player.needleDmg;
+    player.dir = pd.dir || player.dir;
+    _pendingPlayerPosition = { x: pd.x ?? player.x, y: pd.y ?? player.y, dir: player.dir };
+    Object.assign(flags, data.flags || {});
+    Inventory.deserialize(data.inventory || []);
+    _playtime = data.playtime || 0;
+    const mapName = data.mapName || 'village';
+    const targetScene = _sceneFromMapName(mapName);
+    _changeScene(targetScene);
+  }
+
   function _initMapScene(mapName) {
     _currentMapName = mapName;
     const map = MapManager.loadMap(mapName);
@@ -429,6 +525,12 @@ const Game = (() => {
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
+    if (_pendingPlayerPosition) {
+      player.x = _pendingPlayerPosition.x;
+      player.y = _pendingPlayerPosition.y;
+      player.dir = _pendingPlayerPosition.dir || player.dir;
+      _pendingPlayerPosition = null;
+    }
     _dialogActive = false; _dialogQueue = [];
     Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
@@ -436,6 +538,10 @@ const Game = (() => {
     Collection.onAreaVisit(mapName);
     Analytics.logAreaVisit(mapName, true);
     Audio.playSceneBgm(mapName);
+    _areaBannerText = _getMapDisplayName(mapName);
+    _areaBannerTimer = _areaBannerDuration;
+    _miniMapDirty = true;
+    _addLog('エリア到達: ' + _getMapDisplayName(mapName));
     if (_pendingBossDialog) {
       const msg = _pendingBossDialog;
       _pendingBossDialog = null;
@@ -445,6 +551,7 @@ const Game = (() => {
 
   function _updateMapScene(dt) {
     _playtime += dt;
+    if (_areaBannerTimer > 0) _areaBannerTimer = Math.max(0, _areaBannerTimer - dt);
 
     // インベントリ
     if (Engine.consumePress('inventory') && !_dialogActive) {
@@ -465,6 +572,14 @@ const Game = (() => {
         Inventory.useItem(result.itemId, player, flags);
         Analytics.logItemUse(result.itemId, _currentMapName);
       }
+      if (!Inventory.isOpen()) {
+        _dialogActive = false;
+        _dialogText = '';
+        _dialogQueue = [];
+        _dialogLinesCached = null;
+        _dialogLineEndsRaw = null;
+        _dialogTextLast = null;
+      }
       return;
     }
 
@@ -477,6 +592,8 @@ const Game = (() => {
           Inventory.addItem(result.itemId);
           Analytics.logShopBuy(result.itemId, result.cost);
           Audio.playSe('item_get');
+          const def = Inventory.ITEM_DEFS[result.itemId];
+          _addLog((def ? def.name : result.itemId) + ' を購入');
         }
       }
       if (!Shop.isShopOpen()) {
@@ -586,16 +703,17 @@ const Game = (() => {
             player.hp = player.maxHp;
             if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
               const saveState = {
+                scene: _currentScene,
                 player,
                 flags,
                 inventory: Inventory.serialize(),
                 mapName: _currentMapName,
                 playtime: _playtime
               };
-              if (SaveManager.saveGame.length === 1) SaveManager.saveGame(saveState);
-              else SaveManager.saveGame(0, saveState);
+              SaveManager.saveGame(0, saveState);
             }
             _showDialog(Lang.t('save_success'));
+            _addLog('セーブしました');
             Audio.playSe('save');
             break;
           case 'sign':
@@ -606,6 +724,7 @@ const Game = (() => {
           case 'chest':
             _showDialog(Lang.t('chest_empty'));
             Audio.playSe('item_get');
+            _addLog('宝箱を開けた');
             break;
           case 'stump':
             if (!flags.has_green_key) {
@@ -614,6 +733,7 @@ const Game = (() => {
               Collection.onItemGet('green_key');
               Collection.onSpecialDiscover('env_stump');
               _showDialog('切株の中から\n【秘密の鍵】を見つけた！');
+              _addLog('秘密の鍵を入手');
               Audio.playSe('item_get');
               Analytics.logItemGet('green_key', _currentMapName);
             } else {
@@ -627,9 +747,11 @@ const Game = (() => {
               _showDialog('秘密の鍵が光り、封印壁が消えた！\n奥にロイヤルゼリーがある！');
               Inventory.addItem('royal_jelly');
               Collection.onItemGet('royal_jelly');
+              _addLog('ロイヤルゼリーを入手');
               Audio.playSe('door_open');
               if (interact.col !== undefined && interact.row !== undefined) {
                 MapManager.setTile(interact.col, interact.row, MapManager.TILE.CAVE_FLOOR);
+                _miniMapDirty = true;
               }
             } else if (!flags.has_green_key) {
               _showDialog('緑の水晶で封印されている。\n何か鍵が必要みたいだ…');
@@ -686,6 +808,9 @@ const Game = (() => {
       const intensity = Math.min(0.6, Math.abs(saturationShift) / 150);
       if (intensity > 0) {
         ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, PANEL.MAP_W, PANEL.MAP_H);
+        ctx.clip();
         ctx.fillStyle = `rgba(128,128,128,${intensity})`;
         ctx.globalCompositeOperation = 'saturation';
         if (ctx.globalCompositeOperation !== 'saturation') {
@@ -699,12 +824,20 @@ const Game = (() => {
     // 針ペナルティ: ビネット
     const penalties = NpcManager.getNeedlePenalty(flags);
     const vignette = penalties.find(p => p.effect === 'vignette');
-    if (vignette) _drawVignette(ctx, vignette.intensity);
+    if (vignette) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, PANEL.MAP_W, PANEL.MAP_H);
+      ctx.clip();
+      _drawVignette(ctx, vignette.intensity);
+      ctx.restore();
+    }
 
+    _drawPanelBorders(ctx);
     _drawHud(ctx);
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
-    _drawDialog(ctx);
+    _drawBottomPanel(ctx);
     if (CONFIG.DEBUG || location.search.includes('debug=1')) {
     ctx.save();
     ctx.font = '12px monospace';
@@ -734,6 +867,7 @@ const Game = (() => {
     _attackEffectTimer = 0; _needleEffectTimer = 0;
     _bossLastAction = null;
     _bossStartTime = Date.now();
+    _areaBannerTimer = 0;
     EnemyManager.clear();
 
     let bossId = _pendingBossId;
@@ -763,6 +897,14 @@ const Game = (() => {
       if (result && result.action === 'use') {
         Inventory.useItem(result.itemId, player, flags);
         Analytics.logItemUse(result.itemId, 'boss');
+      }
+      if (!Inventory.isOpen()) {
+        _dialogActive = false;
+        _dialogText = '';
+        _dialogQueue = [];
+        _dialogLinesCached = null;
+        _dialogLineEndsRaw = null;
+        _dialogTextLast = null;
       }
       return;
     }
@@ -873,9 +1015,10 @@ const Game = (() => {
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
     ctx.restore();
 
+    _drawPanelBorders(ctx);
     _drawHud(ctx);
     Inventory.drawUI(ctx);
-    _drawDialog(ctx);
+    _drawBottomPanel(ctx);
   }
 
   /* ============ エンディング ============ */
@@ -985,6 +1128,7 @@ const Game = (() => {
     Dungeon.start(flags.has_green_key);
     const map = Dungeon.getMapForRenderer();
     if(map){
+      _currentMapName = 'dungeon';
       // MapManager互換でロード
       player.x = map.playerStart.x * CONFIG.TILE_SIZE;
       player.y = map.playerStart.y * CONFIG.TILE_SIZE;
@@ -994,81 +1138,312 @@ const Game = (() => {
       if(typeof EnemyManager!=='undefined') EnemyManager.spawnFromMap(map.enemies);
     }
     Audio.playSceneBgm('dungeon');
+    _areaBannerText = _getMapDisplayName('dungeon');
+    _areaBannerTimer = _areaBannerDuration;
+    _miniMapDirty = true;
   }
 
   /* ============ HUD ============ */
+  function _drawPanelBorders(ctx) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(245,166,35,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(PANEL.RIGHT_X - 2, 0);
+    ctx.lineTo(PANEL.RIGHT_X - 2, PANEL.MAP_H);
+    ctx.moveTo(0, PANEL.BOTTOM_Y - 2);
+    ctx.lineTo(CONFIG.CANVAS_WIDTH, PANEL.BOTTOM_Y - 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function _getPanelBg(type) {
+    const w = type === 'right' ? PANEL.RIGHT_W : PANEL.BOTTOM_W;
+    const h = type === 'right' ? PANEL.RIGHT_H : PANEL.BOTTOM_H;
+    let canvas = type === 'right' ? _rightPanelBg : _bottomPanelBg;
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const c = canvas.getContext('2d');
+      const grd = c.createLinearGradient(0, 0, 0, h);
+      grd.addColorStop(0, '#0f1428');
+      grd.addColorStop(1, '#0a0f1e');
+      c.fillStyle = grd;
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = 'rgba(255,255,255,0.03)';
+      for (let i = 0; i < h; i += 24) {
+        c.fillRect(0, i, w, 1);
+      }
+      if (type === 'right') _rightPanelBg = canvas;
+      else _bottomPanelBg = canvas;
+    }
+    return canvas;
+  }
+
   function _drawHud(ctx){
-    const W=CONFIG.CANVAS_WIDTH, H=CONFIG.CANVAS_HEIGHT;
-    if (!_hudCanvas) {
-      _hudCanvas = document.createElement('canvas');
-      _hudCtx = _hudCanvas.getContext('2d');
-    }
-    if (_hudCanvas.width !== W || _hudCanvas.height !== H) {
-      _hudCanvas.width = W;
-      _hudCanvas.height = H;
-      _hudCacheKey = '';
+    const rightBg = _getPanelBg('right');
+    ctx.drawImage(rightBg, PANEL.RIGHT_X, PANEL.RIGHT_Y);
+
+    // Section dividers
+    ctx.save();
+    ctx.strokeStyle = 'rgba(245,166,35,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PANEL.RIGHT_X + 12, 140);
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 140);
+    ctx.moveTo(PANEL.RIGHT_X + 12, 320);
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 320);
+    ctx.moveTo(PANEL.RIGHT_X + 12, 420);
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 420);
+    ctx.stroke();
+    ctx.restore();
+
+    _drawStatusSection(ctx);
+    _drawMiniMapSection(ctx);
+    _drawLogSection(ctx);
+    _drawControlsSection(ctx);
+  }
+
+  function _drawStatusSection(ctx) {
+    const x = PANEL.RIGHT_X + 16;
+    const y = PANEL.RIGHT_Y + 12;
+    const w = PANEL.RIGHT_W - 32;
+
+    ctx.fillStyle = 'rgba(15,15,30,0.95)';
+    ctx.fillRect(PANEL.RIGHT_X + 8, PANEL.RIGHT_Y + 6, PANEL.RIGHT_W - 16, 128);
+    ctx.strokeStyle = '#F5A623';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(PANEL.RIGHT_X + 8, PANEL.RIGHT_Y + 6, PANEL.RIGHT_W - 16, 128);
+
+    ctx.fillStyle = '#F5A623';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('ミプリン', x, y);
+
+    // HP bar
+    const barX = x;
+    const barY = y + 32;
+    const barW = w - 10;
+    const barH = 14;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(barX, barY, barW, barH);
+    const hpRate = Math.max(0, Math.min(1, player.hp / player.maxHp));
+    const hpGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+    hpGrad.addColorStop(0, '#e74c3c');
+    hpGrad.addColorStop(1, '#2ecc71');
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(barX, barY, barW * hpRate, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, barX + barW, barY + barH / 2);
+
+    // ATK
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.fillText('⚔ ATK: ' + Inventory.getEffectiveAtk(player), x, barY + 26);
+
+    // Buffs
+    const buffs = [];
+    if (player._buffDef) buffs.push({ icon:'🛡', color:'#D4A03C', timer: player._buffDef.timer });
+    if (player._buffSpeed) buffs.push({ icon:'⚡', color:'#3498DB', timer: player._buffSpeed.timer });
+    if (player._buffAtk) buffs.push({ icon:'🍬', color:'#C0392B', timer: player._buffAtk.timer });
+    if (player._buffVision) buffs.push({ icon:'🔦', color:'#E67E22', timer: player._buffVision.timer });
+    let bx = x, by = barY + 50;
+    for (let i = 0; i < buffs.length; i++) {
+      const b = buffs[i];
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(bx - 2, by - 2, 42, 20);
+      ctx.fillStyle = b.color;
+      ctx.font = '12px monospace';
+      ctx.fillText(b.icon, bx + 2, by);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(Math.ceil(b.timer) + 's', bx + 18, by);
+      bx += 46;
     }
 
+    // Pollen
     const pc = Inventory.getCount('pollen');
-    const cacheKey = `${player.hp}/${player.maxHp}|${pc}|${flags.killCount}|${_currentMapName}`;
-    if (cacheKey !== _hudCacheKey) {
-      _hudCacheKey = cacheKey;
-      const c = _hudCtx;
-      c.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#F1C40F';
+    ctx.font = '14px monospace';
+    ctx.fillText('● ' + pc + ' P', x, barY + 72);
+  }
 
-      // HP
-      const hpDanger = player.hp === 1;
-      c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(8,8,200,28);
-      if (hpDanger) {
-        c.strokeStyle = '#ff0000';
-        c.lineWidth = 2;
-        c.strokeRect(8,8,200,28);
+  function _getMiniMapData() {
+    if (Dungeon.isActive()) return Dungeon.getMapForRenderer();
+    return MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
+  }
+
+  function _renderMiniMapBase(map, key) {
+    if (!map) return;
+    const size = 4;
+    if (!_miniMapCanvas) {
+      _miniMapCanvas = document.createElement('canvas');
+      _miniMapCtx = _miniMapCanvas.getContext('2d');
+    }
+    _miniMapCanvas.width = map.cols * size;
+    _miniMapCanvas.height = map.rows * size;
+    const c = _miniMapCtx;
+    c.clearRect(0, 0, _miniMapCanvas.width, _miniMapCanvas.height);
+    for (let r = 0; r < map.rows; r++) {
+      for (let col = 0; col < map.cols; col++) {
+        const tile = map.data[r * map.cols + col];
+        const solid = tile === MapManager.TILE.WALL || tile === MapManager.TILE.WATER ||
+          tile === MapManager.TILE.TREE || tile === MapManager.TILE.HOUSE ||
+          tile === MapManager.TILE.FENCE || tile === MapManager.TILE.WELL ||
+          tile === MapManager.TILE.CHEST || tile === MapManager.TILE.STUMP ||
+          tile === MapManager.TILE.BUSH || tile === MapManager.TILE.ANCHOR ||
+          tile === MapManager.TILE.SEAL_WALL;
+        c.fillStyle = solid ? '#141a2a' : '#2b3a55';
+        c.fillRect(col * size, r * size, size, size);
       }
-      c.fillStyle='#F5A623';c.font='14px monospace';c.textAlign='left';c.textBaseline='middle';
-      c.fillText('HP:',14,22);
-      for(let i=0;i<player.maxHp;i++){
-        c.fillStyle=i<player.hp?'#FF6B6B':'#333'; c.fillRect(46+i*20,12,16,16);
-        c.strokeStyle='#fff';c.lineWidth=1;c.strokeRect(46+i*20,12,16,16);
-      }
-      // ポーレン
-      if(pc>0){
-        c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(8,40,100,20);
-        c.fillStyle='#F1C40F';c.font='12px monospace';c.textAlign='left';
-        c.fillText('● '+pc+' P',14,50);
-      }
-      // 敵数
-      const ec = typeof EnemyManager!=='undefined' ? EnemyManager.getAliveCount() : 0;
-      if(ec>0){
-        c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(W-140,8,132,20);
-        c.fillStyle='#ff9';c.font='12px monospace';c.textAlign='right';
-        c.fillText('Enemy:'+ec+' Kill:'+flags.killCount,W-14,18);
-      }
-      // マップ名
-      c.fillStyle='rgba(0,0,0,0.5)';c.fillRect(8,64,120,20);
-      c.fillStyle='#aaa';c.font='11px monospace';c.textAlign='left';
-      c.fillText(_currentMapName,14,74);
+    }
+    _miniMapDirty = false;
+    _miniMapKey = key;
+  }
+
+  function _drawMiniMapSection(ctx) {
+    const map = _getMiniMapData();
+    if (!map) return;
+    const key = `${_currentMapName}:${map.cols}x${map.rows}:${map.data.length}`;
+    if (_miniMapDirty || _miniMapKey !== key) {
+      _renderMiniMapBase(map, key);
     }
 
-    ctx.drawImage(_hudCanvas, 0, 0);
+    const sectionX = PANEL.RIGHT_X;
+    const sectionY = 140;
+    const sectionW = PANEL.RIGHT_W;
+    const sectionH = 180;
+    const title = _getMapDisplayName(_currentMapName);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(title, sectionX + sectionW / 2, sectionY + 6);
 
-    // HP低下の点滅は毎フレーム
-    if (player.hp === 1 && Math.sin(Date.now() / 120) > -0.3) {
-      ctx.fillStyle='rgba(220,0,0,0.72)'; ctx.fillRect(8,8,200,28);
+    const mmW = _miniMapCanvas.width;
+    const mmH = _miniMapCanvas.height;
+    const mmX = sectionX + (sectionW - mmW) / 2;
+    const mmY = sectionY + 28;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8);
+    ctx.strokeStyle = 'rgba(245,166,35,0.6)';
+    ctx.strokeRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8);
+    ctx.drawImage(_miniMapCanvas, mmX, mmY);
+
+    // Dots
+    const size = 4;
+    const pCol = Math.floor((player.x + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
+    const pRow = Math.floor((player.y + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
+    if (Math.sin(Date.now() / 200) > 0) {
+      ctx.fillStyle = '#F5D142';
+      ctx.fillRect(mmX + pCol * size, mmY + pRow * size, size, size);
+    }
+    if (map.npcs) {
+      ctx.fillStyle = '#4aa3ff';
+      for (const npc of map.npcs) {
+        ctx.fillRect(mmX + npc.x * size, mmY + npc.y * size, size, size);
+      }
+    }
+    if (map.exits) {
+      ctx.fillStyle = '#2ecc71';
+      for (const ex of map.exits) {
+        ctx.fillRect(mmX + ex.x * size, mmY + ex.y * size, size, size);
+      }
+    }
+    if (map.enemies) {
+      ctx.fillStyle = '#e74c3c';
+      for (const e of map.enemies) {
+        ctx.fillRect(mmX + e.x * size, mmY + e.y * size, size, size);
+      }
+    }
+  }
+
+  function _drawLogSection(ctx) {
+    const x = PANEL.RIGHT_X + 16;
+    const y = 320;
+    ctx.fillStyle = '#F5A623';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('ログ', x, y + 6);
+    const now = Date.now();
+    ctx.font = '12px monospace';
+    for (let i = 0; i < _logEntries.length; i++) {
+      const entry = _logEntries[i];
+      const age = (now - entry.time) / 1000;
+      const fade = Math.max(0.2, 1 - i * 0.18 - age * 0.08);
+      ctx.fillStyle = `rgba(255,255,255,${fade})`;
+      ctx.fillText(entry.text, x, y + 26 + i * 16);
+    }
+  }
+
+  function _drawControlsSection(ctx) {
+    ctx.fillStyle = 'rgba(245,166,35,0.7)';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Z=こうげき  X=はり  C=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, 450);
+  }
+
+  function _getBottomHintText() {
+    const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
+    if (map && map.npcs) {
+      const ts = CONFIG.TILE_SIZE;
+      const pc = Math.floor((player.x + ts / 2) / ts);
+      const pr = Math.floor((player.y + ts / 2) / ts);
+      let nearest = null;
+      let best = 999;
+      for (const npc of map.npcs) {
+        const d = Math.abs(npc.x - pc) + Math.abs(npc.y - pr);
+        if (d < best) { best = d; nearest = npc; }
+      }
+      if (nearest && best <= 2) return `${nearest.name}が近くにいる`;
+    }
+    if (_currentMapName) return `${_getMapDisplayName(_currentMapName)}を探索中`;
+    return '';
+  }
+
+  function _drawBottomPanel(ctx) {
+    const bottomBg = _getPanelBg('bottom');
+    ctx.drawImage(bottomBg, PANEL.BOTTOM_X, PANEL.BOTTOM_Y);
+
+    if (_dialogActive) {
+      _drawDialog(ctx);
+      return;
     }
 
-    // 巣窟HUD
-    if(Dungeon.isActive()) Dungeon.drawHud(ctx);
-
-    // 操作ガイド（開始60秒後からフェードアウト）
-    const guide='移動:矢印キー/WASD  攻撃:Z  必殺:X  会話:C/Enter  メニュー:Esc';
-    const guideAlpha = Math.max(0, Math.min(1, 1 - Math.max(0, _playtime - 60) / 8));
-    if (guideAlpha > 0) {
+    if (_areaBannerTimer > 0 && _areaBannerText) {
+      const t = _areaBannerTimer;
+      const fadeIn = 0.3;
+      const fadeOut = 0.4;
+      let alpha = 1;
+      if (t < fadeOut) alpha = t / fadeOut;
+      if (t > _areaBannerDuration - fadeIn) alpha = Math.min(alpha, (_areaBannerDuration - t) / fadeIn);
+      alpha = Math.max(0, Math.min(1, alpha));
       ctx.save();
-      ctx.globalAlpha = guideAlpha;
-      ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(8, CONFIG.CANVAS_HEIGHT - 34, W - 16, 24);
-      ctx.fillStyle='#ddd'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(guide, W/2, CONFIG.CANVAS_HEIGHT - 22);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#F5A623';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(_areaBannerText, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
       ctx.restore();
+      return;
+    }
+
+    const hint = _getBottomHintText();
+    if (hint) {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(hint, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
     }
   }
 
@@ -1225,7 +1600,7 @@ const Game = (() => {
     },300);
   }
 
-  return { boot, SCENE, player, flags, meta:()=>meta, getScene:()=>_currentScene };
+  return { boot, SCENE, player, flags, meta:()=>meta, getScene:()=>_currentScene, addLog: _addLog };
 })();
 
 window.addEventListener('DOMContentLoaded',()=>{ Game.boot(); });

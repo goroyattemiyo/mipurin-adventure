@@ -240,6 +240,8 @@ const PlayerController = (() => {
    ============================================================ */
 const EnemyManager = (() => {
   let _enemies = [];
+  let _cleanupCounter = 0;
+  const _spriteCache = new Map();
 
   const TEMPLATES = Balance.ENEMIES;
 
@@ -273,6 +275,7 @@ const EnemyManager = (() => {
 
   function spawnFromMap(mapEnemies) {
     _enemies = [];
+    _cleanupCounter = 0;
     if (!mapEnemies) return;
     for (const e of mapEnemies) { spawn(e.type, e.x, e.y); }
   }
@@ -322,7 +325,11 @@ const EnemyManager = (() => {
         _damagePlayer(player, e);
       }
     }
-    _enemies = _enemies.filter(e => !e.dead);
+    _cleanupCounter++;
+    if (_cleanupCounter >= 30) {
+      _enemies = _enemies.filter(e => !e.dead);
+      _cleanupCounter = 0;
+    }
   }
 
   function _damagePlayer(player, enemy) {
@@ -381,12 +388,8 @@ const EnemyManager = (() => {
       if (e.dead) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
-      ctx.fillStyle = e.color;
-      ctx.beginPath(); ctx.arc(x+ts/2, y+ts/2, ts/2-3, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(x+ts/2, y+ts/2, ts/2-3, 0, Math.PI*2); ctx.stroke();
-      ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(e.symbol, x+ts/2, y+ts/2);
+      const sprite = _getEnemySprite(e.id, e.color, e.symbol);
+      if (sprite) ctx.drawImage(sprite, x, y);
       if (e.hp < e.maxHp) {
         const bw = ts-4, bh = 3;
         ctx.fillStyle = '#333'; ctx.fillRect(x+2, y-4, bw, bh);
@@ -397,6 +400,23 @@ const EnemyManager = (() => {
 
   function getAliveCount() { return _enemies.filter(e => !e.dead).length; }
   function clear() { _enemies = []; }
+
+  function _getEnemySprite(id, color, symbol) {
+    if (_spriteCache.has(id)) return _spriteCache.get(id);
+    const ts = CONFIG.TILE_SIZE;
+    const canvas = document.createElement('canvas');
+    canvas.width = ts;
+    canvas.height = ts;
+    const c = canvas.getContext('2d');
+    c.fillStyle = color;
+    c.beginPath(); c.arc(ts/2, ts/2, ts/2-3, 0, Math.PI*2); c.fill();
+    c.strokeStyle = '#000'; c.lineWidth = 1;
+    c.beginPath(); c.arc(ts/2, ts/2, ts/2-3, 0, Math.PI*2); c.stroke();
+    c.font = '16px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(symbol, ts/2, ts/2);
+    _spriteCache.set(id, canvas);
+    return canvas;
+  }
 
   return { spawn, spawnFromMap, update, checkAttackHit, needleBlast, draw, getAliveCount, clear };
 })();

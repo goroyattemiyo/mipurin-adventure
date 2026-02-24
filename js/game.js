@@ -54,6 +54,11 @@ const Game = (() => {
   /* ============ エフェクト ============ */
   let _attackEffectTimer = 0;
   let _needleEffectTimer = 0;
+  let _vignetteGradient = null;
+  let _vignetteIntensityLast = null;
+  let _hudCanvas = null;
+  let _hudCtx = null;
+  let _hudCacheKey = '';
 
   /* ============ ダイアログ ============ */
   let _dialogText = '';
@@ -61,11 +66,17 @@ const Game = (() => {
   let _dialogTimer = 0;
   let _dialogChars = 0;
   let _dialogQueue = []; // 連続会話用
+  let _dialogLinesCached = null;
+  let _dialogLineEndsRaw = null;
+  let _dialogTextLast = null;
   const DIALOG_SPEED = 0.04;
 
   function _showDialog(text) {
     _dialogText = text; _dialogActive = true;
     _dialogTimer = 0; _dialogChars = 0;
+    _dialogLinesCached = null;
+    _dialogLineEndsRaw = null;
+    _dialogTextLast = null;
     Audio.playSe('dialog_open');
   }
 
@@ -88,6 +99,11 @@ const Game = (() => {
           _showDialog(_dialogQueue.shift());
         } else {
           _dialogActive = false;
+          _dialogText = '';
+          _dialogQueue = [];
+          _dialogLinesCached = null;
+          _dialogLineEndsRaw = null;
+          _dialogTextLast = null;
           Shop.closeShop();
           Audio.playSe('dialog_close');
         }
@@ -95,11 +111,32 @@ const Game = (() => {
     }
   }
 
+  function _wrapDialogLines(ctx, text, maxWidth) {
+    const rawLines = text.split('\n');
+    const lines = [];
+    const endsRaw = [];
+    for (let r = 0; r < rawLines.length; r++) {
+      const raw = rawLines[r];
+      if (!raw) {
+        lines.push('');
+        endsRaw.push(r < rawLines.length - 1);
+        continue;
+      }
+      let rest = raw;
+      while (rest.length > 0) {
+        let cut = Math.min(28, rest.length);
+        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut);
+        endsRaw.push(rest.length === 0 && r < rawLines.length - 1);
+      }
+    }
+    return { lines, endsRaw };
+  }
+
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
     const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const vis = _dialogText.substring(0, _dialogChars);
-    const rawLines = vis.split('\n');
     const lineH = 22;
     const padding = 16;
     const minH = 80;
@@ -107,15 +144,31 @@ const Game = (() => {
     // 横幅に収まるよう折り返し
     ctx.font = '16px monospace';
     const maxWidth = W - 40 - padding * 2;
+    if (_dialogText !== _dialogTextLast) {
+      const wrapped = _wrapDialogLines(ctx, _dialogText, maxWidth);
+      _dialogLinesCached = wrapped.lines;
+      _dialogLineEndsRaw = wrapped.endsRaw;
+      _dialogTextLast = _dialogText;
+    }
+
     const lines = [];
-    for (const raw of rawLines) {
-      if (!raw) { lines.push(''); continue; }
-      let rest = raw;
-      while (rest.length > 0) {
-        let cut = Math.min(28, rest.length);
-        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
-        lines.push(rest.slice(0, cut));
-        rest = rest.slice(cut);
+    const cached = _dialogLinesCached || [];
+    const endsRaw = _dialogLineEndsRaw || [];
+    let remaining = _dialogChars;
+    for (let i = 0; i < cached.length; i++) {
+      if (remaining <= 0) break;
+      const line = cached[i];
+      if (remaining < line.length) {
+        lines.push(line.slice(0, remaining));
+        remaining = 0;
+        break;
+      }
+      lines.push(line);
+      remaining -= line.length;
+      if (endsRaw[i]) {
+        if (remaining <= 0) break;
+        remaining -= 1;
+        if (remaining === 0) { lines.push(''); break; }
       }
     }
 
@@ -395,7 +448,15 @@ const Game = (() => {
 
     // インベントリ
     if (Engine.consumePress('inventory') && !_dialogActive) {
-      if (Inventory.isOpen()) { Inventory.close(); }
+      if (Inventory.isOpen()) {
+        Inventory.close();
+        _dialogActive = false;
+        _dialogText = '';
+        _dialogQueue = [];
+        _dialogLinesCached = null;
+        _dialogLineEndsRaw = null;
+        _dialogTextLast = null;
+      }
       else { Inventory.open(); return; }
     }
     if (Inventory.isOpen()) {
@@ -417,6 +478,14 @@ const Game = (() => {
           Analytics.logShopBuy(result.itemId, result.cost);
           Audio.playSe('item_get');
         }
+      }
+      if (!Shop.isShopOpen()) {
+        _dialogActive = false;
+        _dialogText = '';
+        _dialogQueue = [];
+        _dialogLinesCached = null;
+        _dialogLineEndsRaw = null;
+        _dialogTextLast = null;
       }
       return;
     }
@@ -515,7 +584,18 @@ const Game = (() => {
             break;
           case 'save':
             player.hp = player.maxHp;
-            _showDialog(Lang.t('save_point_text'));
+            if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
+              const saveState = {
+                player,
+                flags,
+                inventory: Inventory.serialize(),
+                mapName: _currentMapName,
+                playtime: _playtime
+              };
+              if (SaveManager.saveGame.length === 1) SaveManager.saveGame(saveState);
+              else SaveManager.saveGame(0, saveState);
+            }
+            _showDialog(Lang.t('save_success'));
             Audio.playSe('save');
             break;
           case 'sign':
@@ -590,10 +670,7 @@ const Game = (() => {
 
     // killCount世界演出
     const worldFx = NpcManager.getWorldEffects(flags);
-    if (worldFx.saturationShift < 0) {
-      // 簡易彩度低下（CSS filter相当をcanvasで近似）
-      ctx.filter = `saturate(${Math.max(0, 100 + worldFx.saturationShift)}%)`;
-    }
+    const saturationShift = worldFx.saturationShift;
 
     MapManager.draw(ctx);
     EnemyManager.draw(ctx);
@@ -603,6 +680,21 @@ const Game = (() => {
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
 
     ctx.restore(); // filterを完全にリセット
+
+    // 簡易彩度低下（CSS filterを使わない）
+    if (saturationShift < 0) {
+      const intensity = Math.min(0.6, Math.abs(saturationShift) / 150);
+      if (intensity > 0) {
+        ctx.save();
+        ctx.fillStyle = `rgba(128,128,128,${intensity})`;
+        ctx.globalCompositeOperation = 'saturation';
+        if (ctx.globalCompositeOperation !== 'saturation') {
+          ctx.globalCompositeOperation = 'source-atop';
+        }
+        ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+        ctx.restore();
+      }
+    }
 
     // 針ペナルティ: ビネット
     const penalties = NpcManager.getNeedlePenalty(flags);
@@ -625,10 +717,14 @@ const Game = (() => {
 
   function _drawVignette(ctx, intensity) {
     const W=CONFIG.CANVAS_WIDTH, H=CONFIG.CANVAS_HEIGHT;
-    const grd = ctx.createRadialGradient(W/2,H/2,W*0.3, W/2,H/2,W*0.7);
-    grd.addColorStop(0, 'rgba(0,0,0,0)');
-    grd.addColorStop(1, `rgba(0,0,0,${intensity})`);
-    ctx.fillStyle = grd;
+    if (_vignetteGradient === null || _vignetteIntensityLast === null || Math.abs(intensity - _vignetteIntensityLast) > 0.05) {
+      const grd = ctx.createRadialGradient(W/2,H/2,W*0.3, W/2,H/2,W*0.7);
+      grd.addColorStop(0, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, `rgba(0,0,0,${intensity})`);
+      _vignetteGradient = grd;
+      _vignetteIntensityLast = intensity;
+    }
+    ctx.fillStyle = _vignetteGradient;
     ctx.fillRect(0,0,W,H);
   }
 
@@ -902,40 +998,64 @@ const Game = (() => {
 
   /* ============ HUD ============ */
   function _drawHud(ctx){
-    const W=CONFIG.CANVAS_WIDTH;
-    // HP
-    const hpDanger = player.hp === 1;
-    const hpBg = hpDanger && Math.sin(Date.now() / 120) > -0.3 ? 'rgba(220,0,0,0.72)' : 'rgba(0,0,0,0.5)';
-    ctx.fillStyle=hpBg; ctx.fillRect(8,8,200,28);
-    if (hpDanger) {
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(8,8,200,28);
+    const W=CONFIG.CANVAS_WIDTH, H=CONFIG.CANVAS_HEIGHT;
+    if (!_hudCanvas) {
+      _hudCanvas = document.createElement('canvas');
+      _hudCtx = _hudCanvas.getContext('2d');
     }
-    ctx.fillStyle='#F5A623';ctx.font='14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.fillText('HP:',14,22);
-    for(let i=0;i<player.maxHp;i++){
-      ctx.fillStyle=i<player.hp?'#FF6B6B':'#333'; ctx.fillRect(46+i*20,12,16,16);
-      ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(46+i*20,12,16,16);
+    if (_hudCanvas.width !== W || _hudCanvas.height !== H) {
+      _hudCanvas.width = W;
+      _hudCanvas.height = H;
+      _hudCacheKey = '';
     }
-    // ポーレン
+
     const pc = Inventory.getCount('pollen');
-    if(pc>0){
-      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(8,40,100,20);
-      ctx.fillStyle='#F1C40F';ctx.font='12px monospace';ctx.textAlign='left';
-      ctx.fillText('● '+pc+' P',14,50);
+    const cacheKey = `${player.hp}/${player.maxHp}|${pc}|${flags.killCount}|${_currentMapName}`;
+    if (cacheKey !== _hudCacheKey) {
+      _hudCacheKey = cacheKey;
+      const c = _hudCtx;
+      c.clearRect(0, 0, W, H);
+
+      // HP
+      const hpDanger = player.hp === 1;
+      c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(8,8,200,28);
+      if (hpDanger) {
+        c.strokeStyle = '#ff0000';
+        c.lineWidth = 2;
+        c.strokeRect(8,8,200,28);
+      }
+      c.fillStyle='#F5A623';c.font='14px monospace';c.textAlign='left';c.textBaseline='middle';
+      c.fillText('HP:',14,22);
+      for(let i=0;i<player.maxHp;i++){
+        c.fillStyle=i<player.hp?'#FF6B6B':'#333'; c.fillRect(46+i*20,12,16,16);
+        c.strokeStyle='#fff';c.lineWidth=1;c.strokeRect(46+i*20,12,16,16);
+      }
+      // ポーレン
+      if(pc>0){
+        c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(8,40,100,20);
+        c.fillStyle='#F1C40F';c.font='12px monospace';c.textAlign='left';
+        c.fillText('● '+pc+' P',14,50);
+      }
+      // 敵数
+      const ec = typeof EnemyManager!=='undefined' ? EnemyManager.getAliveCount() : 0;
+      if(ec>0){
+        c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(W-140,8,132,20);
+        c.fillStyle='#ff9';c.font='12px monospace';c.textAlign='right';
+        c.fillText('Enemy:'+ec+' Kill:'+flags.killCount,W-14,18);
+      }
+      // マップ名
+      c.fillStyle='rgba(0,0,0,0.5)';c.fillRect(8,64,120,20);
+      c.fillStyle='#aaa';c.font='11px monospace';c.textAlign='left';
+      c.fillText(_currentMapName,14,74);
     }
-    // 敵数
-    const ec = typeof EnemyManager!=='undefined' ? EnemyManager.getAliveCount() : 0;
-    if(ec>0){
-      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(W-140,8,132,20);
-      ctx.fillStyle='#ff9';ctx.font='12px monospace';ctx.textAlign='right';
-      ctx.fillText('Enemy:'+ec+' Kill:'+flags.killCount,W-14,18);
+
+    ctx.drawImage(_hudCanvas, 0, 0);
+
+    // HP低下の点滅は毎フレーム
+    if (player.hp === 1 && Math.sin(Date.now() / 120) > -0.3) {
+      ctx.fillStyle='rgba(220,0,0,0.72)'; ctx.fillRect(8,8,200,28);
     }
-    // マップ名
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(8,64,120,20);
-    ctx.fillStyle='#aaa';ctx.font='11px monospace';ctx.textAlign='left';
-    ctx.fillText(_currentMapName,14,74);
+
     // 巣窟HUD
     if(Dungeon.isActive()) Dungeon.drawHud(ctx);
 

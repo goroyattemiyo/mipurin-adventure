@@ -9,7 +9,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:monospace}
   h1{margin:18px 0 8px;color:var(--accent)}
-  h2{margin:12px 0;color:#fff;font-size:18px}
+  h2{margin:12px 0 6px;color:#fff;font-size:18px}
   .wrap{max-width:1200px;margin:0 auto;padding:16px}
   .panel{background:var(--panel);border:1px solid rgba(245,166,35,0.3);border-radius:10px;padding:12px;margin-bottom:16px}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -17,13 +17,32 @@
   button.secondary{background:#555;color:#eee}
   input, select{background:#0b0f1c;color:#eee;border:1px solid #333;padding:6px 8px;border-radius:6px}
   canvas{image-rendering:pixelated;background:#0b0f1c;border:1px solid #222;border-radius:6px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .small{color:var(--muted);font-size:12px}
+  .label-grid{display:grid;gap:6px;margin-top:10px}
+  .label{font-size:12px;color:#ddd;text-align:center}
+  details{background:#0b0f1c;border:1px solid #222;border-radius:8px;padding:10px}
+  summary{cursor:pointer;color:#f8d36a}
+  .preview-grid{display:grid;grid-template-columns:repeat(6, 1fr);gap:6px;margin-top:10px}
+  .preview-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .info{color:#aaa;font-size:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>スプライトジェネレーター</h1>
+
+  <div class="panel">
+    <details>
+      <summary>使い方</summary>
+      <div class="small" style="margin-top:8px;">
+        <div>このツールは「ミプリンの冒険」向けのスプライトシートをCanvas 2Dだけで生成します。</div>
+        <div>Seedを変更してRegenerateすると、細部の配置やシェーディングが変化します。</div>
+        <div>PNG/JSONをダウンロードし、`assets/sprites/` に配置してSpriteManagerのフォーマットに合わせて使用できます。</div>
+        <div>ZIPで一括ダウンロードも可能です。</div>
+      </div>
+    </details>
+  </div>
+
   <div class="panel">
     <div class="row">
       <label>Seed</label>
@@ -31,55 +50,84 @@
       <button id="regen">Regenerate</button>
       <button id="downloadAll" class="secondary">Download All (ZIP)</button>
     </div>
-    <div class="small">Canvas 2Dによるプロシージャル生成（32色パレット）</div>
+    <div class="small">64色パレットをベースに、アウトライン＋3段階シェーディング＋ディザで生成</div>
   </div>
 
   <div class="panel">
-    <div class="row"><h2>Enemy Sprites (32x32, 3 frames)</h2></div>
+    <div class="row" style="justify-content:space-between;">
+      <h2>Enemy Sprites (32x32, 3 frames)</h2>
+      <div class="info">32x32 / 3 frames / 9 types</div>
+    </div>
     <div class="row" style="margin:8px 0;">
       <button id="dlEnemy">Download PNG</button>
       <button id="dlEnemyJson" class="secondary">Download JSON</button>
+      <label class="small">Zoom</label>
+      <input id="enemyZoom" type="range" min="1" max="8" value="4" />
+      <button id="enemyPlay" class="secondary">Preview Animation</button>
     </div>
     <canvas id="enemyCanvas" width="96" height="288"></canvas>
+    <div id="enemyPreview" class="preview-grid"></div>
   </div>
 
   <div class="panel">
-    <div class="row"><h2>NPC Sprites (32x32, 2 frames)</h2></div>
+    <div class="row" style="justify-content:space-between;">
+      <h2>NPC Sprites (32x32, 2 frames)</h2>
+      <div class="info">32x32 / 2 frames / 8 types</div>
+    </div>
     <div class="row" style="margin:8px 0;">
       <button id="dlNpc">Download PNG</button>
       <button id="dlNpcJson" class="secondary">Download JSON</button>
+      <label class="small">Zoom</label>
+      <input id="npcZoom" type="range" min="1" max="8" value="4" />
+      <button id="npcPlay" class="secondary">Preview Animation</button>
     </div>
     <canvas id="npcCanvas" width="64" height="256"></canvas>
+    <div id="npcPreview" class="preview-grid"></div>
   </div>
 
   <div class="panel">
-    <div class="row"><h2>Boss Sprites (64x64, 4 frames)</h2></div>
+    <div class="row" style="justify-content:space-between;">
+      <h2>Boss Sprites (64x64, 4 frames)</h2>
+      <div class="info">64x64 / 4 frames / 3 types</div>
+    </div>
     <div class="row" style="margin:8px 0;">
       <button id="dlBoss">Download PNG</button>
       <button id="dlBossJson" class="secondary">Download JSON</button>
+      <label class="small">Zoom</label>
+      <input id="bossZoom" type="range" min="1" max="6" value="2" />
     </div>
     <canvas id="bossCanvas" width="256" height="192"></canvas>
   </div>
 
   <div class="panel">
-    <div class="row"><h2>Tile Sprites (32x32)</h2></div>
+    <div class="row" style="justify-content:space-between;">
+      <h2>Tile Sprites (32x32)</h2>
+      <div class="info">32x32 / 19 tiles</div>
+    </div>
     <div class="row" style="margin:8px 0;">
       <button id="dlTiles">Download PNG</button>
       <button id="dlTilesJson" class="secondary">Download JSON</button>
+      <label class="small">Zoom</label>
+      <input id="tileZoom" type="range" min="1" max="8" value="4" />
     </div>
     <canvas id="tileCanvas" width="320" height="128"></canvas>
+    <div id="tileLabels" class="label-grid"></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (() => {
-  const palette = [
-    '#0b0f1c','#1a1a2a','#2b2f44','#3b3f5c','#4f4c6a','#5b6d7a','#7b8aa5','#a0b1c5',
-    '#f5f2e8','#f5a623','#f8d36a','#e67e22','#c0392b','#e74c3c','#8e44ad','#6c2eb9',
-    '#2ecc71','#27ae60','#16a085','#1abc9c','#3498db','#2980b9','#5dade2','#85c1e9',
-    '#2d5a1e','#3a7ecf','#4a8c2a','#6b5b3a','#8b7355','#708090','#c4a035','#daa520'
-  ];
+  const palette = {
+    warm: ['#f5f2e8','#f8d36a','#f5a623','#e67e22','#d35400','#c0392b','#8b5a2b','#6b3f1e'],
+    cool: ['#85c1e9','#5dade2','#3498db','#2980b9','#1abc9c','#16a085','#48c9b0','#7fb3d5'],
+    nature: ['#2ecc71','#27ae60','#1e8449','#145a32','#4a8c2a','#3d7a22','#2d5a1e','#7dcea0'],
+    dark: ['#0b0f1c','#1a1a2a','#2b2f44','#3b3f5c','#4f4c6a','#6c2eb9','#4a235a','#11111a'],
+    earth: ['#c4a035','#b7950b','#8b7355','#6b5b3a','#7f8c8d','#708090','#a0a0a0','#5d4037'],
+    accent: ['#e74c3c','#ff5a5f','#ff7675','#f1c40f','#ffffff','#f5f2e8','#f8f8ff','#ffb3c1'],
+    metallic: ['#d1d8e0','#bdc3c7','#95a5a6','#f1c40f','#f39c12','#f7dc6f','#a9cce3','#9b59b6'],
+    pastel: ['#f9e79f','#d7bde2','#aed6f1','#d4efdf','#fadbd8','#fcf3cf','#d6eaf8','#f5cba7']
+  };
 
   const enemyTypes = [
     'poison_mushroom','green_slime','spider','bomb_mushroom','dark_slime','bat','ice_worm','dark_flower','shadow_bee'
@@ -92,8 +140,22 @@
   const npcCanvas = document.getElementById('npcCanvas');
   const bossCanvas = document.getElementById('bossCanvas');
   const tileCanvas = document.getElementById('tileCanvas');
-
   const seedInput = document.getElementById('seed');
+
+  const enemyZoom = document.getElementById('enemyZoom');
+  const npcZoom = document.getElementById('npcZoom');
+  const bossZoom = document.getElementById('bossZoom');
+  const tileZoom = document.getElementById('tileZoom');
+
+  const enemyPreview = document.getElementById('enemyPreview');
+  const npcPreview = document.getElementById('npcPreview');
+  const tileLabels = document.getElementById('tileLabels');
+
+  let enemyAnim = false;
+  let npcAnim = false;
+  let animTick = 0;
+  let rafId = null;
+
   document.getElementById('regen').addEventListener('click', generateAll);
 
   function rng(seed) {
@@ -101,190 +163,349 @@
     return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   }
 
-  function px(ctx, x, y, color) {
-    ctx.fillStyle = color; ctx.fillRect(x, y, 1, 1);
+  function pick(arr, r) { return arr[Math.floor(r() * arr.length)]; }
+  function randRange(r, min, max) { return min + (max - min) * r(); }
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.max(0, Math.min(255, (n >> 16) + amt));
+    const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+    const b = Math.max(0, Math.min(255, (n & 255) + amt));
+    return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
   }
 
-  function rect(ctx, x, y, w, h, c) {
-    ctx.fillStyle = c; ctx.fillRect(x, y, w, h);
-  }
+  function px(ctx, x, y, color) { ctx.fillStyle = color; ctx.fillRect(x, y, 1, 1); }
+  function rect(ctx, x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 
-  function circle(ctx, cx, cy, r, c) {
-    ctx.fillStyle = c;
+  function drawOutlinedCircle(ctx, cx, cy, r, base, outline, highlight) {
+    for (let y=-r-1; y<=r+1; y++) for (let x=-r-1; x<=r+1; x++) {
+      if (x*x + y*y <= (r+1)*(r+1)) px(ctx, cx+x, cy+y, outline);
+    }
     for (let y=-r; y<=r; y++) for (let x=-r; x<=r; x++) {
-      if (x*x+y*y <= r*r) ctx.fillRect(cx+x, cy+y, 1, 1);
+      if (x*x + y*y <= r*r) px(ctx, cx+x, cy+y, base);
+    }
+    px(ctx, cx-1, cy-2, highlight);
+    px(ctx, cx, cy-2, highlight);
+  }
+
+  function drawShadedRect(ctx, x, y, w, h, base, shadow, highlight, outline) {
+    rect(ctx, x-1, y-1, w+2, h+2, outline);
+    rect(ctx, x, y, w, h, base);
+    rect(ctx, x, y, w, 1, highlight);
+    rect(ctx, x, y+h-1, w, 1, shadow);
+  }
+
+  function drawDitheredFill(ctx, x, y, w, h, c1, c2) {
+    for (let j=0;j<h;j++) for (let i=0;i<w;i++) {
+      px(ctx, x+i, y+j, (i+j)%2 ? c1 : c2);
     }
   }
 
-  function outline(ctx, x, y, w, h, c) {
-    rect(ctx, x, y, w, 1, c); rect(ctx, x, y+h-1, w, 1, c);
-    rect(ctx, x, y, 1, h, c); rect(ctx, x+w-1, y, 1, h, c);
+  function drawEyes(ctx, x, y, color, glow) {
+    px(ctx, x, y, glow); px(ctx, x+1, y, color);
+    px(ctx, x+3, y, glow); px(ctx, x+4, y, color);
   }
 
-  function drawMushroom(ctx, frame, base, cap, spot) {
-    rect(ctx, 12, 18, 8, 8, base);
-    rect(ctx, 10, 20, 12, 6, base);
-    rect(ctx, 8, 12, 16, 8, cap);
-    rect(ctx, 7, 13, 18, 6, cap);
-    circle(ctx, 12, 14, 2, spot);
-    circle(ctx, 19, 15, 2, spot);
-    if (frame === 1) rect(ctx, 9, 11, 14, 1, cap);
-    if (frame === 2) rect(ctx, 9, 19, 14, 1, '#000');
+  function drawWings(ctx, x, y, w, h, c, r, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    rect(ctx, x, y, w, h, c);
+    rect(ctx, x+1, y+1, w-2, h-2, shade(c, 20));
+    ctx.restore();
   }
 
-  function drawSlime(ctx, frame, body, eye) {
-    const squish = frame === 1 ? 1 : 0;
-    rect(ctx, 8, 18 - squish, 16, 8 + squish, body);
-    rect(ctx, 9, 16 - squish, 14, 3, body);
-    px(ctx, 12, 20 - squish, eye); px(ctx, 19, 20 - squish, eye);
+  function drawMushroom(ctx, frame, r) {
+    const cap = '#8e44ad';
+    const capShadow = shade(cap, -30);
+    const capLight = shade(cap, 30);
+    const stem = '#f5f2e8';
+    const stemShadow = shade(stem, -30);
+    const outline = '#0b0f1c';
+    const wobble = frame === 1 ? -1 : 0;
+    const squash = frame === 2 ? 2 : 0;
+    drawOutlinedCircle(ctx, 16+wobble, 14, 8-squash, cap, outline, capLight);
+    drawDitheredFill(ctx, 9, 12, 14, 5, cap, capShadow);
+    rect(ctx, 11+wobble, 20, 10, 8, stem);
+    rect(ctx, 11+wobble, 26, 10, 2, stemShadow);
+    circleSpots(ctx, 16+wobble, 13, 3, '#fff', outline, r);
+    drawEyes(ctx, 13+wobble, 21, '#111', '#fff');
   }
 
-  function drawSpider(ctx, frame, body, leg) {
-    circle(ctx, 16, 18, 5, body);
+  function drawSlime(ctx, frame, r, tint) {
+    const base = tint || '#2ecc71';
+    const shadow = shade(base, -40);
+    const highlight = shade(base, 40);
+    const outline = '#0b0f1c';
+    const tall = frame === 1 ? -2 : 0;
+    const wide = frame === 2 ? 2 : 0;
+    drawShadedRect(ctx, 9-wide, 16+tall, 14+wide*2, 10-tall, base, shadow, highlight, outline);
+    drawOutlinedCircle(ctx, 12, 18+tall, 4, shade(base, -60), outline, highlight);
+    drawOutlinedCircle(ctx, 17, 18+tall, 4, shade(base, -60), outline, highlight);
+    px(ctx, 14, 12+tall, highlight); px(ctx, 15, 12+tall, highlight);
+    rect(ctx, 14, 26, 4, 2, shadow);
+  }
+
+  function drawSpider(ctx, frame, r) {
+    const body = '#3b3f5c';
+    const shadow = shade(body, -30);
+    const highlight = shade(body, 30);
+    const outline = '#0b0f1c';
+    drawOutlinedCircle(ctx, 14, 18, 4, body, outline, highlight);
+    drawOutlinedCircle(ctx, 20, 20, 5, shadow, outline, highlight);
     for (let i=0;i<4;i++) {
-      const dx = 6 + i*2;
-      const swing = frame === 1 ? 1 : -1;
-      px(ctx, 16-dx, 18+swing, leg); px(ctx, 16+dx, 18-swing, leg);
-      px(ctx, 16-dx+1, 19+swing, leg); px(ctx, 16+dx-1, 19-swing, leg);
+      const y = frame === 1 ? 16+i%2 : 18-i%2;
+      rect(ctx, 4+i*2, y, 6, 1, outline);
+      rect(ctx, 22+i*2, y+1, 6, 1, outline);
     }
-    px(ctx, 14, 18, '#fff'); px(ctx, 18, 18, '#fff');
+    rect(ctx, 17, 19, 6, 1, highlight);
+    drawEyes(ctx, 12, 18, '#e74c3c', '#fff');
   }
 
-  function drawBat(ctx, frame, body, wing) {
-    rect(ctx, 14, 16, 4, 4, body);
-    const flap = frame === 1 ? -2 : 2;
-    rect(ctx, 6, 16+flap, 8, 3, wing);
-    rect(ctx, 18, 16+flap, 8, 3, wing);
-    px(ctx, 13, 16, '#fff'); px(ctx, 18, 16, '#fff');
+  function drawBombMushroom(ctx, frame, r) {
+    drawMushroom(ctx, frame, r);
+    rect(ctx, 15, 6, 2, 4, '#8b5a2b');
+    const spark = frame === 1 ? '#f8d36a' : '#e74c3c';
+    px(ctx, 14, 5, spark); px(ctx, 17, 5, spark);
+    rect(ctx, 12, 22, 4, 1, '#000'); rect(ctx, 18, 22, 4, 1, '#000');
+    if (frame === 2) drawDitheredFill(ctx, 10, 10, 12, 6, '#fff', '#f8d36a');
   }
 
-  function drawWorm(ctx, frame, body, eye) {
-    for (let i=0;i<4;i++) circle(ctx, 10+i*5, 18+(i%2), 3, body);
-    px(ctx, 8, 17, eye);
-    if (frame === 2) rect(ctx, 7, 20, 18, 1, '#000');
+  function drawDarkSlime(ctx, frame, r) {
+    drawSlime(ctx, frame, r, '#2b2f44');
+    const glow = frame === 1 ? '#f1c40f' : '#f8d36a';
+    drawEyes(ctx, 12, 20, glow, '#fff');
+    rect(ctx, 8, 14, 2, 2, '#6c2eb9');
   }
 
-  function drawFlower(ctx, frame, petal, core) {
-    circle(ctx, 16, 18, 3, core);
-    for (let i=0;i<8;i++) px(ctx, 16 + Math.round(Math.cos(i)*6), 18 + Math.round(Math.sin(i)*6), petal);
-    if (frame === 1) rect(ctx, 15, 12, 2, 2, '#000');
+  function drawBat(ctx, frame, r) {
+    const body = '#4f4c6a';
+    const outline = '#0b0f1c';
+    const wing = '#2b2f44';
+    const spread = frame === 1 ? 1 : 0;
+    rect(ctx, 14, 16, 4, 5, body);
+    rect(ctx, 6-spread*2, 15-spread, 8+spread*2, 3, wing);
+    rect(ctx, 18, 15-spread, 8+spread*2, 3, wing);
+    rect(ctx, 6-spread*2, 18, 8+spread*2, 2, outline);
+    px(ctx, 15, 16, '#fff'); px(ctx, 17, 16, '#fff');
+    rect(ctx, 14, 14, 1, 2, outline); rect(ctx, 17, 14, 1, 2, outline);
+    if (frame === 2) rect(ctx, 10, 18, 12, 2, outline);
   }
 
-  function drawBee(ctx, frame, body, wing) {
-    rect(ctx, 12, 16, 8, 6, body);
-    rect(ctx, 12, 18, 8, 1, '#000');
-    const flap = frame === 1 ? -2 : 2;
-    rect(ctx, 10, 12+flap, 5, 3, wing);
-    rect(ctx, 17, 12+flap, 5, 3, wing);
-    px(ctx, 13, 17, '#fff');
+  function drawIceWorm(ctx, frame, r) {
+    const base = '#5dade2';
+    const shadow = shade(base, -30);
+    const highlight = shade(base, 30);
+    const outline = '#0b0f1c';
+    const bend = frame === 1 ? 1 : frame === 2 ? -1 : 0;
+    for (let i=0;i<4;i++) {
+      drawOutlinedCircle(ctx, 10+i*5, 18+((i%2)+bend), 3, base, outline, highlight);
+    }
+    rect(ctx, 6, 18, 2, 2, '#f8f8ff');
+    rect(ctx, 7, 16, 1, 4, '#f8f8ff');
   }
 
-  function drawEnemy(ctx, type, frame) {
-    const c = {
-      poison_mushroom: ['#6c2eb9','#8e44ad','#f5f2e8'],
-      green_slime: ['#2ecc71','#27ae60','#0b0f1c'],
-      spider: ['#2b2f44','#3b3f5c','#f5f2e8'],
-      bomb_mushroom: ['#c0392b','#e74c3c','#f8d36a'],
-      dark_slime: ['#3b3f5c','#1a1a2a','#f5f2e8'],
-      bat: ['#5b6d7a','#2b2f44','#f5f2e8'],
-      ice_worm: ['#5dade2','#85c1e9','#f5f2e8'],
-      dark_flower: ['#6c2eb9','#1a1a2a','#f8d36a'],
-      shadow_bee: ['#1a1a2a','#3b3f5c','#85c1e9']
+  function drawDarkFlower(ctx, frame, r) {
+    const petal = '#4a235a';
+    const edge = '#e74c3c';
+    const center = '#f1c40f';
+    const outline = '#0b0f1c';
+    for (let i=0;i<8;i++) {
+      const pxX = 16 + Math.round(Math.cos(i)*6);
+      const pxY = 16 + Math.round(Math.sin(i)*6);
+      px(ctx, pxX, pxY, petal); px(ctx, pxX+1, pxY, edge);
+    }
+    drawOutlinedCircle(ctx, 16, 16, 3, center, outline, '#fff');
+    rect(ctx, 15, 20, 2, 8, '#2d5a1e');
+    if (frame === 1) rect(ctx, 12, 12, 8, 2, edge);
+    if (frame === 2) rect(ctx, 14, 18, 4, 1, '#000');
+  }
+
+  function drawShadowBee(ctx, frame, r) {
+    const body = '#1a1a2a';
+    const stripe = '#3b3f5c';
+    const outline = '#0b0f1c';
+    drawShadedRect(ctx, 12, 16, 8, 6, body, outline, stripe, outline);
+    rect(ctx, 12, 18, 8, 1, stripe);
+    const wingY = frame === 1 ? 10 : 12;
+    drawWings(ctx, 9, wingY, 6, 3, '#85c1e9', r, 0.5);
+    drawWings(ctx, 17, wingY, 6, 3, '#85c1e9', r, 0.5);
+    rect(ctx, 19, 21, 2, 2, '#e74c3c');
+    if (frame === 2) rect(ctx, 20, 22, 4, 1, '#f8d36a');
+  }
+
+  function drawEnemy(ctx, type, frame, r) {
+    switch (type) {
+      case 'poison_mushroom': drawMushroom(ctx, frame, r); break;
+      case 'green_slime': drawSlime(ctx, frame, r, '#2ecc71'); break;
+      case 'spider': drawSpider(ctx, frame, r); break;
+      case 'bomb_mushroom': drawBombMushroom(ctx, frame, r); break;
+      case 'dark_slime': drawDarkSlime(ctx, frame, r); break;
+      case 'bat': drawBat(ctx, frame, r); break;
+      case 'ice_worm': drawIceWorm(ctx, frame, r); break;
+      case 'dark_flower': drawDarkFlower(ctx, frame, r); break;
+      case 'shadow_bee': drawShadowBee(ctx, frame, r); break;
+    }
+  }
+
+  function drawNpc(ctx, type, frame, r) {
+    const base = {
+      hatch:'#f5a623', miel:'#9b59b6', marche:'#e67e22', bee:'#f8d36a',
+      pore:'#8b7355', navi:'#1abc9c', granpa:'#bdc3c7', sign:'#6b5b3a'
     }[type];
-
-    if (type.includes('mushroom')) drawMushroom(ctx, frame, c[0], c[1], c[2]);
-    else if (type.includes('slime')) drawSlime(ctx, frame, c[0], c[2]);
-    else if (type === 'spider') drawSpider(ctx, frame, c[0], c[1]);
-    else if (type === 'bat') drawBat(ctx, frame, c[1], c[0]);
-    else if (type === 'ice_worm') drawWorm(ctx, frame, c[0], c[2]);
-    else if (type === 'dark_flower') drawFlower(ctx, frame, c[0], c[2]);
-    else if (type === 'shadow_bee') drawBee(ctx, frame, c[1], c[2]);
-  }
-
-  function drawNpc(ctx, type, frame) {
-    const body = {
-      hatch:'#f5a623', miel:'#8e44ad', marche:'#e67e22', bee:'#f8d36a',
-      pore:'#8b7355', navi:'#1abc9c', granpa:'#708090', sign:'#6b5b3a'
-    }[type];
-
+    const outline = '#0b0f1c';
     if (type === 'sign') {
-      rect(ctx, 14, 10, 4, 16, '#8b7355');
-      rect(ctx, 8, 8, 16, 6, '#c4a035');
-      outline(ctx, 8, 8, 16, 6, '#6b5b3a');
+      drawShadedRect(ctx, 12, 10, 8, 16, base, shade(base,-30), shade(base,20), outline);
+      drawShadedRect(ctx, 6, 8, 20, 6, '#c4a035', '#8b5a2b', '#f8d36a', outline);
+      rect(ctx, 10, 24, 12, 2, '#1a1a2a');
       return;
     }
-
-    rect(ctx, 12, 14, 8, 8, body);
-    rect(ctx, 11, 12, 10, 4, body);
-    rect(ctx, 13, 18, 6, 1, '#000');
-    if (frame === 1) rect(ctx, 14, 19, 4, 2, '#000');
+    drawShadedRect(ctx, 12, 14, 8, 10, base, shade(base,-30), shade(base,30), outline);
+    drawShadedRect(ctx, 11, 12, 10, 4, base, shade(base,-30), shade(base,30), outline);
     rect(ctx, 9, 12, 3, 3, '#85c1e9');
     rect(ctx, 20, 12, 3, 3, '#85c1e9');
-    if (type === 'hatch') { px(ctx, 13, 13, '#000'); px(ctx, 18, 13, '#000'); rect(ctx, 10, 10, 1, 8, '#daa520'); }
-    if (type === 'miel') { circle(ctx, 22, 20, 3, '#85c1e9'); }
-    if (type === 'marche') { rect(ctx, 12, 20, 8, 4, '#8b7355'); }
-    if (type === 'granpa') { rect(ctx, 12, 20, 8, 3, '#f5f2e8'); }
+    if (frame === 1) rect(ctx, 14, 20, 4, 2, '#000');
+    drawEyes(ctx, 13, 16, '#111', '#fff');
+    if (type === 'hatch') { rect(ctx, 10, 10, 1, 10, '#daa520'); rect(ctx, 12, 12, 2, 1, '#000'); rect(ctx, 18, 12, 2, 1, '#000'); }
+    if (type === 'miel') { drawOutlinedCircle(ctx, 23, 20, 3, '#85c1e9', outline, '#fff'); }
+    if (type === 'marche') { rect(ctx, 11, 20, 10, 4, '#8b7355'); if (frame===1) rect(ctx, 20, 18, 4, 3, '#f8d36a'); }
+    if (type === 'bee') { rect(ctx, 12, 18, 8, 1, '#000'); if (frame===1) rect(ctx, 8, 12, 3, 3, '#f8f8ff'); }
+    if (type === 'pore') { if (frame===1) rect(ctx, 14, 10, 4, 2, '#f5f2e8'); }
+    if (type === 'navi') { rect(ctx, 14, 18, 4, 2, '#85c1e9'); if (frame===1) rect(ctx, 8, 10, 3, 3, '#85c1e9'); }
+    if (type === 'granpa') { rect(ctx, 12, 20, 8, 3, '#f5f2e8'); if (frame===1) rect(ctx, 14, 19, 4, 1, '#f5f2e8'); }
   }
 
-  function drawBoss(ctx, type, frame) {
+  function drawBoss(ctx, type, frame, r) {
+    const outline = '#0b0f1c';
     if (type === 'mushroom_king') {
-      rect(ctx, 20, 34, 24, 18, '#daa520');
-      rect(ctx, 14, 18, 36, 16, '#c0392b');
-      rect(ctx, 12, 20, 40, 12, '#e74c3c');
-      rect(ctx, 26, 10, 12, 6, '#f5a623');
-      px(ctx, 28, 8, '#f8d36a'); px(ctx, 35, 8, '#f8d36a');
-      if (frame === 1) rect(ctx, 18, 16, 28, 2, '#000');
-      if (frame === 2) circle(ctx, 32, 14, 4, '#f8d36a');
+      drawOutlinedCircle(ctx, 32, 22, 18, '#c0392b', outline, '#ff7675');
+      drawDitheredFill(ctx, 18, 16, 28, 8, '#e74c3c', '#c0392b');
+      drawShadedRect(ctx, 24, 32, 16, 20, '#f5f2e8', '#8b5a2b', '#fff', outline);
+      drawShadedRect(ctx, 26, 8, 12, 6, '#f1c40f', '#d4a03c', '#f8d36a', outline);
+      if (frame === 1) rect(ctx, 20, 20, 24, 2, '#000');
+      if (frame === 2) drawDitheredFill(ctx, 16, 6, 32, 8, '#f8f8ff', '#f8d36a');
+      if (frame === 3) rect(ctx, 28, 8, 12, 2, '#000');
     }
     if (type === 'ice_beetle') {
-      rect(ctx, 18, 24, 28, 24, '#5dade2');
-      rect(ctx, 22, 18, 20, 8, '#85c1e9');
-      rect(ctx, 14, 20, 8, 6, '#85c1e9');
-      rect(ctx, 42, 20, 8, 6, '#85c1e9');
-      if (frame === 2) rect(ctx, 26, 10, 12, 6, '#f5f2e8');
+      drawShadedRect(ctx, 18, 24, 28, 24, '#5dade2', '#2980b9', '#85c1e9', outline);
+      drawShadedRect(ctx, 22, 18, 20, 8, '#85c1e9', '#5dade2', '#f8f8ff', outline);
+      rect(ctx, 12, 20, 6, 6, '#85c1e9'); rect(ctx, 46, 20, 6, 6, '#85c1e9');
+      if (frame === 2) rect(ctx, 26, 10, 12, 6, '#f8f8ff');
+      if (frame === 3) rect(ctx, 18, 24, 28, 1, '#000');
     }
     if (type === 'dark_queen') {
-      rect(ctx, 18, 22, 28, 26, '#1a1a2a');
-      rect(ctx, 20, 18, 24, 6, '#6c2eb9');
-      rect(ctx, 12, 18, 6, 8, '#3b3f5c');
-      rect(ctx, 46, 18, 6, 8, '#3b3f5c');
-      if (frame === 1) circle(ctx, 32, 14, 5, '#6c2eb9');
-      if (frame === 3) rect(ctx, 26, 28, 12, 4, '#f5f2e8');
+      drawShadedRect(ctx, 18, 22, 28, 28, '#1a1a2a', '#0b0f1c', '#3b3f5c', outline);
+      drawShadedRect(ctx, 20, 18, 24, 6, '#6c2eb9', '#4a235a', '#9b59b6', outline);
+      rect(ctx, 10, 18, 6, 10, '#3b3f5c'); rect(ctx, 48, 18, 6, 10, '#3b3f5c');
+      if (frame === 1) drawDitheredFill(ctx, 10, 8, 44, 6, '#6c2eb9', '#4a235a');
+      if (frame === 2) rect(ctx, 26, 12, 12, 4, '#f8d36a');
+      if (frame === 3) rect(ctx, 24, 30, 16, 2, '#f5f2e8');
     }
   }
 
-  function drawTile(ctx, type) {
-    const c = {
-      grass:'#4a8c2a', path:'#c4a035', wall:'#6b5b3a', water:'#3a7ecf', tree:'#2d5a1e', house:'#8b7355',
-      fence:'#8b7355', well:'#708090', flower:'#f8d36a', bridge:'#a0522d', save_point:'#f5a623', sign:'#c4a035',
-      chest:'#daa520', stump:'#6b5b3a', bush:'#3d7a22', cave_floor:'#4b4b4b', anchor:'#708090', seal_wall:'#2ecc71', exit:'#2ecc71'
-    };
-    rect(ctx, 0, 0, 32, 32, c[type] || '#333');
-    if (type === 'water') { for (let i=0;i<32;i+=4) rect(ctx, i, 8, 2, 1, '#85c1e9'); }
-    if (type === 'tree') { rect(ctx, 12, 18, 8, 10, '#6b5b3a'); circle(ctx, 16, 14, 7, '#2d5a1e'); }
-    if (type === 'house') { rect(ctx, 8, 14, 16, 12, '#8b7355'); rect(ctx, 10, 10, 12, 6, '#6b5b3a'); }
-    if (type === 'fence') { rect(ctx, 8, 8, 2, 16, '#6b5b3a'); rect(ctx, 22, 8, 2, 16, '#6b5b3a'); rect(ctx, 8, 12, 16, 2, '#6b5b3a'); }
-    if (type === 'well') { circle(ctx, 16, 18, 6, '#708090'); rect(ctx, 12, 16, 8, 4, '#4f4c6a'); }
-    if (type === 'flower') { circle(ctx, 16, 16, 4, '#f8d36a'); px(ctx, 16, 10, '#f5f2e8'); px(ctx, 10, 16, '#f5f2e8'); }
-    if (type === 'bridge') { for (let i=6;i<26;i+=4) rect(ctx, i, 14, 2, 4, '#6b5b3a'); }
-    if (type === 'save_point') { circle(ctx, 16, 16, 6, '#f8d36a'); rect(ctx, 15, 8, 2, 16, '#f5a623'); }
-    if (type === 'sign') { rect(ctx, 14, 10, 4, 12, '#8b7355'); rect(ctx, 8, 8, 16, 6, '#c4a035'); }
-    if (type === 'chest') { rect(ctx, 8, 14, 16, 10, '#daa520'); rect(ctx, 8, 18, 16, 2, '#6b5b3a'); }
-    if (type === 'stump') { circle(ctx, 16, 18, 6, '#6b5b3a'); rect(ctx, 12, 16, 8, 4, '#8b7355'); }
-    if (type === 'bush') { circle(ctx, 12, 18, 5, '#3d7a22'); circle(ctx, 20, 18, 5, '#3d7a22'); }
-    if (type === 'anchor') { rect(ctx, 15, 8, 2, 16, '#708090'); rect(ctx, 10, 20, 12, 2, '#708090'); }
-    if (type === 'seal_wall') { rect(ctx, 4, 4, 24, 24, '#2ecc71'); outline(ctx, 4, 4, 24, 24, '#1a1a2a'); }
-    if (type === 'exit') { rect(ctx, 4, 4, 24, 24, '#2ecc71'); rect(ctx, 10, 10, 12, 12, '#0b0f1c'); }
+  function drawTile(ctx, type, r) {
+    const outline = '#0b0f1c';
+    if (type === 'grass') {
+      drawDitheredFill(ctx, 0, 0, 32, 32, '#4a8c2a', '#3d7a22');
+      for (let i=0;i<12;i++) px(ctx, Math.floor(r()*32), Math.floor(r()*32), '#7dcea0');
+    }
+    if (type === 'path') {
+      drawDitheredFill(ctx, 0, 0, 32, 32, '#c4a035', '#b7950b');
+      rect(ctx, 10, 14, 12, 4, '#d7bde2');
+    }
+    if (type === 'wall') {
+      rect(ctx, 0, 0, 32, 32, '#6b5b3a');
+      for (let y=0;y<32;y+=8) rect(ctx, 0, y, 32, 1, '#4a3a28');
+      for (let x=0;x<32;x+=8) rect(ctx, x, 0, 1, 32, '#4a3a28');
+      rect(ctx, 4, 4, 4, 2, '#2ecc71');
+    }
+    if (type === 'water') {
+      drawDitheredFill(ctx, 0, 0, 32, 32, '#3a7ecf', '#2980b9');
+      for (let i=0;i<32;i+=6) rect(ctx, i, 10, 4, 1, '#85c1e9');
+      for (let i=0;i<32;i+=7) rect(ctx, i, 20, 4, 1, '#5dade2');
+    }
+    if (type === 'tree') {
+      rect(ctx, 12, 18, 8, 10, '#6b5b3a');
+      drawOutlinedCircle(ctx, 16, 14, 9, '#2d5a1e', outline, '#7dcea0');
+    }
+    if (type === 'house') {
+      drawShadedRect(ctx, 8, 14, 16, 12, '#8b7355', '#6b5b3a', '#c4a035', outline);
+      rect(ctx, 10, 10, 12, 6, '#6b5b3a');
+      rect(ctx, 12, 18, 4, 6, '#0b0f1c');
+      rect(ctx, 18, 18, 4, 4, '#f8f8ff');
+    }
+    if (type === 'fence') {
+      rect(ctx, 8, 8, 2, 16, '#6b5b3a'); rect(ctx, 22, 8, 2, 16, '#6b5b3a'); rect(ctx, 8, 12, 16, 2, '#8b7355');
+    }
+    if (type === 'well') {
+      drawOutlinedCircle(ctx, 16, 18, 6, '#708090', outline, '#d1d8e0');
+      rect(ctx, 12, 16, 8, 4, '#0b0f1c');
+      rect(ctx, 18, 10, 1, 6, '#8b7355'); rect(ctx, 12, 10, 1, 6, '#8b7355');
+    }
+    if (type === 'flower') {
+      drawDitheredFill(ctx, 0, 0, 32, 32, '#4a8c2a', '#3d7a22');
+      for (let i=0;i<6;i++) { px(ctx, 10+i*3, 16, '#ff5a5f'); px(ctx, 11+i*3, 15, '#f8d36a'); }
+    }
+    if (type === 'bridge') {
+      rect(ctx, 0, 0, 32, 32, '#8b7355');
+      for (let i=0;i<32;i+=4) rect(ctx, i, 14, 2, 6, '#6b5b3a');
+      rect(ctx, 4, 8, 24, 1, '#f5f2e8'); rect(ctx, 4, 24, 24, 1, '#f5f2e8');
+    }
+    if (type === 'save_point') {
+      rect(ctx, 12, 20, 8, 6, '#6b5b3a');
+      drawOutlinedCircle(ctx, 16, 14, 6, '#f8d36a', outline, '#fff');
+      rect(ctx, 16, 6, 1, 4, '#f8f8ff');
+    }
+    if (type === 'sign') {
+      rect(ctx, 14, 10, 4, 12, '#8b7355'); rect(ctx, 8, 8, 16, 6, '#c4a035');
+    }
+    if (type === 'chest') {
+      drawShadedRect(ctx, 8, 14, 16, 10, '#daa520', '#8b5a2b', '#f8d36a', outline);
+      rect(ctx, 8, 18, 16, 2, '#6b5b3a'); rect(ctx, 15, 18, 2, 4, '#f8f8ff');
+    }
+    if (type === 'stump') {
+      drawOutlinedCircle(ctx, 16, 18, 6, '#6b5b3a', outline, '#8b7355');
+      rect(ctx, 12, 16, 8, 4, '#c4a035');
+      rect(ctx, 10, 20, 2, 2, '#2ecc71');
+    }
+    if (type === 'bush') {
+      drawOutlinedCircle(ctx, 12, 18, 5, '#3d7a22', outline, '#7dcea0');
+      drawOutlinedCircle(ctx, 20, 18, 5, '#3d7a22', outline, '#7dcea0');
+      px(ctx, 14, 16, '#ff5a5f'); px(ctx, 18, 19, '#ff5a5f');
+    }
+    if (type === 'cave_floor') {
+      drawDitheredFill(ctx, 0, 0, 32, 32, '#3b3f5c', '#2b2f44');
+      rect(ctx, 8, 8, 6, 1, '#0b0f1c'); rect(ctx, 18, 22, 8, 1, '#0b0f1c');
+    }
+    if (type === 'anchor') {
+      rect(ctx, 15, 8, 2, 16, '#708090'); rect(ctx, 10, 20, 12, 2, '#708090');
+      rect(ctx, 12, 22, 2, 4, '#708090'); rect(ctx, 18, 22, 2, 4, '#708090');
+    }
+    if (type === 'seal_wall') {
+      drawShadedRect(ctx, 4, 4, 24, 24, '#2ecc71', '#145a32', '#7dcea0', outline);
+      for (let i=8;i<24;i+=6) rect(ctx, i, 10, 2, 8, '#f8f8ff');
+    }
+    if (type === 'exit') {
+      rect(ctx, 6, 6, 20, 20, '#2ecc71'); rect(ctx, 10, 10, 12, 12, '#0b0f1c');
+      rect(ctx, 12, 14, 8, 1, '#f8f8ff');
+    }
+  }
+
+  function circleSpots(ctx, cx, cy, count, c, outline, r) {
+    for (let i=0;i<count;i++) {
+      const ox = Math.round(randRange(r, -6, 6));
+      const oy = Math.round(randRange(r, -4, 4));
+      drawOutlinedCircle(ctx, cx+ox, cy+oy, 2, c, outline, '#f8f8ff');
+    }
   }
 
   function makeJson(sheetW, sheetH, frameW, frameH, names, framesPer) {
     const frames = [];
     const animations = {};
+    const cols = sheetW / frameW;
     for (let i=0;i<names.length;i++) {
       for (let f=0;f<framesPer;f++) {
         const idx = i * framesPer + f;
-        const sx = (idx % (sheetW / frameW)) * frameW;
-        const sy = Math.floor(idx / (sheetW / frameW)) * frameH;
+        const sx = (idx % cols) * frameW;
+        const sy = Math.floor(idx / cols) * frameH;
         frames.push({ sx, sy, sw: frameW, sh: frameH });
       }
       const base = i * framesPer;
@@ -296,7 +517,7 @@
     return { sheet: { w: sheetW, h: sheetH, frameW, frameH }, frames, animations };
   }
 
-  function renderSheet(canvas, frameW, frameH, names, framesPer, drawFn, scale) {
+  function renderSheet(canvas, frameW, frameH, names, framesPer, drawFn, zoom, r) {
     canvas.width = frameW * framesPer;
     canvas.height = frameH * names.length;
     const ctx = canvas.getContext('2d');
@@ -306,15 +527,15 @@
       for (let f=0;f<framesPer;f++) {
         ctx.save();
         ctx.translate(f*frameW, i*frameH);
-        drawFn(ctx, names[i], f);
+        drawFn(ctx, names[i], f, r);
         ctx.restore();
       }
     }
-    canvas.style.width = canvas.width * (scale || 4) + 'px';
-    canvas.style.height = canvas.height * (scale || 4) + 'px';
+    canvas.style.width = canvas.width * zoom + 'px';
+    canvas.style.height = canvas.height * zoom + 'px';
   }
 
-  function renderTiles(canvas) {
+  function renderTiles(canvas, zoom, r) {
     const cols = 10;
     const rows = Math.ceil(tileTypes.length / cols);
     canvas.width = cols * 32;
@@ -326,20 +547,55 @@
       const y = Math.floor(i / cols) * 32;
       ctx.save();
       ctx.translate(x, y);
-      drawTile(ctx, tileTypes[i]);
+      drawTile(ctx, tileTypes[i], r);
       ctx.restore();
     }
-    canvas.style.width = canvas.width * 4 + 'px';
-    canvas.style.height = canvas.height * 4 + 'px';
+    canvas.style.width = canvas.width * zoom + 'px';
+    canvas.style.height = canvas.height * zoom + 'px';
+  }
+
+  function buildPreview(container, names, size, frames, sheetCanvas) {
+    container.innerHTML = '';
+    for (let i=0;i<names.length;i++) {
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      c.style.width = '64px'; c.style.height = '64px';
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = names[i];
+      item.appendChild(c); item.appendChild(label);
+      container.appendChild(item);
+      item._canvas = c; item._index = i; item._frames = frames; item._size = size; item._sheet = sheetCanvas;
+    }
+  }
+
+  function updatePreview(container, frameIndex) {
+    for (const item of container.children) {
+      const c = item._canvas; if (!c) continue;
+      const ctx = c.getContext('2d');
+      const f = frameIndex % item._frames;
+      const sx = f * item._size;
+      const sy = item._index * item._size;
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0,0,c.width,c.height);
+      ctx.drawImage(item._sheet, sx, sy, item._size, item._size, 0, 0, c.width, c.height);
+    }
   }
 
   function generateAll() {
     const r = rng(parseInt(seedInput.value,10) || 1);
-    r();
-    renderSheet(enemyCanvas, 32, 32, enemyTypes, 3, drawEnemy, 4);
-    renderSheet(npcCanvas, 32, 32, npcTypes, 2, drawNpc, 4);
-    renderSheet(bossCanvas, 64, 64, bossTypes, 4, drawBoss, 2);
-    renderTiles(tileCanvas);
+    renderSheet(enemyCanvas, 32, 32, enemyTypes, 3, drawEnemy, parseInt(enemyZoom.value,10), r);
+    renderSheet(npcCanvas, 32, 32, npcTypes, 2, drawNpc, parseInt(npcZoom.value,10), r);
+    renderSheet(bossCanvas, 64, 64, bossTypes, 4, drawBoss, parseInt(bossZoom.value,10), r);
+    renderTiles(tileCanvas, parseInt(tileZoom.value,10), r);
+    buildPreview(enemyPreview, enemyTypes, 32, 3, enemyCanvas);
+    buildPreview(npcPreview, npcTypes, 32, 2, npcCanvas);
+    updatePreview(enemyPreview, 0);
+    updatePreview(npcPreview, 0);
+    tileLabels.innerHTML = '';
+    tileTypes.forEach(t => { const d = document.createElement('div'); d.className='label'; d.textContent=t; tileLabels.appendChild(d); });
   }
 
   function downloadCanvas(canvas, name) {
@@ -373,13 +629,7 @@
     downloadJson(makeJson(bossCanvas.width, bossCanvas.height, 64, 64, bossTypes, 4), 'boss_sheet.json');
   });
   document.getElementById('dlTilesJson').addEventListener('click', () => {
-    const frames = tileTypes.map((t, i) => ({
-      name: t,
-      sx: (i % 10) * 32,
-      sy: Math.floor(i / 10) * 32,
-      sw: 32,
-      sh: 32
-    }));
+    const frames = tileTypes.map((t, i) => ({ name: t, sx:(i%10)*32, sy:Math.floor(i/10)*32, sw:32, sh:32 }));
     downloadJson({ sheet: { w: tileCanvas.width, h: tileCanvas.height, frameW: 32, frameH: 32 }, frames, animations: {} }, 'tile_sheet.json');
   });
 
@@ -403,6 +653,37 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
+
+  function updateZoom() {
+    enemyCanvas.style.width = enemyCanvas.width * parseInt(enemyZoom.value,10) + 'px';
+    enemyCanvas.style.height = enemyCanvas.height * parseInt(enemyZoom.value,10) + 'px';
+    npcCanvas.style.width = npcCanvas.width * parseInt(npcZoom.value,10) + 'px';
+    npcCanvas.style.height = npcCanvas.height * parseInt(npcZoom.value,10) + 'px';
+    bossCanvas.style.width = bossCanvas.width * parseInt(bossZoom.value,10) + 'px';
+    bossCanvas.style.height = bossCanvas.height * parseInt(bossZoom.value,10) + 'px';
+    tileCanvas.style.width = tileCanvas.width * parseInt(tileZoom.value,10) + 'px';
+    tileCanvas.style.height = tileCanvas.height * parseInt(tileZoom.value,10) + 'px';
+  }
+
+  enemyZoom.addEventListener('input', updateZoom);
+  npcZoom.addEventListener('input', updateZoom);
+  bossZoom.addEventListener('input', updateZoom);
+  tileZoom.addEventListener('input', updateZoom);
+
+  document.getElementById('enemyPlay').addEventListener('click', () => { enemyAnim = !enemyAnim; startAnim(); });
+  document.getElementById('npcPlay').addEventListener('click', () => { npcAnim = !npcAnim; startAnim(); });
+
+  function startAnim() {
+    if (rafId) return;
+    const step = () => {
+      animTick++;
+      if (enemyAnim) updatePreview(enemyPreview, Math.floor(animTick/10));
+      if (npcAnim) updatePreview(npcPreview, Math.floor(animTick/12));
+      if (!enemyAnim && !npcAnim) { rafId = null; return; }
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
 
   generateAll();
 })();

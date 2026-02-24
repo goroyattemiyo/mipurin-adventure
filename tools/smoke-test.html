@@ -30,6 +30,7 @@
   <script src="../js/sprites.js"></script>
   <script src="../js/map.js"></script>
   <script src="../js/battle.js"></script>
+  <script src="../js/boss.js"></script>
   <script src="../js/engine.js"></script>
 
   <script>
@@ -95,6 +96,83 @@
       const prologueFiles = Array.from({length:10}, (_,i)=>`prologue_${String(i+1).padStart(2,'0')}.webp`);
       const prologueChecks = await Promise.all(prologueFiles.map(f => checkFetch(`../assets/prologue/${f}`)));
       addResult('Prologue images exist', prologueChecks.every(Boolean), prologueFiles.filter((_,i)=>!prologueChecks[i]).join(', '));
+
+      const boss1 = BossManager.spawn('mushroom_king');
+      addResult('BossManager.spawn mushroom_king hp=30', !!boss1 && boss1.hp === 30, boss1 ? `hp=${boss1.hp}` : 'no boss');
+      const boss2 = BossManager.spawn('ice_beetle');
+      addResult('BossManager.spawn ice_beetle hp=50', !!boss2 && boss2.hp === 50, boss2 ? `hp=${boss2.hp}` : 'no boss');
+      const boss3 = BossManager.spawn('dark_queen');
+      addResult('BossManager.spawn dark_queen hp=80', !!boss3 && boss3.hp === 80, boss3 ? `hp=${boss3.hp}` : 'no boss');
+
+      const bossCheck = BossManager.spawn('mushroom_king');
+      const beforeHp = bossCheck ? bossCheck.hp : 0;
+      const box = bossCheck ? { x: bossCheck.x, y: bossCheck.y, w: 10, h: 10 } : null;
+      const hit = box ? BossManager.checkHit(box, 1) : false;
+      const afterHp = bossCheck ? bossCheck.hp : beforeHp;
+      addResult('BossManager.checkHit reduces HP', hit && afterHp < beforeHp, `before=${beforeHp} after=${afterHp}`);
+
+      addResult('Ending type C when killCount=0', NpcManager.getEndingType({ killCount:0 }, null) === 'ending_c');
+      addResult('Ending type A when needle finish', NpcManager.getEndingType({ killCount:5 }, 'needle_finish') === 'ending_a');
+      addResult('Ending type B otherwise', NpcManager.getEndingType({ killCount:5 }, 'attack_finish') === 'ending_b');
+
+      const requiredMaps = ['village','forest_south','forest_north','cave','flower_field'];
+      const loadedMaps = requiredMaps.filter(m => !!MapManager.loadMap(m)).length;
+      const invalidMaps = ['boss','dungeon','unknown'].every(m => !MapManager.loadMap(m));
+      addResult('MapManager has exactly 5 maps', loadedMaps === 5 && invalidMaps, `loaded=${loadedMaps}`);
+
+      addResult('MapManager.TILE.SEAL_WALL exists', typeof MapManager.TILE.SEAL_WALL === 'number');
+
+      const allEnemies = ['poison_mushroom','green_slime','spider','bomb_mushroom','dark_slime','bat','ice_worm','dark_flower','shadow_bee'];
+      const enemyKeys = Object.keys(Balance.ENEMIES || {});
+      const enemiesOk = allEnemies.every(e => enemyKeys.includes(e)) && enemyKeys.length === 9;
+      addResult('Balance.ENEMIES has all 9 types', enemiesOk, enemyKeys.join(', '));
+
+      const langKeys = [
+        'title','press_start','menu_story','menu_dungeon','menu_collection','menu_settings','menu_credits',
+        'mipurin_home','npc_hatch_first','npc_hatch_pacifist','npc_hatch_normal','npc_hatch_violent',
+        'npc_miel_normal','npc_miel_hint','npc_miel_worried','npc_marche','npc_marche_closed','npc_bee',
+        'npc_pore_normal','npc_navi_first','npc_navi_repeat','save_point_text','area_locked','chest_empty',
+        'sign_village','sign_forest_south','sign_forest_north','sign_cave','sign_flower_field',
+        'game_over','continue_prompt','credits_thanks',
+        'ending_a','ending_a_title','ending_b','ending_b_title','ending_c','ending_c_title',
+        ...Array.from({length:10}, (_,i)=>`prologue_${String(i+1).padStart(2,'0')}`)
+      ];
+      const missingLang = langKeys.filter(k => {
+        const v = Lang.t(k);
+        return !v || v === k;
+      });
+      addResult('All Lang.t keys in game/npc are defined', missingLang.length === 0, missingLang.join(', '));
+
+      addResult('BossManager global exists', typeof BossManager !== 'undefined');
+      const bossA = BossManager.spawn('mushroom_king');
+      addResult('BossManager.spawn mushroom_king returns hp=30', !!bossA && bossA.hp === 30, bossA ? `hp=${bossA.hp}` : 'no boss');
+      const bossB = BossManager.spawn('ice_beetle');
+      addResult('BossManager.spawn ice_beetle returns hp=50', !!bossB && bossB.hp === 50, bossB ? `hp=${bossB.hp}` : 'no boss');
+      const bossC = BossManager.spawn('dark_queen');
+      addResult('BossManager.spawn dark_queen returns hp=80', !!bossC && bossC.hp === 80, bossC ? `hp=${bossC.hp}` : 'no boss');
+
+      addResult('NpcManager.getEndingType killCount=0 => ending_c', NpcManager.getEndingType({ killCount:0 }) === 'ending_c');
+      addResult('NpcManager.getEndingType needle_finish => ending_a', NpcManager.getEndingType({ lastAction:'needle_finish', killCount:5 }) === 'ending_a');
+      addResult('NpcManager.getEndingType killCount=5 => ending_b', NpcManager.getEndingType({ killCount:5 }) === 'ending_b');
+
+      const mapCollection = MapManager._maps || MapManager.maps || {};
+      addResult('MapManager has 5 maps', Object.keys(mapCollection).length === 5, `count=${Object.keys(mapCollection).length}`);
+      addResult('MapManager.TILE.SEAL_WALL is number', typeof MapManager.TILE.SEAL_WALL === 'number');
+
+      const enemyList = ['poison_mushroom','green_slime','spider','bat','ice_worm','dark_flower','shadow_bee','bomb_mushroom','dark_slime'];
+      const enemySet = Object.keys(Balance.ENEMIES || {});
+      const enemyOk = enemyList.every(e => enemySet.includes(e)) && enemySet.length === 9;
+      addResult('Balance.ENEMIES has all 9 types', enemyOk, enemySet.join(', '));
+
+      const requiredLang = [
+        'prologue_01','ending_a_title','ending_a_text','npc_hatch_first','boss_mushroom_king_intro',
+        'item_piece_a_name','shop_title','save_success','dungeon_enter','collection_title'
+      ];
+      const missingRequired = requiredLang.filter(k => {
+        const v = Lang.t(k);
+        return !v || v === k;
+      });
+      addResult('Lang.t required keys non-empty', missingRequired.length === 0, missingRequired.join(', '));
     })();
   </script>
 </body>

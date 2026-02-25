@@ -86,6 +86,7 @@
       <div class="row" style="margin-top:8px;">
         <button id="removeBg">背景を透過</button>
         <button id="undo" class="secondary">元に戻す</button>
+        <button id="downloadSrc" class="secondary">背景除去画像をダウンロード</button>
       </div>
     </div>
 
@@ -157,6 +158,7 @@
   const pickBtn = document.getElementById('pickBtn');
   const removeBtn = document.getElementById('removeBg');
   const undoBtn = document.getElementById('undo');
+  const downloadSrcBtn = document.getElementById('downloadSrc');
   const sizeSel = document.getElementById('sizeSel');
   const customSize = document.getElementById('customSize');
   const colorsSel = document.getElementById('colors');
@@ -257,6 +259,14 @@
   undoBtn.addEventListener('click', () => {
     if (!originalImageData) return;
     sctx.putImageData(originalImageData, 0, 0);
+  });
+
+  downloadSrcBtn.addEventListener('click', () => {
+    if (!img) return;
+    const a = document.createElement('a');
+    a.download = 'bg_removed.png';
+    a.href = srcCanvas.toDataURL('image/png');
+    a.click();
   });
 
   sizeSel.addEventListener('change', () => {

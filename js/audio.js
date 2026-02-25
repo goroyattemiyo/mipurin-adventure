@@ -15,6 +15,7 @@ const Audio = (() => {
   let _bgmName = '';
   let _bgmPlaying = false;
   let _bgmFading = false;
+  let _pendingBgm = null;
 
   /* killCountローパスフィルタ */
   let _lowpassFilter = null;
@@ -170,15 +171,21 @@ const Audio = (() => {
     if (_audioDisabled()) return;
     _ensureContext();
     if (!_ctx) return;
-    if (_bgmName === name && _bgmPlaying) return; // 同じ曲が再生中
+    if (_bgmName === name && _bgmPlaying && !_bgmFading) return;
 
     fadeInSec = fadeInSec || 0.5;
+    _pendingBgm = name;
 
-    // 既存BGMをフェードアウトしてから再生
-    if (_bgmPlaying) {
-      _fadeOutBgm(0.3, () => _startBgm(name, fadeInSec));
+    if (_bgmPlaying || _bgmFading) {
+      _fadeOutBgm(0.3, () => {
+        if (_pendingBgm) {
+          _startBgm(_pendingBgm, fadeInSec);
+          _pendingBgm = null;
+        }
+      });
     } else {
       _startBgm(name, fadeInSec);
+      _pendingBgm = null;
     }
   }
 
@@ -222,6 +229,7 @@ const Audio = (() => {
 
   function stopBgm() {
     if (_audioDisabled()) return;
+    _pendingBgm = null;
     if (_bgmSource) {
       try { _bgmSource.stop(); } catch (e) {}
       _bgmSource.disconnect();

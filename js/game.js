@@ -1651,8 +1651,8 @@ const Game = (() => {
       case SCENE.ENDING: _initEndingScene(); break;
       case SCENE.DUNGEON: _initDungeon(); break;
       case SCENE.GAMEOVER:
-        Audio.playSceneBgm('gameover');
         Audio.stopBgm();
+        Audio.playSe('game_over');
         _resetGameover();
         break;
       case SCENE.SETTINGS: _resetSettings(); break;

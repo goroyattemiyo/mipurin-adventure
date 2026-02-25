@@ -163,7 +163,7 @@ const MapManager = (() => {
     ]
   };
 
-  /* ── 北の森マップ（ボス前） ── */
+  ── 北の森マップ（ボス前） ──
   _maps.forest_north = {
     cols: 20, rows: 15,
     data: [
@@ -198,7 +198,7 @@ const MapManager = (() => {
       { type:'poison_mushroom', x:16, y:10 }
     ]
   };
-    /* ── 洞窟マップ ── */
+    ── 洞窟マップ ──
   _maps.cave = {
     cols: 20, rows: 15,
     data: [
@@ -234,7 +234,7 @@ const MapManager = (() => {
     ]
   };
 
-  /* ── 花畑マップ ── */
+  ── 花畑マップ ──
   _maps.flower_field = {
     cols: 20, rows: 15,
     data: [

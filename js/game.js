@@ -577,12 +577,13 @@ const Game = (() => {
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
-    if (_pendingPlayerPosition) {
+    // _pendingPlayerPosition はセーブ復元専用、固定マップのみ適用
+    if (_pendingPlayerPosition && mapName === 'village') {
       player.x = _pendingPlayerPosition.x;
       player.y = _pendingPlayerPosition.y;
       player.dir = _pendingPlayerPosition.dir || player.dir;
-      _pendingPlayerPosition = null;
     }
+    _pendingPlayerPosition = null;
     _dialogActive = false; _dialogQueue = [];
     Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
@@ -1633,19 +1634,19 @@ const Game = (() => {
         break;
       case SCENE.FOREST_SOUTH:
         _initMapScene('forest_south');
-        if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
         break;
       case SCENE.FOREST_NORTH:
         _initMapScene('forest_north');
-        if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
         break;
       case SCENE.CAVE:
         _initMapScene('cave');
-        if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
         break;
       case SCENE.FLOWER_FIELD:
         _initMapScene('flower_field');
-        if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
+        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
         break;
       case SCENE.BOSS: _initBossScene(); break;
       case SCENE.ENDING: _initEndingScene(); break;

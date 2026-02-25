@@ -77,6 +77,7 @@ const Game = (() => {
   const _areaBannerDuration = 2.0;
   let _pendingPlayerPosition = null;
   let _logEntries = [];
+  let _dropLogs = [];
   let _autoSaveCooldown = 0;
 
   /* ============ ダイアログ ============ */
@@ -111,10 +112,23 @@ const Game = (() => {
     return names[mapName] || mapName;
   }
 
+  function _getAreaBannerText(mapName) {
+    const name = _getMapDisplayName(mapName);
+    if (mapName === 'village') return name;
+    const aLv = Scaling.areaLevel(player.level, mapName);
+    return `${name}  エリア Lv.${aLv}`;
+  }
+
   function _addLog(text) {
     if (!text) return;
     _logEntries.unshift({ text, time: Date.now() });
     if (_logEntries.length > 5) _logEntries.length = 5;
+  }
+
+  function _addDropLog(text, color) {
+    if (!text) return;
+    _dropLogs.unshift({ text, color: color || '#fff', timer: 3.0 });
+    if (_dropLogs.length > 5) _dropLogs.length = 5;
   }
 
   function _gainExp(amount) {
@@ -343,9 +357,11 @@ const Game = (() => {
   }
 
   /* ============ メニュー ============ */
-  const _menuItems=['menu_story','menu_dungeon','menu_collection','menu_settings','menu_credits'];
+  const _menuItemsBase=['menu_story','menu_dungeon','menu_collection','menu_settings','menu_credits'];
   let _menuCursor=0,_menuAlpha=0;
   let _menuStorySub=false,_menuStoryCursor=0;
+  let _menuFromGame=false;
+  function _getMenuItems(){ return _menuFromGame ? ['menu_return_village', ..._menuItemsBase] : _menuItemsBase; }
   function _resetMenu(){_menuCursor=0;_menuAlpha=0;_menuStorySub=false;_menuStoryCursor=0;}
   function _updateMenu(dt){
     _menuAlpha=Math.min(1,_menuAlpha+dt*2);
@@ -367,11 +383,16 @@ const Game = (() => {
       }
       return;
     }
-    if(Engine.consumePress('up')){_menuCursor=(_menuCursor-1+_menuItems.length)%_menuItems.length;Audio.playSe('menu_move');}
-    if(Engine.consumePress('down')){_menuCursor=(_menuCursor+1)%_menuItems.length;Audio.playSe('menu_move');}
+    const items=_getMenuItems();
+    if(Engine.consumePress('up')){_menuCursor=(_menuCursor-1+items.length)%items.length;Audio.playSe('menu_move');}
+    if(Engine.consumePress('down')){_menuCursor=(_menuCursor+1)%items.length;Audio.playSe('menu_move');}
     if(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick()){
       Audio.playSe('menu_select');
-      switch(_menuItems[_menuCursor]){
+      switch(items[_menuCursor]){
+        case'menu_return_village':
+          _pendingSpawn = { x: 9, y: 6 };
+          _changeScene(SCENE.VILLAGE);
+          break;
         case'menu_story':
           if (SaveManager.getSaveInfo(0)) { _menuStorySub=true; _menuStoryCursor=0; }
           else { _changeScene(SCENE.VILLAGE); }
@@ -392,12 +413,15 @@ const Game = (() => {
     ctx.save();ctx.globalAlpha=_menuAlpha;
     ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
     ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,PX(100));
-    for(let i=0;i<_menuItems.length;i++){const y=PX(220)+i*PX(50);const cur=(i===_menuCursor);
+    const items=_getMenuItems();
+    for(let i=0;i<items.length;i++){const y=PX(220)+i*PX(50);const cur=(i===_menuCursor);
       if(cur){ctx.fillStyle='#F5A623';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTH/2-PX(100),y);}
       ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='left';
-      const label=Lang.t(_menuItems[i]);
+      const key=items[i];
+      let label=Lang.t(key);
+      if (label === key && key === 'menu_return_village') label = 'むらに もどる';
       // 巣窟ロック表示
-      if(_menuItems[i]==='menu_dungeon'&&!flags.dungeon_unlocked&&!meta.ending_a&&!meta.ending_b&&!meta.ending_c){
+      if(key==='menu_dungeon'&&!flags.dungeon_unlocked&&!meta.ending_a&&!meta.ending_b&&!meta.ending_c){
         ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTH/2-PX(90),y);
       } else { ctx.fillText(label,CONFIG.CANVAS_WIDTH/2-PX(90),y); }
     }
@@ -566,7 +590,7 @@ const Game = (() => {
     Collection.onAreaVisit(mapName);
     Analytics.logAreaVisit(mapName, true);
     Audio.playSceneBgm(mapName);
-    _areaBannerText = _getMapDisplayName(mapName);
+    _areaBannerText = _getAreaBannerText(mapName);
     _areaBannerTimer = _areaBannerDuration;
     _miniMapDirty = true;
     _autoSaveCooldown = 0;
@@ -581,6 +605,8 @@ const Game = (() => {
   function _updateMapScene(dt) {
     _playtime += dt;
     if (_areaBannerTimer > 0) _areaBannerTimer = Math.max(0, _areaBannerTimer - dt);
+
+    if (Engine.consumePress('menu')) { _changeScene(SCENE.MENU); return; }
 
     // インベントリ
     if (Engine.consumePress('inventory') && !_dialogActive) {
@@ -696,6 +722,12 @@ const Game = (() => {
     EnemyManager.update(dt, player);
     if (typeof Particles !== 'undefined') Particles.update(dt);
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
+    if (typeof Loot !== 'undefined') Loot.update(dt, player.x, player.y);
+
+    for (let i = _dropLogs.length - 1; i >= 0; i--) {
+      _dropLogs[i].timer -= dt;
+      if (_dropLogs[i].timer <= 0) _dropLogs.splice(i, 1);
+    }
 
     // ボス突入判定（該当地域で全滅時）
     if (!Dungeon.isActive() && typeof BossManager !== 'undefined') {
@@ -833,6 +865,23 @@ const Game = (() => {
     // 出口判定
     const exit = PlayerController.checkExit(player);
     if (exit) {
+      if (exit.type === 'random_exit') {
+        const map = MapManager.loadMap(_currentMapName);
+        if (map) {
+          player.x = map.playerStart.x * CONFIG.TILE_SIZE;
+          player.y = map.playerStart.y * CONFIG.TILE_SIZE;
+          player.dir = 'down';
+          _dialogActive = false; _dialogQueue = [];
+          Shop.closeShop();
+          _attackEffectTimer = 0; _needleEffectTimer = 0;
+          if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
+          _areaBannerText = _getAreaBannerText(_currentMapName);
+          _areaBannerTimer = _areaBannerDuration;
+          _miniMapDirty = true;
+          _autoSaveCooldown = 0;
+        }
+        return;
+      }
       const sceneMap = {
         'village':SCENE.VILLAGE, 'forest_south':SCENE.FOREST_SOUTH,
         'forest_north':SCENE.FOREST_NORTH, 'cave':SCENE.CAVE,
@@ -886,6 +935,7 @@ const Game = (() => {
     }
     if (typeof Particles !== 'undefined') Particles.draw(ctx);
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
+    if (typeof Loot !== 'undefined') Loot.draw(ctx);
 
     ctx.restore(); // filterを完全にリセット
 
@@ -1319,6 +1369,29 @@ const Game = (() => {
     _drawControlsSection(ctx);
   }
 
+  function _drawDropFeed(ctx) {
+    if (_dropLogs.length === 0) return;
+    const feedW = 640;
+    const x = CONFIG.CANVAS_WIDTH - feedW + PX(12);
+    const y = PANEL.BOTTOM_Y + PX(12);
+    const lineH = PX(18);
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
+    for (let i = 0; i < _dropLogs.length; i++) {
+      const entry = _dropLogs[i];
+      const alpha = Math.max(0, Math.min(1, entry.timer / 3));
+      ctx.fillStyle = `rgba(0,0,0,${0.6 * alpha})`;
+      ctx.fillText(entry.text, x + PX(1), y + i * lineH + PX(1));
+      ctx.fillStyle = entry.color || '#fff';
+      ctx.globalAlpha = alpha;
+      ctx.fillText(entry.text, x, y + i * lineH);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
   function _drawStatusSection(ctx) {
     const x = PANEL.RIGHT_X + PX(16);
     const y = PANEL.RIGHT_Y + PX(12);
@@ -1532,12 +1605,18 @@ const Game = (() => {
       ctx.textBaseline = 'middle';
       ctx.fillText(hint, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
     }
+
+    _drawDropFeed(ctx);
   }
 
   /* ============ シーン管理 ============ */
   function _changeScene(scene){
     Analytics.logSceneChange(_currentScene, scene);
     Analytics.onSceneChange();
+    if (scene === SCENE.MENU) {
+      const from = _currentScene;
+      _menuFromGame = ![SCENE.TITLE, SCENE.PROLOGUE, SCENE.CREDITS, SCENE.SETTINGS, SCENE.COLLECTION, SCENE.MENU].includes(from);
+    }
     _prevScene=_currentScene; _currentScene=scene; _onSceneEnter(scene);
   }
 
@@ -1571,7 +1650,11 @@ const Game = (() => {
       case SCENE.BOSS: _initBossScene(); break;
       case SCENE.ENDING: _initEndingScene(); break;
       case SCENE.DUNGEON: _initDungeon(); break;
-      case SCENE.GAMEOVER: _resetGameover(); break;
+      case SCENE.GAMEOVER:
+        Audio.playSceneBgm('gameover');
+        Audio.stopBgm();
+        _resetGameover();
+        break;
       case SCENE.SETTINGS: _resetSettings(); break;
       case SCENE.COLLECTION: Collection.open(); break;
       case SCENE.CREDITS: _creditsTimer=0; break;
@@ -1687,7 +1770,11 @@ const Game = (() => {
     },300);
   }
 
-  return { boot, SCENE, player, flags, meta:()=>meta, getScene:()=>_currentScene, addLog: _addLog };
+  return {
+    boot, SCENE, player, flags,
+    meta:()=>meta, getScene:()=>_currentScene, getPlayerLevel:()=>player.level,
+    addLog: _addLog, addDropLog: _addDropLog
+  };
 })();
 
 window.addEventListener('DOMContentLoaded',()=>{ Game.boot(); });

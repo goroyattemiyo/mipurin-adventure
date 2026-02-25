@@ -14,6 +14,7 @@ const Dungeon = (() => {
   let _corridors = [];
   let _bossRoom = null;
   let _exitTile = null;
+  let _map = null;
   let _cleared = false;
   let _active = false;
 
@@ -115,60 +116,10 @@ const Dungeon = (() => {
     _bossRoom = null;
     _exitTile = null;
     _cleared = false;
-
-    // 全タイルを壁に
-    _mapData = new Array(ROWS);
-    for (let r = 0; r < ROWS; r++) {
-      _mapData[r] = new Array(COLS).fill(2); // WALL
-    }
-
-    // BSP分割
-    const maxDepth = 3 + Math.min(2, Math.floor(_floor / 5));
-    const root = _BSPNode(0, 0, COLS, ROWS);
-    _split(root, maxDepth);
-    _createRoom(root);
-    _connectRooms(root);
-
-    // 部屋を床に
-    for (const room of _rooms) {
-      for (let r = room.y; r < room.y + room.h && r < ROWS; r++) {
-        for (let c = room.x; c < room.x + room.w && c < COLS; c++) {
-          _mapData[r][c] = _getFloorTile();
-        }
-      }
-    }
-
-    // 廊下を床に
-    for (const corr of _corridors) {
-      for (const p of corr) {
-        if (p.y >= 0 && p.y < ROWS && p.x >= 0 && p.x < COLS) {
-          _mapData[p.y][p.x] = _getFloorTile();
-        }
-      }
-    }
-
-    // ボスフロア判定
-    const isBossFloor = (_floor % Balance.DUNGEON.BOSS_EVERY_N_FLOORS === 0);
-    if (isBossFloor && _rooms.length >= 2) {
-      _bossRoom = _rooms[_rooms.length - 1];
-      // ボス部屋の入口にロックタイル
-      const bx = Math.floor(_bossRoom.x + _bossRoom.w / 2);
-      const by = _bossRoom.y;
-      if (by > 0) _mapData[by][bx] = 34; // 封印扉
-    }
-
-    // 出口配置（最後の部屋）
-    const lastRoom = isBossFloor ? _rooms[Math.max(0, _rooms.length - 2)] : _rooms[_rooms.length - 1];
-    const ex = Math.floor(lastRoom.x + lastRoom.w / 2);
-    const ey = Math.floor(lastRoom.y + lastRoom.h / 2);
-    _exitTile = { x: ex, y: ey };
-    _mapData[ey][ex] = 28; // 階段下
-
-    // セーブポイント（最初の部屋中央）
-    if (_rooms.length > 0) {
-      const fr = _rooms[0];
-      _mapData[Math.floor(fr.y + fr.h / 2)][Math.floor(fr.x + fr.w / 2) + 1] = 31; // セーブポイント
-    }
+    const theme = MapManager.getThemeForArea ? MapManager.getThemeForArea('dungeon', _floor) : 'forest';
+    const seed = Date.now() + _floor;
+    _map = MapManager.generateRandomMap(_floor, theme, seed);
+    _mapData = null;
   }
 
   function _getFloorTile() {
@@ -337,43 +288,30 @@ const Dungeon = (() => {
 
   /** マップをMapManager互換形式に変換 */
   function getMapForRenderer() {
-    if (!_mapData) return null;
-    const flat = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        flat.push(_mapData[r][c]);
-      }
-    }
-    const spawnRoom = _rooms[0];
-    const px = spawnRoom ? Math.floor(spawnRoom.x + spawnRoom.w / 2) : 1;
-    const py = spawnRoom ? Math.floor(spawnRoom.y + spawnRoom.h / 2) : 1;
-
-    return {
-      cols: COLS, rows: ROWS,
-      data: flat,
-      playerStart: { x: px, y: py },
-      exits: _exitTile ? [{ x: _exitTile.x, y: _exitTile.y, to: 'dungeon_next' }] : [],
-      npcs: [],
-      enemies: _spawnEnemies()
-    };
+    return _map;
   }
 
   /** ミニマップ描画 */
   function drawMinimap(ctx, playerCol, playerRow, hasMap) {
-    if (!hasMap || !_mapData) return;
+    if (!hasMap || !_map) return;
 
     const mmX = CONFIG.CANVAS_WIDTH - 110;
     const mmY = 8;
     const cellSize = 5;
+    const cols = _map.cols || COLS;
+    const rows = _map.rows || ROWS;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(mmX - 2, mmY - 2, COLS * cellSize + 4, ROWS * cellSize + 4);
+    ctx.fillRect(mmX - 2, mmY - 2, cols * cellSize + 4, rows * cellSize + 4);
 
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const tile = _mapData[r][c];
-        if (tile === 2) continue; // 壁は描画しない
-        ctx.fillStyle = tile === 28 ? '#0f0' : tile === 31 ? '#ff0' : tile === 34 ? '#f00' : '#555';
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const tile = _map.data[r * cols + c];
+        if (tile === MapManager.TILE.WALL) continue;
+        ctx.fillStyle = tile === MapManager.TILE.EXIT ? '#0f0'
+          : tile === MapManager.TILE.SAVE_POINT ? '#ff0'
+          : tile === MapManager.TILE.SEAL_WALL ? '#f00'
+          : '#555';
         ctx.fillRect(mmX + c * cellSize, mmY + r * cellSize, cellSize - 1, cellSize - 1);
       }
     }
@@ -384,7 +322,7 @@ const Dungeon = (() => {
 
     // 階数
     ctx.fillStyle = '#fff'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
-    ctx.fillText('B' + _floor, mmX, mmY + ROWS * cellSize + 12);
+    ctx.fillText('B' + _floor, mmX, mmY + rows * cellSize + 12);
   }
 
   /** 巣窟HUD描画 */

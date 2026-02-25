@@ -364,7 +364,8 @@ const Audio = (() => {
     boss: 'boss',
     dungeon: 'nest',
     ending_b: 'end_b',
-    ending_c: 'end_c'
+    ending_c: 'end_c',
+    gameover: null
     // ending_a: 無音
   };
 
@@ -373,8 +374,8 @@ const Audio = (() => {
     if (bgm) {
       playBgm(bgm, 1.0);
     } else {
-      // マッピングなし（ending_aなど）→ フェードアウト
-      if (_bgmPlaying) _fadeOutBgm(1.0);
+      // マッピングなし（gameover/ending_aなど）→ フェードアウト
+      if (_bgmPlaying) _fadeOutBgm(0.5);
     }
   }
 

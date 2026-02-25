@@ -3,6 +3,8 @@
  * ミプリンの冒険 v0.5.0
  */
 const Inventory = (() => {
+  const S = CONFIG.SCALE;
+  const PX = (v) => v * S;
 
   /* ============ アイテム定義（15種） ============ */
   const ITEM_DEFS = {
@@ -158,27 +160,27 @@ const Inventory = (() => {
 
   function drawUI(ctx) {
     if (!_isOpen) return;
-    const bx = 640 + 10, by = 10, bw = 300, bh = 460;
+    const bx = CONFIG.PANEL_RIGHT_X + PX(10), by = PX(10), bw = CONFIG.PANEL_RIGHT_W - PX(20), bh = PX(460);
 
     // 背景
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = '#F5A623'; ctx.lineWidth = 2;
+    ctx.strokeStyle = '#F5A623'; ctx.lineWidth = PX(1);
     ctx.strokeRect(bx, by, bw, bh);
 
     // タイトル
-    ctx.fillStyle = '#F5A623'; ctx.font = 'bold 20px monospace';
+    ctx.fillStyle = '#F5A623'; ctx.font = `bold ${CONFIG.FONT_BASE}px monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('もちもの', bx + bw / 2, by + 12);
+    ctx.fillText('もちもの', bx + bw / 2, by + PX(12));
 
     // アイテムリスト
-    ctx.textAlign = 'left'; ctx.font = '16px monospace';
-    const startY = by + 50;
-    const lineH = 24;
+    ctx.textAlign = 'left'; ctx.font = `${CONFIG.FONT_SM}px monospace`;
+    const startY = by + PX(50);
+    const lineH = PX(24);
 
     if (_items.length === 0) {
       ctx.fillStyle = '#888';
-      ctx.fillText('なにも もっていない', bx + 20, startY);
+      ctx.fillText('なにも もっていない', bx + PX(20), startY);
     }
 
     for (let i = 0; i < _items.length; i++) {
@@ -189,21 +191,21 @@ const Inventory = (() => {
 
       if (selected) {
         ctx.fillStyle = 'rgba(245,166,35,0.2)';
-        ctx.fillRect(bx + 10, y - 4, bw - 20, lineH);
-        ctx.fillStyle = '#F5A623'; ctx.fillText('▶', bx + 14, y);
+        ctx.fillRect(bx + PX(10), y - PX(4), bw - PX(20), lineH);
+        ctx.fillStyle = '#F5A623'; ctx.fillText('▶', bx + PX(14), y);
       }
 
       ctx.fillStyle = def.color || '#fff';
-      ctx.fillText(def.icon, bx + 36, y);
+      ctx.fillText(def.icon, bx + PX(36), y);
       ctx.fillStyle = selected ? '#fff' : '#ccc';
-      ctx.fillText(def.name, bx + 58, y);
+      ctx.fillText(def.name, bx + PX(58), y);
       if (def.stackable && item.count > 1) {
         ctx.fillStyle = '#aaa';
-        ctx.fillText('×' + item.count, bx + bw - 70, y);
+        ctx.fillText('×' + item.count, bx + bw - PX(70), y);
       }
       if (def.type === 'key') {
         ctx.fillStyle = '#F5A623';
-        ctx.fillText('[キー]', bx + bw - 70, y);
+        ctx.fillText('[キー]', bx + bw - PX(70), y);
       }
     }
 
@@ -211,21 +213,21 @@ const Inventory = (() => {
     if (_items[_cursor]) {
       const def = ITEM_DEFS[_items[_cursor].id];
       ctx.fillStyle = 'rgba(0,0,0,0.8)';
-      ctx.fillRect(bx + 10, by + bh - 64, bw - 20, 54);
-      ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
-      ctx.strokeRect(bx + 10, by + bh - 64, bw - 20, 54);
-      ctx.fillStyle = '#ddd'; ctx.font = '13px monospace';
+      ctx.fillRect(bx + PX(10), by + bh - PX(64), bw - PX(20), PX(54));
+      ctx.strokeStyle = '#555'; ctx.lineWidth = PX(1);
+      ctx.strokeRect(bx + PX(10), by + bh - PX(64), bw - PX(20), PX(54));
+      ctx.fillStyle = '#ddd'; ctx.font = `${CONFIG.FONT_SM}px monospace`;
       ctx.textAlign = 'left';
       const descLines = def.desc.match(/.{1,26}/g) || [def.desc];
       for (let i = 0; i < descLines.length && i < 2; i++) {
-        ctx.fillText(descLines[i], bx + 18, by + bh - 50 + i * 18);
+        ctx.fillText(descLines[i], bx + PX(18), by + bh - PX(50) + i * PX(18));
       }
     }
 
     // 操作ガイド
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText('↑↓: えらぶ　Z: つかう　I/Esc: とじる', bx + bw / 2, by + bh - 8);
+    ctx.fillText('↑↓: えらぶ　Z: つかう　I/Esc: とじる', bx + bw / 2, by + bh - PX(8));
   }
 
   return {

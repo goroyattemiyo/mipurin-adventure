@@ -26,12 +26,13 @@
   }
   input[type="file"] { display: none; }
   .drop.drag { border-color: var(--accent); background: rgba(245,166,35,0.08); }
-  button { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  button, .btn { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; touch-action: manipulation; display: inline-block; }
   button.secondary { background: #555; color: #eee; }
   select, input[type="number"], input[type="color"], input[type="range"] {
     background: #0b0f1c; color: #eee; border: 1px solid #333; padding: 6px 8px; border-radius: 6px;
   }
-  .canvas-wrap { background: #0b0f1c; padding: 8px; border-radius: 8px; border: 1px solid #222; }
+  input[type="range"] { width: 100%; max-width: 200px; }
+  .canvas-wrap { background: #0b0f1c; padding: 8px; border-radius: 8px; border: 1px solid #222; overflow: hidden; max-width: 100%; }
   canvas { width: 100%; height: auto; image-rendering: pixelated; background: transparent; display: block; }
   .checker {
     background-image:
@@ -44,6 +45,9 @@
   }
   .small { font-size: 12px; color: var(--muted); }
   .divider { height:1px; background: rgba(255,255,255,0.06); margin: 10px 0; }
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -51,11 +55,11 @@
   <h1>ドット絵コンバーター</h1>
   <div class="panel">
     <div id="drop" class="drop">
-      <div>ここに画像をドラッグ＆ドロップ</div>
+      <div>ここに画像をドラッグ＆ドロップ、またはタップして選択</div>
       <div class="small">PNG / JPG / WebP</div>
       <div style="margin-top:10px;">
-        <label for="file"><button>ファイルを選択</button></label>
-        <input id="file" type="file" accept="image/png,image/jpeg,image/webp" />
+        <label for="file"><span class="btn">ファイルを選択</span></label>
+        <input id="file" type="file" accept="image/*" />
       </div>
     </div>
   </div>
@@ -201,22 +205,38 @@
     drop.classList.remove('drag');
     if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
+  drop.addEventListener('click', (e) => {
+    if (e.target.closest('.btn') || e.target.closest('input')) return;
+    fileInput.click();
+  });
   fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
   tolerance.addEventListener('input', () => tolVal.textContent = tolerance.value);
 
   pickBtn.addEventListener('click', () => { pickMode = !pickMode; pickBtn.textContent = pickMode ? 'スポイト中...' : 'スポイト'; });
 
-  srcCanvas.addEventListener('click', (e) => {
-    if (!pickMode) return;
+  function pickAt(clientX, clientY) {
     const rect = srcCanvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) * (srcCanvas.width / rect.width));
-    const y = Math.floor((e.clientY - rect.top) * (srcCanvas.height / rect.height));
+    const x = Math.floor((clientX - rect.left) * (srcCanvas.width / rect.width));
+    const y = Math.floor((clientY - rect.top) * (srcCanvas.height / rect.height));
     const data = sctx.getImageData(x, y, 1, 1).data;
     bgColor.value = rgbToHex(data[0], data[1], data[2]);
     pickMode = false;
     pickBtn.textContent = 'スポイト';
+  }
+
+  srcCanvas.addEventListener('click', (e) => {
+    if (!pickMode) return;
+    pickAt(e.clientX, e.clientY);
   });
+
+  srcCanvas.addEventListener('touchstart', (e) => {
+    if (!pickMode) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    pickAt(touch.clientX, touch.clientY);
+  }, { passive: false });
 
   removeBtn.addEventListener('click', () => {
     if (!originalImageData) return;

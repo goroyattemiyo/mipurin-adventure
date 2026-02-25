@@ -62,7 +62,7 @@ const MapManager = (() => {
     if (!_currentMap || !_bgCtx || !_bgCanvas) return;
     const ts = CONFIG.TILE_SIZE;
     _bgCtx.clearRect(0, 0, _bgCanvas.width, _bgCanvas.height);
-    _bgCtx.font = '16px sans-serif';
+    _bgCtx.font = `${CONFIG.TILE_SIZE / 2}px sans-serif`;
     _bgCtx.textAlign = 'center';
     _bgCtx.textBaseline = 'middle';
     for (let row=0; row<_currentMap.rows; row++) {
@@ -85,7 +85,7 @@ const MapManager = (() => {
     const c = canvas.getContext('2d');
     c.fillStyle = npc.color||'#fff';
     c.beginPath(); c.arc(ts/2, ts/2, ts/2-2, 0, Math.PI*2); c.fill();
-    c.font = '18px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `${Math.floor(CONFIG.TILE_SIZE * 0.56)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(npc.symbol||'?', ts/2, ts/2);
     npc._canvas = canvas;
   }

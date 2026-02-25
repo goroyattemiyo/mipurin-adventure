@@ -26,7 +26,7 @@
   }
   input[type="file"] { display: none; }
   .drop.drag { border-color: var(--accent); background: rgba(245,166,35,0.08); }
-  button, .button-like { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; touch-action: manipulation; display: inline-block; }
+  button, .btn { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; touch-action: manipulation; display: inline-block; }
   button.secondary { background: #555; color: #eee; }
   select, input[type="number"], input[type="color"], input[type="range"] {
     background: #0b0f1c; color: #eee; border: 1px solid #333; padding: 6px 8px; border-radius: 6px;
@@ -58,7 +58,7 @@
       <div>ここに画像をドラッグ＆ドロップ、またはタップして選択</div>
       <div class="small">PNG / JPG / WebP</div>
       <div style="margin-top:10px;">
-        <label for="file"><span class="button-like">ファイルを選択</span></label>
+        <label for="file"><span class="btn">ファイルを選択</span></label>
         <input id="file" type="file" accept="image/*" />
       </div>
     </div>
@@ -206,7 +206,7 @@
     if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
   drop.addEventListener('click', (e) => {
-    if (e.target.closest('label')) return;
+    if (e.target.closest('.btn') || e.target.closest('input')) return;
     fileInput.click();
   });
   fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
@@ -237,7 +237,6 @@
     if (!touch) return;
     pickAt(touch.clientX, touch.clientY);
   }, { passive: false });
-  });
 
   removeBtn.addEventListener('click', () => {
     if (!originalImageData) return;

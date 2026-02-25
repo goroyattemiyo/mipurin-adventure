@@ -3,6 +3,8 @@
  * ミプリンの冒険 v1.0.0
  */
 const Game = (() => {
+  const S = CONFIG.SCALE;
+  const PX = (v) => v * S;
 
   /* ============ シーン定数 ============ */
   const SCENE = {
@@ -14,9 +16,9 @@ const Game = (() => {
   };
 
   const PANEL = {
-    MAP_W: 640, MAP_H: 480,
-    RIGHT_X: 640, RIGHT_Y: 0, RIGHT_W: 320, RIGHT_H: 480,
-    BOTTOM_X: 0, BOTTOM_Y: 480, BOTTOM_W: 960, BOTTOM_H: 240
+    MAP_W: CONFIG.MAP_PX_W, MAP_H: CONFIG.MAP_PX_H,
+    RIGHT_X: CONFIG.PANEL_RIGHT_X, RIGHT_Y: 0, RIGHT_W: CONFIG.PANEL_RIGHT_W, RIGHT_H: CONFIG.MAP_PX_H,
+    BOTTOM_X: 0, BOTTOM_Y: CONFIG.PANEL_BOTTOM_Y, BOTTOM_W: CONFIG.CANVAS_WIDTH, BOTTOM_H: CONFIG.PANEL_BOTTOM_H
   };
 
   let _currentScene = SCENE.LOADING;
@@ -157,7 +159,7 @@ const Game = (() => {
       }
       let rest = raw;
       while (rest.length > 0) {
-        let cut = Math.min(28, rest.length);
+        let cut = Math.min(Math.floor(28 * S), rest.length);
         while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
         lines.push(rest.slice(0, cut));
         rest = rest.slice(cut);
@@ -170,13 +172,13 @@ const Game = (() => {
   function _drawDialog(ctx) {
     if (!_dialogActive) return;
     const W = PANEL.BOTTOM_W, H = PANEL.BOTTOM_H;
-    const lineH = 22;
-    const padding = 16;
-    const minH = 100;
+    const lineH = PX(22);
+    const padding = PX(16);
+    const minH = PX(100);
 
     // 横幅に収まるよう折り返し
-    ctx.font = '16px monospace';
-    const maxWidth = W - 32 - padding * 2;
+    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
+    const maxWidth = W - PX(32) - padding * 2;
     if (_dialogText !== _dialogTextLast) {
       const wrapped = _wrapDialogLines(ctx, _dialogText, maxWidth);
       _dialogLinesCached = wrapped.lines;
@@ -205,18 +207,18 @@ const Game = (() => {
       }
     }
 
-    const neededH = padding * 2 + lines.length * lineH + 10;
-    const bh = Math.max(minH, Math.min(neededH, H - 20));
-    const bx = PANEL.BOTTOM_X + 16, by = PANEL.BOTTOM_Y + 10, bw = W - 32;
+    const neededH = padding * 2 + lines.length * lineH + PX(10);
+    const bh = Math.max(minH, Math.min(neededH, H - PX(20)));
+    const bx = PANEL.BOTTOM_X + PX(16), by = PANEL.BOTTOM_Y + PX(10), bw = W - PX(32);
 
     ctx.fillStyle = 'rgba(0,0,0,0.88)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.strokeStyle = '#F5A623';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = PX(2);
     ctx.strokeRect(bx, by, bw, bh);
 
     ctx.fillStyle = '#fff';
-    ctx.font = '16px monospace';
+    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     const maxLines = Math.floor((bh - padding * 2) / lineH);
@@ -226,7 +228,7 @@ const Game = (() => {
 
     if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
       ctx.fillStyle = '#F5A623';
-      ctx.fillText('▼', bx + bw - 28, by + bh - 26);
+      ctx.fillText('▼', bx + bw - PX(28), by + bh - PX(26));
     }
   }
 
@@ -283,16 +285,18 @@ const Game = (() => {
     ctx.save();ctx.globalAlpha=_prologueAlpha;ctx.drawImage(img,x,y,w,h);ctx.restore();
     const idx2=_prologueIndex+1;const key='prologue_'+(idx2<10?'0'+idx2:''+idx2);
     const cap=Lang.t(key);
-    if(cap&&cap!==key&&_prologueTextAlpha>0) _drawCaptionText(ctx,cap,CONFIG.CANVAS_HEIGHT-80,_prologueTextAlpha);
-    ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('Enter / タップ で次へ　　Esc でスキップ',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-16);ctx.restore();
+    if(cap&&cap!==key&&_prologueTextAlpha>0) _drawCaptionText(ctx,cap,CONFIG.CANVAS_HEIGHT-PX(80),_prologueTextAlpha);
+    ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
+    ctx.fillText('Enter / タップ で次へ　　Esc でスキップ',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(16));ctx.restore();
   }
 
   function _drawCaptionText(ctx,text,baseY,alpha){
-    const lines=text.split('\n'),lh=30,startY=baseY-(lines.length-1)*lh/2;
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='20px monospace';
+    const captionFont = CONFIG.FONT_SM * S * (20 / 24);
+    const lh = CONFIG.FONT_SM * S * (30 / 24);
+    const lines=text.split('\n'),startY=baseY-(lines.length-1)*lh/2;
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${captionFont}px monospace`;
     for(let i=0;i<lines.length;i++){const ly=startY+i*lh;
-      ctx.globalAlpha=alpha*0.6;ctx.fillStyle='#000';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2+2,ly+2);
+      ctx.globalAlpha=alpha*0.6;ctx.fillStyle='#000';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2+PX(2),ly+PX(2));
       ctx.globalAlpha=alpha;ctx.fillStyle='#FFFFFF';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,ly);}
     ctx.restore();
   }
@@ -312,9 +316,9 @@ const Game = (() => {
   function _drawTitle(ctx){
     ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
     ctx.save();ctx.globalAlpha=_titleAlpha;
-    ctx.fillStyle='#F5A623';ctx.font='bold 48px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,280);
-    if(_titleReady&&Math.sin(_titleTimer*4)>0){ctx.fillStyle='#fff';ctx.font='18px monospace';ctx.fillText(Lang.t('press_start'),CONFIG.CANVAS_WIDTH/2,400);}
+    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_XL}px monospace`;ctx.textAlign='center';
+    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,PX(280));
+    if(_titleReady&&Math.sin(_titleTimer*4)>0){ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.fillText(Lang.t('press_start'),CONFIG.CANVAS_WIDTH/2,PX(400));}
     if(meta.golden_title){ctx.fillStyle='rgba(245,166,35,0.15)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);}
     ctx.restore();
   }
@@ -367,33 +371,33 @@ const Game = (() => {
   function _drawMenu(ctx){
     ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
     ctx.save();ctx.globalAlpha=_menuAlpha;
-    ctx.fillStyle='#F5A623';ctx.font='bold 32px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,100);
-    for(let i=0;i<_menuItems.length;i++){const y=220+i*50;const cur=(i===_menuCursor);
-      if(cur){ctx.fillStyle='#F5A623';ctx.font='22px monospace';ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTH/2-100,y);}
-      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?'bold 22px monospace':'20px monospace';ctx.textAlign='left';
+    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
+    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,PX(100));
+    for(let i=0;i<_menuItems.length;i++){const y=PX(220)+i*PX(50);const cur=(i===_menuCursor);
+      if(cur){ctx.fillStyle='#F5A623';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTH/2-PX(100),y);}
+      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='left';
       const label=Lang.t(_menuItems[i]);
       // 巣窟ロック表示
       if(_menuItems[i]==='menu_dungeon'&&!flags.dungeon_unlocked&&!meta.ending_a&&!meta.ending_b&&!meta.ending_c){
-        ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTH/2-90,y);
-      } else { ctx.fillText(label,CONFIG.CANVAS_WIDTH/2-90,y); }
+        ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTH/2-PX(90),y);
+      } else { ctx.fillText(label,CONFIG.CANVAS_WIDTH/2-PX(90),y); }
     }
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
+    ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
     if(_menuStorySub){
-      const bx=CONFIG.CANVAS_WIDTH/2-140, by=360, bw=280, bh=120;
+      const bx=CONFIG.CANVAS_WIDTH/2-PX(140), by=PX(360), bw=PX(280), bh=PX(120);
       ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(bx,by,bw,bh);
-      ctx.strokeStyle='#F5A623';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+      ctx.strokeStyle='#F5A623';ctx.lineWidth=PX(2);ctx.strokeRect(bx,by,bw,bh);
       const opts=['はじめから','つづきから'];
       for(let i=0;i<opts.length;i++){
-        const y=by+40+i*36;
+        const y=by+PX(40)+i*PX(36);
         const cur=(i===_menuStoryCursor);
-        if(cur){ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.font='18px monospace';ctx.fillText('▶',bx+36,y);}
-        ctx.fillStyle=cur?'#fff':'#aaa';ctx.textAlign='left';ctx.font=cur?'bold 18px monospace':'16px monospace';
-        ctx.fillText(opts[i],bx+50,y);
+        if(cur){ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.fillText('▶',bx+PX(36),y);}
+        ctx.fillStyle=cur?'#fff':'#aaa';ctx.textAlign='left';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;
+        ctx.fillText(opts[i],bx+PX(50),y);
       }
-      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='11px monospace';ctx.textAlign='center';
-      ctx.fillText('Esc: もどる',bx+bw/2,by+bh-12);
+      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
+      ctx.fillText('Esc: もどる',bx+bw/2,by+bh-PX(12));
     }
     ctx.restore();
   }
@@ -430,27 +434,27 @@ const Game = (() => {
   }
   function _drawSettings(ctx){
     ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#F5A623';ctx.font='bold 24px monospace';ctx.textAlign='center';
-    ctx.fillText('せってい',CONFIG.CANVAS_WIDTH/2,60);
+    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
+    ctx.fillText('せってい',CONFIG.CANVAS_WIDTH/2,PX(60));
     const labels={bgm:'BGM おんりょう',se:'SE おんりょう',speed:'ゲームスピード',invincible:'むてきモード',shake:'がめんゆれ',flash:'フラッシュ',colorblind:'いろよわモード',back:'← もどる'};
     for(let i=0;i<_settingsItems.length;i++){
-      const y=120+i*44; const cur=(i===_settingsCursor);
-      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?'bold 18px monospace':'16px monospace';ctx.textAlign='left';
-      if(cur){ctx.fillText('▶',160,y);}
-      ctx.fillText(labels[_settingsItems[i]],190,y);
+      const y=PX(120)+i*PX(44); const cur=(i===_settingsCursor);
+      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='left';
+      if(cur){ctx.fillText('▶',PX(160),y);}
+      ctx.fillText(labels[_settingsItems[i]],PX(190),y);
       // 値
-      ctx.textAlign='right';ctx.fillStyle=cur?'#fff':'#888';ctx.font='16px monospace';
+      ctx.textAlign='right';ctx.fillStyle=cur?'#fff':'#888';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
       const item=_settingsItems[i];
-      if(item==='bgm') ctx.fillText(Math.round((_settings.bgmVolume||0.5)*100)+'%',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='se') ctx.fillText(Math.round((_settings.seVolume||0.7)*100)+'%',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='speed') ctx.fillText({slow:'ゆっくり',normal:'ふつう',fast:'はやい'}[_settings.gameSpeed||'normal'],CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='invincible') ctx.fillText(_settings.invincible?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='shake') ctx.fillText(_settings.screenShake!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='flash') ctx.fillText(_settings.flash!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
-      else if(item==='colorblind') ctx.fillText(_settings.colorblind?'ON':'OFF',CONFIG.CANVAS_WIDTH-180,y);
+      if(item==='bgm') ctx.fillText(Math.round((_settings.bgmVolume||0.5)*100)+'%',CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='se') ctx.fillText(Math.round((_settings.seVolume||0.7)*100)+'%',CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='speed') ctx.fillText({slow:'ゆっくり',normal:'ふつう',fast:'はやい'}[_settings.gameSpeed||'normal'],CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='invincible') ctx.fillText(_settings.invincible?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='shake') ctx.fillText(_settings.screenShake!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='flash') ctx.fillText(_settings.flash!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
+      else if(item==='colorblind') ctx.fillText(_settings.colorblind?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
     }
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　←→/Z: へんこう　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
+    ctx.fillText('↑↓: えらぶ　←→/Z: へんこう　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
   }
 
   /* ============ クレジット ============ */
@@ -461,13 +465,13 @@ const Game = (() => {
   }
   function _drawCredits(ctx){
     ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#F5A623';ctx.font='bold 24px monospace';ctx.textAlign='center';
-    ctx.fillText('クレジット',CONFIG.CANVAS_WIDTH/2,80);
-    ctx.fillStyle='#ccc';ctx.font='16px monospace';
+    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
+    ctx.fillText('クレジット',CONFIG.CANVAS_WIDTH/2,PX(80));
+    ctx.fillStyle='#ccc';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
     const lines=['ミプリンの冒険','','企画・プログラム: goroyattemiyo','キャラクターデザイン: （クレジット）','音楽: Suno AI','',''+Lang.t('credits_thanks')];
-    for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,160+i*32);
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='12px monospace';
-    ctx.fillText('Esc / Enter でもどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-20);
+    for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,PX(160)+i*PX(32));
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;
+    ctx.fillText('Esc / Enter でもどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
   }
 
   /* ============ 図鑑シーン ============ */
@@ -870,10 +874,10 @@ const Game = (() => {
     _drawBottomPanel(ctx);
     if (CONFIG.DEBUG || location.search.includes('debug=1')) {
     ctx.save();
-    ctx.font = '12px monospace';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.textAlign = 'right';
-    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - 8, CONFIG.CANVAS_HEIGHT - 8);
+    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - PX(8), CONFIG.CANVAS_HEIGHT - PX(8));
     ctx.restore();
     }
   }
@@ -1115,20 +1119,20 @@ const Game = (() => {
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 28px monospace';
-    ctx.fillText(title, W / 2, 140);
+    ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
+    ctx.fillText(title, W / 2, PX(140));
 
-    ctx.font = '18px monospace';
+    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
     const lines = (body || '').split('\n');
-    const startY = 240;
+    const startY = PX(240);
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], W / 2, startY + i * 28);
+      ctx.fillText(lines[i], W / 2, startY + i * PX(28));
     }
 
     if (_endingReady && Math.sin(_endingTimer * 3) > 0) {
-      ctx.font = '14px monospace';
+      ctx.font = `${CONFIG.FONT_SM}px monospace`;
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText('Enter / クリックでタイトルへ', W / 2, H - 40);
+      ctx.fillText('Enter / クリックでタイトルへ', W / 2, H - PX(40));
     }
   }
 
@@ -1145,11 +1149,11 @@ const Game = (() => {
   }
   function _drawGameover(ctx){
     ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#e74c3c';ctx.font='bold 40px monospace';ctx.textAlign='center';
-    ctx.fillText(Lang.t('game_over'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2-30);
+    ctx.fillStyle='#e74c3c';ctx.font=`bold ${CONFIG.FONT_XL}px monospace`;ctx.textAlign='center';
+    ctx.fillText(Lang.t('game_over'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2-PX(30));
     if(_goTimer>1.5&&Math.sin(_goTimer*4)>0){
-      ctx.fillStyle='#fff';ctx.font='18px monospace';
-      ctx.fillText(Lang.t('continue_prompt'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2+30);
+      ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
+      ctx.fillText(Lang.t('continue_prompt'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2+PX(30));
     }
   }
 
@@ -1177,12 +1181,12 @@ const Game = (() => {
   function _drawPanelBorders(ctx) {
     ctx.save();
     ctx.strokeStyle = 'rgba(245,166,35,0.6)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = PX(2);
     ctx.beginPath();
-    ctx.moveTo(PANEL.RIGHT_X - 2, 0);
-    ctx.lineTo(PANEL.RIGHT_X - 2, PANEL.MAP_H);
-    ctx.moveTo(0, PANEL.BOTTOM_Y - 2);
-    ctx.lineTo(CONFIG.CANVAS_WIDTH, PANEL.BOTTOM_Y - 2);
+    ctx.moveTo(PANEL.RIGHT_X - PX(2), 0);
+    ctx.lineTo(PANEL.RIGHT_X - PX(2), PANEL.MAP_H);
+    ctx.moveTo(0, PANEL.BOTTOM_Y - PX(2));
+    ctx.lineTo(CONFIG.CANVAS_WIDTH, PANEL.BOTTOM_Y - PX(2));
     ctx.stroke();
     ctx.restore();
   }
@@ -1201,7 +1205,7 @@ const Game = (() => {
       c.fillStyle = grd;
       c.fillRect(0, 0, w, h);
       c.fillStyle = 'rgba(255,255,255,0.03)';
-      for (let i = 0; i < h; i += 24) {
+      for (let i = 0; i < h; i += PX(24)) {
         c.fillRect(0, i, w, 1);
       }
       if (type === 'right') _rightPanelBg = canvas;
@@ -1217,14 +1221,14 @@ const Game = (() => {
     // Section dividers
     ctx.save();
     ctx.strokeStyle = 'rgba(245,166,35,0.25)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = PX(1);
     ctx.beginPath();
-    ctx.moveTo(PANEL.RIGHT_X + 12, 140);
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 140);
-    ctx.moveTo(PANEL.RIGHT_X + 12, 320);
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 320);
-    ctx.moveTo(PANEL.RIGHT_X + 12, 420);
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - 12, 420);
+    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(140));
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(140));
+    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(320));
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(320));
+    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(420));
+    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(420));
     ctx.stroke();
     ctx.restore();
 
@@ -1235,27 +1239,27 @@ const Game = (() => {
   }
 
   function _drawStatusSection(ctx) {
-    const x = PANEL.RIGHT_X + 16;
-    const y = PANEL.RIGHT_Y + 12;
-    const w = PANEL.RIGHT_W - 32;
+    const x = PANEL.RIGHT_X + PX(16);
+    const y = PANEL.RIGHT_Y + PX(12);
+    const w = PANEL.RIGHT_W - PX(32);
 
     ctx.fillStyle = 'rgba(15,15,30,0.95)';
-    ctx.fillRect(PANEL.RIGHT_X + 8, PANEL.RIGHT_Y + 6, PANEL.RIGHT_W - 16, 128);
+    ctx.fillRect(PANEL.RIGHT_X + PX(8), PANEL.RIGHT_Y + PX(6), PANEL.RIGHT_W - PX(16), PX(128));
     ctx.strokeStyle = '#F5A623';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(PANEL.RIGHT_X + 8, PANEL.RIGHT_Y + 6, PANEL.RIGHT_W - 16, 128);
+    ctx.lineWidth = PX(2);
+    ctx.strokeRect(PANEL.RIGHT_X + PX(8), PANEL.RIGHT_Y + PX(6), PANEL.RIGHT_W - PX(16), PX(128));
 
     ctx.fillStyle = '#F5A623';
-    ctx.font = 'bold 18px monospace';
+    ctx.font = `bold ${CONFIG.FONT_BASE}px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('ミプリン', x, y);
 
     // HP bar
     const barX = x;
-    const barY = y + 32;
-    const barW = w - 10;
-    const barH = 14;
+    const barY = y + PX(32);
+    const barW = w - PX(10);
+    const barH = PX(14);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(barX, barY, barW, barH);
     const hpRate = Math.max(0, Math.min(1, player.hp / player.maxHp));
@@ -1267,7 +1271,7 @@ const Game = (() => {
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.strokeRect(barX, barY, barW, barH);
     ctx.fillStyle = '#fff';
-    ctx.font = '12px monospace';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, barX + barW, barY + barH / 2);
@@ -1275,8 +1279,8 @@ const Game = (() => {
     // ATK
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff';
-    ctx.font = '14px monospace';
-    ctx.fillText('⚔ ATK: ' + Inventory.getEffectiveAtk(player), x, barY + 26);
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
+    ctx.fillText('⚔ ATK: ' + Inventory.getEffectiveAtk(player), x, barY + PX(26));
 
     // Buffs
     const buffs = [];
@@ -1284,24 +1288,24 @@ const Game = (() => {
     if (player._buffSpeed) buffs.push({ icon:'⚡', color:'#3498DB', timer: player._buffSpeed.timer });
     if (player._buffAtk) buffs.push({ icon:'🍬', color:'#C0392B', timer: player._buffAtk.timer });
     if (player._buffVision) buffs.push({ icon:'🔦', color:'#E67E22', timer: player._buffVision.timer });
-    let bx = x, by = barY + 50;
+    let bx = x, by = barY + PX(50);
     for (let i = 0; i < buffs.length; i++) {
       const b = buffs[i];
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.fillRect(bx - 2, by - 2, 42, 20);
+      ctx.fillRect(bx - PX(2), by - PX(2), PX(42), PX(20));
       ctx.fillStyle = b.color;
-      ctx.font = '12px monospace';
-      ctx.fillText(b.icon, bx + 2, by);
+      ctx.font = `${CONFIG.FONT_SM}px monospace`;
+      ctx.fillText(b.icon, bx + PX(2), by);
       ctx.fillStyle = '#fff';
-      ctx.fillText(Math.ceil(b.timer) + 's', bx + 18, by);
-      bx += 46;
+      ctx.fillText(Math.ceil(b.timer) + 's', bx + PX(18), by);
+      bx += PX(46);
     }
 
     // Pollen
     const pc = Inventory.getCount('pollen');
     ctx.fillStyle = '#F1C40F';
-    ctx.font = '14px monospace';
-    ctx.fillText('● ' + pc + ' P', x, barY + 72);
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
+    ctx.fillText('● ' + pc + ' P', x, barY + PX(72));
   }
 
   function _getMiniMapData() {
@@ -1311,7 +1315,7 @@ const Game = (() => {
 
   function _renderMiniMapBase(map, key) {
     if (!map) return;
-    const size = 4;
+    const size = PX(4);
     if (!_miniMapCanvas) {
       _miniMapCanvas = document.createElement('canvas');
       _miniMapCtx = _miniMapCanvas.getContext('2d');
@@ -1346,28 +1350,28 @@ const Game = (() => {
     }
 
     const sectionX = PANEL.RIGHT_X;
-    const sectionY = 140;
+    const sectionY = PX(140);
     const sectionW = PANEL.RIGHT_W;
-    const sectionH = 180;
+    const sectionH = PX(180);
     const title = _getMapDisplayName(_currentMapName);
     ctx.fillStyle = '#fff';
-    ctx.font = '14px monospace';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(title, sectionX + sectionW / 2, sectionY + 6);
+    ctx.fillText(title, sectionX + sectionW / 2, sectionY + PX(6));
 
     const mmW = _miniMapCanvas.width;
     const mmH = _miniMapCanvas.height;
     const mmX = sectionX + (sectionW - mmW) / 2;
-    const mmY = sectionY + 28;
+    const mmY = sectionY + PX(28);
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8);
+    ctx.fillRect(mmX - PX(4), mmY - PX(4), mmW + PX(8), mmH + PX(8));
     ctx.strokeStyle = 'rgba(245,166,35,0.6)';
-    ctx.strokeRect(mmX - 4, mmY - 4, mmW + 8, mmH + 8);
+    ctx.strokeRect(mmX - PX(4), mmY - PX(4), mmW + PX(8), mmH + PX(8));
     ctx.drawImage(_miniMapCanvas, mmX, mmY);
 
     // Dots
-    const size = 4;
+    const size = PX(4);
     const pCol = Math.floor((player.x + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
     const pRow = Math.floor((player.y + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
     if (Math.sin(Date.now() / 200) > 0) {
@@ -1395,30 +1399,30 @@ const Game = (() => {
   }
 
   function _drawLogSection(ctx) {
-    const x = PANEL.RIGHT_X + 16;
-    const y = 320;
+    const x = PANEL.RIGHT_X + PX(16);
+    const y = PX(320);
     ctx.fillStyle = '#F5A623';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = `bold ${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('ログ', x, y + 6);
+    ctx.fillText('ログ', x, y + PX(6));
     const now = Date.now();
-    ctx.font = '12px monospace';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
     for (let i = 0; i < _logEntries.length; i++) {
       const entry = _logEntries[i];
       const age = (now - entry.time) / 1000;
       const fade = Math.max(0.2, 1 - i * 0.18 - age * 0.08);
       ctx.fillStyle = `rgba(255,255,255,${fade})`;
-      ctx.fillText(entry.text, x, y + 26 + i * 16);
+      ctx.fillText(entry.text, x, y + PX(26) + i * PX(16));
     }
   }
 
   function _drawControlsSection(ctx) {
     ctx.fillStyle = 'rgba(245,166,35,0.7)';
-    ctx.font = '12px monospace';
+    ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Z=こうげき  X=はり  C=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, 450);
+    ctx.fillText('Z=こうげき  X=はり  C=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
   }
 
   function _getBottomHintText() {
@@ -1459,7 +1463,7 @@ const Game = (() => {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.fillStyle = '#F5A623';
-      ctx.font = 'bold 28px monospace';
+      ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(_areaBannerText, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
@@ -1470,7 +1474,7 @@ const Game = (() => {
     const hint = _getBottomHintText();
     if (hint) {
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = '16px monospace';
+      ctx.font = `${CONFIG.FONT_BASE}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(hint, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
@@ -1560,12 +1564,12 @@ const Game = (() => {
     if(CONFIG.DEBUG){
       const txt = `v${CONFIG.VERSION}`;
       ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(CONFIG.CANVAS_WIDTH - 92, 6, 86, 18);
+      ctx.fillRect(CONFIG.CANVAS_WIDTH - PX(92), PX(6), PX(86), PX(18));
       ctx.fillStyle='#0f0';
-      ctx.font='12px monospace';
+      ctx.font=`${CONFIG.FONT_SM}px monospace`;
       ctx.textAlign='right';
       ctx.textBaseline='middle';
-      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - 10, 15);
+      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - PX(10), PX(15));
     }
   }
 

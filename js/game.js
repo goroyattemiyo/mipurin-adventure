@@ -139,10 +139,10 @@ const Game = (() => {
     while (player.exp >= Scaling.expForLevel(player.level)) {
       player.exp -= Scaling.expForLevel(player.level);
       player.level++;
-      player.skillPoints++;
-      player.maxHp += Balance.PLAYER.HP_PER_LV;
+      Skills.addPoint(1);
+      player.skillPoints = Skills.getPoints();
+      EquipmentUI.applyStats();
       player.hp = player.maxHp;
-      player.atk += Balance.PLAYER.ATK_PER_LV;
       _addLog('レベル ' + player.level + ' に上がった！');
       Audio.playSe('level_up');
       _levelUpEffectTimer = 1.0;
@@ -549,6 +549,19 @@ const Game = (() => {
     return sceneMap[mapName] || SCENE.VILLAGE;
   }
 
+  function _buildSaveState() {
+    return {
+      scene: _currentScene,
+      player,
+      flags,
+      inventory: Inventory.serialize(),
+      equipment: Equipment.serialize(),
+      skills: Skills.serialize(),
+      mapName: _currentMapName,
+      playtime: _playtime
+    };
+  }
+
   function _restoreFromSave(data) {
     if (!data) { _changeScene(SCENE.VILLAGE); return; }
     const pd = data.player || {};
@@ -568,6 +581,15 @@ const Game = (() => {
     _pendingPlayerPosition = { x: pd.x ?? player.x, y: pd.y ?? player.y, dir: player.dir };
     Object.assign(flags, data.flags || {});
     Inventory.deserialize(data.inventory || []);
+    Equipment.deserialize(data.equipment);
+    if (data.skills) {
+      Skills.deserialize(data.skills);
+    } else {
+      Skills.init();
+      if (pd.skillPoints) Skills.addPoint(pd.skillPoints);
+    }
+    player.skillPoints = Skills.getPoints();
+    EquipmentUI.applyStats();
     _playtime = data.playtime || 0;
     const mapName = data.mapName || 'village';
     const targetScene = _sceneFromMapName(mapName);
@@ -612,6 +634,22 @@ const Game = (() => {
     if (_areaBannerTimer > 0) _areaBannerTimer = Math.max(0, _areaBannerTimer - dt);
 
     if (Engine.consumePress('menu')) { _changeScene(SCENE.MENU); return; }
+
+    // 装備UI
+    if (Engine.consumePress('equipment') && !Inventory.isOpen() && !SkillUI.isOpen()) {
+      if (EquipmentUI.isOpen()) EquipmentUI.close();
+      else EquipmentUI.open();
+      return;
+    }
+    if (EquipmentUI.isOpen()) { EquipmentUI.update(); return; }
+
+    // スキルUI
+    if (Engine.consumePress('skill') && !Inventory.isOpen() && !EquipmentUI.isOpen()) {
+      if (SkillUI.isOpen()) SkillUI.close();
+      else SkillUI.open();
+      return;
+    }
+    if (SkillUI.isOpen()) { SkillUI.update(); return; }
 
     // インベントリ
     if (Engine.consumePress('inventory') && !_dialogActive) {
@@ -784,15 +822,7 @@ const Game = (() => {
       _autoSaveCooldown = 3.0; // 3 second cooldown to avoid repeated saves
       player.hp = player.maxHp;
       if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
-        const saveState = {
-          scene: _currentScene,
-          player,
-          flags,
-          inventory: Inventory.serialize(),
-          mapName: _currentMapName,
-          playtime: _playtime
-        };
-        SaveManager.saveGame(0, saveState);
+        SaveManager.saveGame(0, _buildSaveState());
       }
       _showDialog(Lang.t('save_success'));
       _addLog('セーブしました');
@@ -819,15 +849,7 @@ const Game = (() => {
               _autoSaveCooldown = 3.0;
               player.hp = player.maxHp;
               if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
-                const saveState = {
-                  scene: _currentScene,
-                  player,
-                  flags,
-                  inventory: Inventory.serialize(),
-                  mapName: _currentMapName,
-                  playtime: _playtime
-                };
-                SaveManager.saveGame(0, saveState);
+                SaveManager.saveGame(0, _buildSaveState());
               }
               _showDialog(Lang.t('save_success'));
               _addLog('セーブしました');
@@ -976,6 +998,8 @@ const Game = (() => {
 
     _drawPanelBorders(ctx);
     _drawHud(ctx);
+    EquipmentUI.draw(ctx);
+    SkillUI.draw(ctx);
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
     _drawBottomPanel(ctx);
@@ -1442,9 +1466,12 @@ const Game = (() => {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     const infoY = barY + PX(18);
+    const sp = Skills.getPoints();
     ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, x, infoY);
     ctx.fillText('ATK: ' + Math.floor(player.atk), x, infoY + PX(18));
-    ctx.fillText('SP: ' + player.skillPoints, x, infoY + PX(36));
+    ctx.fillStyle = sp > 0 ? '#ff0' : '#fff';
+    ctx.fillText('SP: ' + sp, x, infoY + PX(36));
+    ctx.fillStyle = '#fff';
     ctx.fillText(`針: ${player.needles}/${player.needleMax}`, x, infoY + PX(54));
   }
 
@@ -1754,6 +1781,7 @@ const Game = (() => {
 
     // Collection初期化
     Collection.init();
+    Skills.init();
 
     // Shop初期化
     Shop.init();

@@ -19,6 +19,8 @@ const Engine = (() => {
     x: 'dash', X: 'dash',
     c: 'needle', C: 'needle', Enter: 'interact',
     i: 'inventory', I: 'inventory',
+    e: 'equipment', E: 'equipment', KeyE: 'equipment',
+    KeyS: 'skill',
     Escape: 'menu'
   };
 
@@ -35,14 +37,14 @@ const Engine = (() => {
     // ── キーボード ──
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;  
-      const action = _keyMap[e.key];
+      const action = _keyMap[e.code] || _keyMap[e.key];
       if (action) {
         e.preventDefault();
         _keys[action] = true;
       }
     });
     window.addEventListener('keyup', (e) => {
-      const action = _keyMap[e.key];
+      const action = _keyMap[e.code] || _keyMap[e.key];
       if (action) _keys[action] = false;
     });
 

@@ -47,6 +47,7 @@ const Equipment = (() => {
     _applySetBonuses(bonuses);
     return bonuses;
   }
+  function getTotalBonus() { return calcBonuses(); }
 
   // セットボーナス
   const SET_DEFS = {
@@ -88,5 +89,5 @@ const Equipment = (() => {
   }
 
   return { SLOTS, SET_DEFS, equip, unequip, getEquipped, getAllEquipped,
-           calcBonuses, serialize, deserialize };
+           calcBonuses, getTotalBonus, serialize, deserialize };
 })();

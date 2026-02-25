@@ -52,6 +52,11 @@ const Inventory = (() => {
   }
 
   function removeItem(itemId, count) {
+    if (itemId && typeof itemId === 'object') {
+      const uid = itemId.uid;
+      if (!uid) return false;
+      return removeEquipment(uid);
+    }
     count = count || 1;
     const idx = _items.findIndex(i => i.id === itemId);
     if (idx === -1) return false;
@@ -86,6 +91,7 @@ const Inventory = (() => {
   }
 
   function getEquipmentBag() { return _equipmentBag.map(i => ({ ...i })); }
+  function getItems() { return _equipmentBag; }
 
   function useItem(itemId, player, flags) {
     if (!hasItem(itemId)) return false;
@@ -265,7 +271,7 @@ const Inventory = (() => {
   return {
     ITEM_DEFS, MAX_SLOTS, MAX_EQUIP_SLOTS,
     clear, addItem, removeItem, hasItem, getCount, getAll,
-    addEquipment, removeEquipment, getEquipmentBag,
+    addEquipment, removeEquipment, getEquipmentBag, getItems,
     useItem, updateBuffs,
     getEffectiveSpeed, getEffectiveAtk, getDefReduction,
     serialize, deserialize,

@@ -4,9 +4,9 @@
  */
 const CONFIG = {
   // 表示
-  CANVAS_WIDTH: 960,
-  CANVAS_HEIGHT: 720,
-  TILE_SIZE: 32,
+  CANVAS_WIDTH: 1920,
+  CANVAS_HEIGHT: 1440,
+  TILE_SIZE: 64,
   FPS: 30,
   FRAME_DURATION: 1000 / 30,
   MAX_FRAME_SKIP: 3,
@@ -19,7 +19,7 @@ const CONFIG = {
   PLAYER: {
     HP: 5,
     ATK: 1,
-    SPEED: 3,
+    SPEED: 6,
     NEEDLE_DMG: 10,
     NEEDLE_HP_COST: 1,
     ATTACK_COOLDOWN: 15,   // フレーム数 (0.5秒)

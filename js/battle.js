@@ -556,7 +556,6 @@ const EnemyManager = (() => {
     player.hitStopFrames = 3;
     Engine.triggerShake(4, 6);
     if (typeof DamageNumbers !== 'undefined') {
-      const ts = CONFIG.TILE_SIZE;
       DamageNumbers.spawn(player.x + ts / 2, player.y, enemy.atk, false);
     }
   }
@@ -597,12 +596,12 @@ const EnemyManager = (() => {
   }
 
   function needleBlast(damage, flags) {
+    const ts = CONFIG.TILE_SIZE;
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
       e.hp -= damage;
       e.hurtTimer = 0.5;
       if (typeof DamageNumbers !== 'undefined') {
-        const ts = CONFIG.TILE_SIZE;
         DamageNumbers.spawn(e.x + ts / 2, e.y, damage, false);
       }
       if (e.hp <= 0) {

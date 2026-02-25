@@ -177,7 +177,11 @@ const PlayerController = (() => {
   function checkExit(player) {
     const ts = CONFIG.TILE_SIZE;
     const c = Math.floor((player.x + ts/2) / ts), r = Math.floor((player.y + ts/2) / ts);
-    return MapManager.getExitAt(c, r);
+    const exit = MapManager.getExitAt(c, r);
+    if (exit) return exit;
+    const tile = MapManager.getTile(c, r);
+    if (tile === MapManager.TILE.EXIT) return { type: 'random_exit', x: c, y: r };
+    return null;
   }
 
   /* ── 攻撃判定（範囲取得） ── */
@@ -294,7 +298,7 @@ const EnemyManager = (() => {
     return e;
   }
 
-  function spawn(templateId, col, row) {
+  function spawn(templateId, col, row, isElite) {
     const t = TEMPLATES[templateId];
     if (!t) { console.warn('Unknown enemy:', templateId); return; }
     const ts = CONFIG.TILE_SIZE;
@@ -317,6 +321,12 @@ const EnemyManager = (() => {
     e.hurtTimer = 0;
     e.dead = false;
     e.hidden = false;
+    e.isElite = !!isElite;
+    if (e.isElite) {
+      e.hp = Math.ceil(e.hp * 2);
+      e.maxHp = e.hp;
+      e.atk = Math.ceil(e.atk * 1.5);
+    }
     e.state = '';
     e.stateTimer = 0;
     e.patternTimer = Math.random() * 2;
@@ -329,7 +339,7 @@ const EnemyManager = (() => {
   function spawnFromMap(mapEnemies) {
     for (const e of _enemies) e.dead = true;
     if (!mapEnemies) return;
-    for (const e of mapEnemies) { spawn(e.type, e.x, e.y); }
+    for (const e of mapEnemies) { spawn(e.type, e.x, e.y, e.isElite); }
   }
 
   function _tryMove(e, dx, dy, speed) {
@@ -568,9 +578,13 @@ const EnemyManager = (() => {
         if (e.hp <= 0) {
           e.dead = true;
           flags.killCount++;
-          if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
           if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
           killed.push({ id: e.id, x: e.x, y: e.y, exp: e.xp, pollen: e.pollen || 1 });
+          if (typeof Loot !== 'undefined' && typeof Game !== 'undefined') {
+            const aLv = Scaling.areaLevel(Game.getPlayerLevel(), MapManager.getCurrentMapName());
+            const drops = Loot.rollDrop(e.id, aLv, e.isElite || false, false);
+            Loot.spawnOnGround(e.x + ts / 2, e.y + ts / 2, drops);
+          }
           if (typeof Particles !== 'undefined') {
             Particles.emit(e.x + ts / 2, e.y + ts / 2, 8, e.color, {
               speedMin: 40, speedMax: 100, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 3, sizeMax: 6
@@ -594,8 +608,12 @@ const EnemyManager = (() => {
       if (e.hp <= 0) {
         e.dead = true;
         flags.killCount++;
-        if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
         if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+        if (typeof Loot !== 'undefined' && typeof Game !== 'undefined') {
+          const aLv = Scaling.areaLevel(Game.getPlayerLevel(), MapManager.getCurrentMapName());
+          const drops = Loot.rollDrop(e.id, aLv, e.isElite || false, false);
+          Loot.spawnOnGround(e.x + ts / 2, e.y + ts / 2, drops);
+        }
         if (typeof Particles !== 'undefined') {
           const ts = CONFIG.TILE_SIZE;
           Particles.emit(e.x + ts / 2, e.y + ts / 2, 8, e.color, {
@@ -613,6 +631,11 @@ const EnemyManager = (() => {
       if (e.dead || e.hidden) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
+      if (e.isElite) {
+        ctx.save();
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 12;
+      }
       if (e.state === 'explode_charge' && Math.floor(Date.now() / 80) % 2) {
         ctx.save();
         ctx.globalAlpha = 0.7;
@@ -624,6 +647,7 @@ const EnemyManager = (() => {
       }
       const sprite = _getEnemySprite(e.id, e.color, e.symbol);
       if (sprite) ctx.drawImage(sprite, x, y);
+      if (e.isElite) ctx.restore();
       if (e.hp < e.maxHp) {
         const bw = ts-4, bh = 3;
         ctx.fillStyle = '#333'; ctx.fillRect(x+2, y-4, bw, bh);

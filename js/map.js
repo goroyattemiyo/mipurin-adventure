@@ -9,7 +9,7 @@ const MapManager = (() => {
     TREE:6, HOUSE:7, DOOR:8, SAVE_POINT:9, FENCE:10, WELL:11,
     SIGN:12, BRIDGE:13, CHEST:14, STUMP:15, DARK_GRASS:16, BUSH:17,
     CAVE_FLOOR:18, FLOWER_GROUND:19, TORCH:20, CHEST_OPEN:21,
-    ANCHOR:36, SEAL_WALL:37
+    ANCHOR:36, SEAL_WALL:37, EXIT:38
   };
 
   const TILE_COLORS = {
@@ -21,7 +21,8 @@ const MapManager = (() => {
     [TILE.STUMP]:'#6b5b3a', [TILE.DARK_GRASS]:'#3a6b1e', [TILE.BUSH]:'#3d7a22',
     [TILE.CAVE_FLOOR]:'#4b4b4b', [TILE.FLOWER_GROUND]:'#4f8f32',
     [TILE.TORCH]:'#b35a1a', [TILE.CHEST_OPEN]:'#C9A24A',
-    [TILE.ANCHOR]:'#708090', [TILE.SEAL_WALL]:'#2ecc71'
+    [TILE.ANCHOR]:'#708090', [TILE.SEAL_WALL]:'#2ecc71',
+    [TILE.EXIT]:'#7CFC00'
   };
 
   const TILE_SYMBOLS = {
@@ -30,7 +31,7 @@ const MapManager = (() => {
     [TILE.WELL]:'○', [TILE.SIGN]:'📋', [TILE.CHEST]:'📦',
     [TILE.STUMP]:'◎', [TILE.FENCE]:'┃', [TILE.BUSH]:'🌿',
     [TILE.TORCH]:'🔥', [TILE.CHEST_OPEN]:'📭', [TILE.ANCHOR]:'⚓',
-    [TILE.SEAL_WALL]:'🧱'
+    [TILE.SEAL_WALL]:'🧱', [TILE.EXIT]:'🔽'
   };
 
   const SOLID = {
@@ -124,7 +125,8 @@ const MapManager = (() => {
     enemies: []
   };
 
-  /* ── 南の森マップ ── */
+  /* BACKUP: 固定マップ（南/北の森・洞窟・花畑）
+  ── 南の森マップ ──
   _maps.forest_south = {
     cols: 20, rows: 15,
     data: [
@@ -264,9 +266,236 @@ const MapManager = (() => {
       { type:'shadow_bee', x:15, y:10 }
     ]
   };
+  BACKUP END
+  */
+
+  function _mulberry32(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function _randInt(rng, min, max) {
+    return Math.floor(rng() * (max - min + 1)) + min;
+  }
+
+  function _pick(rng, arr) {
+    return arr[_randInt(rng, 0, arr.length - 1)];
+  }
+
+  function _getTilesForTheme(theme) {
+    switch (theme) {
+      case 'forest': return { floor: TILE.GRASS, wall: TILE.TREE };
+      case 'cave': return { floor: TILE.CAVE_FLOOR, wall: TILE.WALL };
+      case 'flower': return { floor: TILE.FLOWER_GROUND, wall: TILE.BUSH };
+      case 'abyss': return { floor: TILE.DARK_GRASS, wall: TILE.WALL };
+      case 'ruins': return { floor: TILE.PATH, wall: TILE.WALL };
+      case 'sky_garden': return { floor: TILE.FLOWER_Y, wall: TILE.FENCE };
+      default: return { floor: TILE.GRASS, wall: TILE.TREE };
+    }
+  }
+
+  function _getEnemyPool(theme) {
+    switch (theme) {
+      case 'forest': return ['poison_mushroom', 'green_slime', 'spider'];
+      case 'cave': return ['bat', 'ice_worm', 'dark_slime'];
+      case 'flower': return ['dark_flower', 'shadow_bee', 'spider'];
+      case 'abyss': return ['dark_slime', 'shadow_bee', 'bat'];
+      case 'ruins': return ['spider', 'bat', 'dark_slime'];
+      case 'sky_garden': return ['shadow_bee', 'green_slime', 'poison_mushroom'];
+      default: return ['green_slime', 'spider'];
+    }
+  }
+
+  function _getThemeForArea(name, areaLv) {
+    if (name === 'forest_south' || name === 'forest_north') return 'forest';
+    if (name === 'cave') return 'cave';
+    if (name === 'flower_field') return 'flower';
+    const themes = ['forest','cave','flower','abyss','ruins','sky_garden'];
+    const idx = Math.floor((areaLv - 1) / 10) % themes.length;
+    return themes[Math.max(0, idx)];
+  }
+
+  function generateRandomMap(areaLv, theme, seed) {
+    const rng = _mulberry32(seed || Date.now());
+    const cols = 20;
+    const rows = 15;
+    const tiles = _getTilesForTheme(theme);
+
+    const data = new Array(cols * rows).fill(tiles.wall);
+    const rooms = [];
+    const corridors = [];
+
+    function node(x, y, w, h) { return { x, y, w, h, left: null, right: null, room: null }; }
+
+    function split(n, depth) {
+      const minSize = 4;
+      if (depth <= 0 || n.w < minSize * 2 + 2 || n.h < minSize * 2 + 2) return;
+      const splitH = n.w > n.h ? false : n.h > n.w ? true : rng() > 0.5;
+      if (splitH) {
+        const splitAt = _randInt(rng, minSize + 1, n.h - minSize - 1);
+        n.left = node(n.x, n.y, n.w, splitAt);
+        n.right = node(n.x, n.y + splitAt, n.w, n.h - splitAt);
+      } else {
+        const splitAt = _randInt(rng, minSize + 1, n.w - minSize - 1);
+        n.left = node(n.x, n.y, splitAt, n.h);
+        n.right = node(n.x + splitAt, n.y, n.w - splitAt, n.h);
+      }
+      split(n.left, depth - 1);
+      split(n.right, depth - 1);
+    }
+
+    function createRoom(n) {
+      if (n.left && n.right) { createRoom(n.left); createRoom(n.right); return; }
+      const minS = 4;
+      const maxS = 8;
+      const rw = Math.min(maxS, _randInt(rng, minS, Math.max(minS, n.w - 2)));
+      const rh = Math.min(maxS, _randInt(rng, minS, Math.max(minS, n.h - 2)));
+      const rx = _randInt(rng, n.x + 1, n.x + n.w - rw - 1);
+      const ry = _randInt(rng, n.y + 1, n.y + n.h - rh - 1);
+      n.room = { x: rx, y: ry, w: rw, h: rh };
+      rooms.push(n.room);
+    }
+
+    function getRoom(n) {
+      if (n.room) return n.room;
+      if (n.left) { const r = getRoom(n.left); if (r) return r; }
+      if (n.right) { const r = getRoom(n.right); if (r) return r; }
+      return null;
+    }
+
+    function connect(n) {
+      if (!n.left || !n.right) return;
+      connect(n.left);
+      connect(n.right);
+      const a = getRoom(n.left);
+      const b = getRoom(n.right);
+      if (!a || !b) return;
+      const ax = Math.floor(a.x + a.w / 2);
+      const ay = Math.floor(a.y + a.h / 2);
+      const bx = Math.floor(b.x + b.w / 2);
+      const by = Math.floor(b.y + b.h / 2);
+      const corridor = [];
+      let cx = ax, cy = ay;
+      while (cx !== bx) { corridor.push({ x: cx, y: cy }); cx += cx < bx ? 1 : -1; }
+      while (cy !== by) { corridor.push({ x: cx, y: cy }); cy += cy < by ? 1 : -1; }
+      corridor.push({ x: bx, y: by });
+      corridors.push(corridor);
+    }
+
+    const depth = 3;
+    const root = node(0, 0, cols, rows);
+    split(root, depth);
+    createRoom(root);
+    connect(root);
+
+    for (const room of rooms) {
+      for (let r = room.y; r < room.y + room.h; r++) {
+        for (let c = room.x; c < room.x + room.w; c++) {
+          data[r * cols + c] = tiles.floor;
+        }
+      }
+    }
+    for (const corr of corridors) {
+      for (const p of corr) {
+        data[p.y * cols + p.x] = tiles.floor;
+      }
+    }
+
+    const roomCenters = rooms.map(r => ({ x: Math.floor(r.x + r.w / 2), y: Math.floor(r.y + r.h / 2) }));
+    const playerStart = roomCenters[0] || { x: 1, y: 1 };
+    const exitRoom = rooms[Math.max(0, rooms.length - 1)];
+    const exitPos = exitRoom ? { x: Math.floor(exitRoom.x + exitRoom.w / 2), y: Math.floor(exitRoom.y + exitRoom.h / 2) } : { x: cols - 2, y: rows - 2 };
+
+    data[playerStart.y * cols + playerStart.x] = tiles.floor;
+    data[exitPos.y * cols + exitPos.x] = TILE.EXIT;
+
+    if (rooms[0]) {
+      const sx = Math.min(cols - 2, Math.max(1, Math.floor(rooms[0].x + rooms[0].w / 2) + 1));
+      const sy = Math.min(rows - 2, Math.max(1, Math.floor(rooms[0].y + rooms[0].h / 2)));
+      data[sy * cols + sx] = TILE.SAVE_POINT;
+    }
+
+    const types = [];
+    const isBossArea = areaLv % 10 === 0;
+    for (let i = 0; i < rooms.length; i++) {
+      if (i === 0) { types[i] = 'start'; continue; }
+      if (i === rooms.length - 1 && isBossArea) { types[i] = 'boss'; continue; }
+      const roll = rng();
+      if (roll < 0.50) types[i] = 'combat';
+      else if (roll < 0.65) types[i] = 'treasure';
+      else if (roll < 0.80) types[i] = 'elite';
+      else if (roll < 0.90) types[i] = 'shop';
+      else types[i] = 'combat';
+    }
+
+    const enemyPool = _getEnemyPool(theme);
+    const enemies = [];
+    const npcs = [];
+
+    for (let i = 0; i < rooms.length; i++) {
+      const room = rooms[i];
+      const type = types[i];
+      if (!room || type === 'start') continue;
+      const center = { x: Math.floor(room.x + room.w / 2), y: Math.floor(room.y + room.h / 2) };
+
+      if (type === 'treasure') {
+        const chestCount = _randInt(rng, 1, 2);
+        for (let c = 0; c < chestCount; c++) {
+          const cx = _randInt(rng, room.x + 1, room.x + room.w - 2);
+          const cy = _randInt(rng, room.y + 1, room.y + room.h - 2);
+          data[cy * cols + cx] = TILE.CHEST;
+        }
+        continue;
+      }
+
+      if (type === 'shop') {
+        npcs.push({ id:'marche', x:center.x, y:center.y, name:'商人', symbol:'🎒', color:'#E67E22' });
+        continue;
+      }
+
+      if (type === 'boss') {
+        continue;
+      }
+
+      if (type === 'elite') {
+        const eliteType = _pick(rng, enemyPool);
+        enemies.push({ type: eliteType, x: center.x, y: center.y, isElite: true });
+        for (let k = 0; k < 2; k++) {
+          const ex = _randInt(rng, room.x + 1, room.x + room.w - 2);
+          const ey = _randInt(rng, room.y + 1, room.y + room.h - 2);
+          enemies.push({ type: _pick(rng, enemyPool), x: ex, y: ey });
+        }
+        continue;
+      }
+
+      if (type === 'combat') {
+        const count = _randInt(rng, 3, 6);
+        for (let k = 0; k < count; k++) {
+          const ex = _randInt(rng, room.x + 1, room.x + room.w - 2);
+          const ey = _randInt(rng, room.y + 1, room.y + room.h - 2);
+          enemies.push({ type: _pick(rng, enemyPool), x: ex, y: ey });
+        }
+      }
+    }
+
+    return { cols, rows, data, playerStart, exits: [], npcs, enemies };
+  }
 
   function loadMap(name) {
-    const map = _maps[name];
+    let map = _maps[name];
+    if (!map && name !== 'village') {
+      const lvl = typeof Game !== 'undefined' && Game.getPlayerLevel ? Game.getPlayerLevel() : 1;
+      const aLv = Scaling.areaLevel(lvl, name);
+      const theme = _getThemeForArea(name, aLv);
+      const seed = Date.now() + aLv;
+      map = generateRandomMap(aLv, theme, seed);
+    }
     if (!map) { console.warn('マップが見つかりません:', name); return null; }
     _currentMap = map; _currentMapName = name;
     _ensureBgCanvas(map);
@@ -318,5 +547,19 @@ const MapManager = (() => {
     }
   }
 
-  return { TILE, loadMap, getTile, setTile, isSolid, getNpcAt, getExitAt, draw, drawNpcs, getCurrentMap:()=>_currentMap, getCurrentMapName:()=>_currentMapName };
+  return {
+    TILE,
+    loadMap,
+    getTile,
+    setTile,
+    isSolid,
+    getNpcAt,
+    getExitAt,
+    draw,
+    drawNpcs,
+    generateRandomMap,
+    getThemeForArea: _getThemeForArea,
+    getCurrentMap:()=>_currentMap,
+    getCurrentMapName:()=>_currentMapName
+  };
 })();

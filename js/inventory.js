@@ -29,8 +29,10 @@ const Inventory = (() => {
   /* ============ インベントリ状態 ============ */
   let _items = []; // { id, count }
   const MAX_SLOTS = 16;
+  let _equipmentBag = []; // 装備品
+  const MAX_EQUIP_SLOTS = 24;
 
-  function clear() { _items = []; }
+  function clear() { _items = []; _equipmentBag = []; }
 
   function addItem(itemId, count) {
     count = count || 1;
@@ -67,6 +69,22 @@ const Inventory = (() => {
   }
 
   function getAll() { return _items.map(i => ({ ...i })); }
+
+  function addEquipment(item) {
+    if (!item) return false;
+    if (_equipmentBag.length >= MAX_EQUIP_SLOTS) return false;
+    _equipmentBag.push({ ...item });
+    return true;
+  }
+
+  function removeEquipment(uid) {
+    const idx = _equipmentBag.findIndex(i => i.uid === uid);
+    if (idx === -1) return false;
+    _equipmentBag.splice(idx, 1);
+    return true;
+  }
+
+  function getEquipmentBag() { return _equipmentBag.map(i => ({ ...i })); }
 
   function useItem(itemId, player, flags) {
     if (!hasItem(itemId)) return false;
@@ -133,8 +151,21 @@ const Inventory = (() => {
   }
 
   /** セーブ用シリアライズ */
-  function serialize() { return _items.map(i => ({ ...i })); }
-  function deserialize(arr) { _items = (arr || []).map(i => ({ ...i })); }
+  function serialize() {
+    return {
+      items: _items.map(i => ({ ...i })),
+      equipmentBag: _equipmentBag.map(i => ({ ...i }))
+    };
+  }
+  function deserialize(data) {
+    if (Array.isArray(data)) {
+      _items = data.map(i => ({ ...i }));
+      _equipmentBag = [];
+      return;
+    }
+    _items = (data && data.items ? data.items : []).map(i => ({ ...i }));
+    _equipmentBag = (data && data.equipmentBag ? data.equipmentBag : []).map(i => ({ ...i }));
+  }
 
   /** インベントリ画面描画 */
   let _cursor = 0;
@@ -231,8 +262,9 @@ const Inventory = (() => {
   }
 
   return {
-    ITEM_DEFS, MAX_SLOTS,
+    ITEM_DEFS, MAX_SLOTS, MAX_EQUIP_SLOTS,
     clear, addItem, removeItem, hasItem, getCount, getAll,
+    addEquipment, removeEquipment, getEquipmentBag,
     useItem, updateBuffs,
     getEffectiveSpeed, getEffectiveAtk, getDefReduction,
     serialize, deserialize,

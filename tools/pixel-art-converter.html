@@ -84,6 +84,8 @@
         <span id="tolVal">30</span>
       </div>
       <div class="row" style="margin-top:8px;">
+        <button id="cropBtn" class="secondary">クロップ</button>
+        <button id="cropConfirm" style="display:none;">クロップ確定</button>
         <button id="removeBg">背景を透過</button>
         <button id="undo" class="secondary">元に戻す</button>
         <button id="downloadSrc" class="secondary">背景除去画像をダウンロード</button>
@@ -156,6 +158,8 @@
   const tolerance = document.getElementById('tolerance');
   const tolVal = document.getElementById('tolVal');
   const pickBtn = document.getElementById('pickBtn');
+  const cropBtn = document.getElementById('cropBtn');
+  const cropConfirmBtn = document.getElementById('cropConfirm');
   const removeBtn = document.getElementById('removeBg');
   const undoBtn = document.getElementById('undo');
   const downloadSrcBtn = document.getElementById('downloadSrc');
@@ -170,9 +174,32 @@
 
   let img = null;
   let originalImageData = null;
+  let initialImageData = null;
+  let fullOriginalImageData = null;
+  let currentImageData = null;
   let pickMode = false;
+  let cropMode = false;
+  let cropUndoStage = 0;
+  let isCropping = false;
+  let cropStart = null;
+  let cropEnd = null;
+  let cropRect = null;
+  let cropRaf = null;
   let pixelArtCanvas = null;
   let previewCanvas = null;
+
+  function updateCurrentImageData() {
+    if (!srcCanvas.width || !srcCanvas.height) return;
+    currentImageData = sctx.getImageData(0,0,srcCanvas.width, srcCanvas.height);
+  }
+
+  function applyImageData(imgData) {
+    if (!imgData) return;
+    srcCanvas.width = imgData.width;
+    srcCanvas.height = imgData.height;
+    sctx.putImageData(imgData, 0, 0);
+    updateCurrentImageData();
+  }
 
   function setCanvasSizeForImage(c, w, h, maxW, maxH) {
     const scale = Math.min(maxW / w, maxH / h, 1);
@@ -187,6 +214,16 @@
     sctx.imageSmoothingEnabled = true;
     sctx.drawImage(img, 0, 0, srcCanvas.width, srcCanvas.height);
     originalImageData = sctx.getImageData(0,0,srcCanvas.width, srcCanvas.height);
+    initialImageData = originalImageData;
+    fullOriginalImageData = null;
+    cropUndoStage = 0;
+    cropRect = null;
+    cropStart = null;
+    cropEnd = null;
+    cropConfirmBtn.style.display = 'none';
+    cropMode = false;
+    cropBtn.textContent = 'クロップ';
+    updateCurrentImageData();
   }
 
   function handleFile(file) {
@@ -215,7 +252,31 @@
 
   tolerance.addEventListener('input', () => tolVal.textContent = tolerance.value);
 
-  pickBtn.addEventListener('click', () => { pickMode = !pickMode; pickBtn.textContent = pickMode ? 'スポイト中...' : 'スポイト'; });
+  pickBtn.addEventListener('click', () => {
+    if (cropMode) return;
+    pickMode = !pickMode;
+    pickBtn.textContent = pickMode ? 'スポイト中...' : 'スポイト';
+  });
+
+  cropBtn.addEventListener('click', () => {
+    cropMode = !cropMode;
+    cropBtn.textContent = cropMode ? 'クロップ中...' : 'クロップ';
+    if (cropMode) {
+      pickMode = false;
+      pickBtn.textContent = 'スポイト';
+      cropRect = null;
+      cropStart = null;
+      cropEnd = null;
+      cropConfirmBtn.style.display = 'none';
+      redrawCropPreview();
+    } else {
+      cropRect = null;
+      cropStart = null;
+      cropEnd = null;
+      cropConfirmBtn.style.display = 'none';
+      redrawCropPreview();
+    }
+  });
 
   function pickAt(clientX, clientY) {
     const rect = srcCanvas.getBoundingClientRect();
@@ -228,17 +289,156 @@
   }
 
   srcCanvas.addEventListener('click', (e) => {
-    if (!pickMode) return;
+    if (!pickMode || cropMode) return;
     pickAt(e.clientX, e.clientY);
   });
 
   srcCanvas.addEventListener('touchstart', (e) => {
-    if (!pickMode) return;
+    if (!pickMode || cropMode) return;
     e.preventDefault();
     const touch = e.touches[0];
     if (!touch) return;
     pickAt(touch.clientX, touch.clientY);
   }, { passive: false });
+
+  function getCanvasPoint(clientX, clientY) {
+    const rect = srcCanvas.getBoundingClientRect();
+    const scaleX = srcCanvas.width / rect.width;
+    const scaleY = srcCanvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  }
+
+  function normalizeRect(a, b) {
+    if (!a || !b) return null;
+    let x1 = Math.min(a.x, b.x);
+    let y1 = Math.min(a.y, b.y);
+    let x2 = Math.max(a.x, b.x);
+    let y2 = Math.max(a.y, b.y);
+    x1 = Math.max(0, Math.min(srcCanvas.width, x1));
+    y1 = Math.max(0, Math.min(srcCanvas.height, y1));
+    x2 = Math.max(0, Math.min(srcCanvas.width, x2));
+    y2 = Math.max(0, Math.min(srcCanvas.height, y2));
+    const w = Math.max(0, x2 - x1);
+    const h = Math.max(0, y2 - y1);
+    if (w < 1 || h < 1) return null;
+    return { x: Math.floor(x1), y: Math.floor(y1), w: Math.floor(w), h: Math.floor(h) };
+  }
+
+  function scheduleCropPreview() {
+    if (cropRaf) return;
+    cropRaf = requestAnimationFrame(() => {
+      cropRaf = null;
+      redrawCropPreview();
+    });
+  }
+
+  function redrawCropPreview() {
+    if (!currentImageData) return;
+    sctx.putImageData(currentImageData, 0, 0);
+    if (!cropMode) return;
+    const rect = cropRect || normalizeRect(cropStart, cropEnd);
+    if (!rect) return;
+    sctx.save();
+    sctx.strokeStyle = '#F5A623';
+    sctx.setLineDash([6,4]);
+    sctx.lineWidth = 2;
+    sctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h);
+    sctx.restore();
+  }
+
+  function finishCropSelection() {
+    cropRect = normalizeRect(cropStart, cropEnd);
+    cropConfirmBtn.style.display = cropRect ? 'inline-block' : 'none';
+  }
+
+  srcCanvas.addEventListener('mousedown', (e) => {
+    if (!cropMode) return;
+    e.preventDefault();
+    const p = getCanvasPoint(e.clientX, e.clientY);
+    isCropping = true;
+    cropStart = p;
+    cropEnd = p;
+    cropRect = null;
+    cropConfirmBtn.style.display = 'none';
+    scheduleCropPreview();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!cropMode || !isCropping) return;
+    const p = getCanvasPoint(e.clientX, e.clientY);
+    cropEnd = p;
+    scheduleCropPreview();
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!cropMode || !isCropping) return;
+    const p = getCanvasPoint(e.clientX, e.clientY);
+    cropEnd = p;
+    isCropping = false;
+    finishCropSelection();
+    scheduleCropPreview();
+  });
+
+  srcCanvas.addEventListener('touchstart', (e) => {
+    if (!cropMode) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const p = getCanvasPoint(touch.clientX, touch.clientY);
+    isCropping = true;
+    cropStart = p;
+    cropEnd = p;
+    cropRect = null;
+    cropConfirmBtn.style.display = 'none';
+    scheduleCropPreview();
+  }, { passive: false });
+
+  srcCanvas.addEventListener('touchmove', (e) => {
+    if (!cropMode || !isCropping) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const p = getCanvasPoint(touch.clientX, touch.clientY);
+    cropEnd = p;
+    scheduleCropPreview();
+  }, { passive: false });
+
+  srcCanvas.addEventListener('touchend', (e) => {
+    if (!cropMode || !isCropping) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    if (touch) cropEnd = getCanvasPoint(touch.clientX, touch.clientY);
+    isCropping = false;
+    finishCropSelection();
+    scheduleCropPreview();
+  }, { passive: false });
+
+  cropConfirmBtn.addEventListener('click', () => {
+    if (!cropRect || !currentImageData) return;
+    fullOriginalImageData = sctx.getImageData(0,0,srcCanvas.width, srcCanvas.height);
+    cropUndoStage = 2;
+    const temp = document.createElement('canvas');
+    temp.width = cropRect.w;
+    temp.height = cropRect.h;
+    const tctx = temp.getContext('2d');
+    tctx.imageSmoothingEnabled = true;
+    tctx.clearRect(0,0,cropRect.w, cropRect.h);
+    tctx.drawImage(srcCanvas, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, cropRect.w, cropRect.h);
+    srcCanvas.width = cropRect.w;
+    srcCanvas.height = cropRect.h;
+    sctx.drawImage(temp, 0, 0);
+    originalImageData = sctx.getImageData(0,0,srcCanvas.width, srcCanvas.height);
+    updateCurrentImageData();
+    cropMode = false;
+    cropBtn.textContent = 'クロップ';
+    cropRect = null;
+    cropStart = null;
+    cropEnd = null;
+    cropConfirmBtn.style.display = 'none';
+  });
 
   removeBtn.addEventListener('click', () => {
     if (!originalImageData) return;
@@ -254,11 +454,26 @@
       if (dist <= tol * 2.55) d[i+3] = 0;
     }
     sctx.putImageData(imgData, 0, 0);
+    updateCurrentImageData();
   });
 
   undoBtn.addEventListener('click', () => {
     if (!originalImageData) return;
+    if (cropUndoStage === 2 && fullOriginalImageData) {
+      applyImageData(fullOriginalImageData);
+      originalImageData = fullOriginalImageData;
+      cropUndoStage = 1;
+      return;
+    }
+    if (cropUndoStage === 1 && initialImageData) {
+      applyImageData(initialImageData);
+      originalImageData = initialImageData;
+      cropUndoStage = 0;
+      fullOriginalImageData = null;
+      return;
+    }
     sctx.putImageData(originalImageData, 0, 0);
+    updateCurrentImageData();
   });
 
   downloadSrcBtn.addEventListener('click', () => {

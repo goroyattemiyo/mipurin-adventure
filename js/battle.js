@@ -3,6 +3,7 @@
  * ミプリンの冒険 v0.6.0
  */
 const PlayerController = (() => {
+  const ts = CONFIG.TILE_SIZE;
   const P_COLOR = '#F5A623';
   const P_OUTLINE = '#2B1B0E';
 
@@ -28,7 +29,6 @@ const PlayerController = (() => {
   function _clampPlayerToMap(player) {
     const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
     if (!map) return;
-    const ts = CONFIG.TILE_SIZE;
     const maxX = map.cols * ts - ts;
     const maxY = map.rows * ts - ts;
     player.x = Math.max(0, Math.min(player.x, maxX));
@@ -93,7 +93,6 @@ const PlayerController = (() => {
       player.invincibleTimer = DASH_DURATION + 0.05;
       Audio.playSe('dash');
       if (typeof Particles !== 'undefined') {
-        const ts = CONFIG.TILE_SIZE;
         Particles.emit(player.x + ts / 2, player.y + ts / 2, 6, '#F5A623', {
           speedMin: 20, speedMax: 50, lifeMin: 0.2, lifeMax: 0.4, sizeMin: 2, sizeMax: 4
         });
@@ -102,7 +101,7 @@ const PlayerController = (() => {
 
     const moveWithCollision = (dx, dy, speed) => {
       if (dx === 0 && dy === 0) return;
-      const ts = CONFIG.TILE_SIZE;
+
       const margin = 4;
       const newPx = player.x + dx * speed;
       const newPy = player.y + dy * speed;
@@ -159,7 +158,7 @@ const PlayerController = (() => {
   }
 
   function checkInteract(player) {
-    const ts = CONFIG.TILE_SIZE;
+
     const cc = Math.floor((player.x + ts/2) / ts), cr = Math.floor((player.y + ts/2) / ts);
     let tc = cc, tr = cr;
     switch (player.dir) { case 'up': tr--; break; case 'down': tr++; break; case 'left': tc--; break; case 'right': tc++; break; }
@@ -175,7 +174,7 @@ const PlayerController = (() => {
   }
 
   function checkExit(player) {
-    const ts = CONFIG.TILE_SIZE;
+
     const c = Math.floor((player.x + ts/2) / ts), r = Math.floor((player.y + ts/2) / ts);
     const exit = MapManager.getExitAt(c, r);
     if (exit) return exit;
@@ -186,7 +185,7 @@ const PlayerController = (() => {
 
   /* ── 攻撃判定（範囲取得） ── */
   function getAttackBox(player) {
-    const ts = CONFIG.TILE_SIZE;
+
     const cx = player.x + ts / 2, cy = player.y + ts / 2;
     const range = ts * 1.2;
     const size = ts * 0.8;
@@ -201,7 +200,7 @@ const PlayerController = (() => {
   }
 
   function draw(ctx, player) {
-    const ts = CONFIG.TILE_SIZE;
+
     const x = Math.round(player.x), y = Math.round(player.y);
 
     /* 影 */
@@ -267,7 +266,7 @@ const PlayerController = (() => {
     if (timer <= 0) return;
     ctx.save();
     ctx.globalAlpha = timer;
-    const ts = CONFIG.TILE_SIZE;
+
     const cx = player.x + ts/2, cy = player.y + ts/2;
     const r = ts * 2 * (1 - timer);
     ctx.strokeStyle = '#FF4444';
@@ -285,6 +284,7 @@ const PlayerController = (() => {
    EnemyManager - 敵の生成・更新・描画・当たり判定
    ============================================================ */
 const EnemyManager = (() => {
+  const ts = CONFIG.TILE_SIZE;
   let _enemies = [];
   const _spriteCache = new Map();
 
@@ -301,7 +301,7 @@ const EnemyManager = (() => {
   function spawn(templateId, col, row, isElite) {
     const t = TEMPLATES[templateId];
     if (!t) { console.warn('Unknown enemy:', templateId); return; }
-    const ts = CONFIG.TILE_SIZE;
+
     const e = _allocEnemy();
     e.id = templateId;
     e.name = t.name;
@@ -344,7 +344,7 @@ const EnemyManager = (() => {
 
   function _tryMove(e, dx, dy, speed) {
     if (dx === 0 && dy === 0) return false;
-    const ts = CONFIG.TILE_SIZE;
+
     const margin = 4;
     const nx = e.x + dx * speed;
     const ny = e.y + dy * speed;
@@ -358,7 +358,7 @@ const EnemyManager = (() => {
   }
 
   function update(dt, player) {
-    const ts = CONFIG.TILE_SIZE;
+
     for (const e of _enemies) {
       if (e.dead) continue;
       if (e.hurtTimer > 0) { e.hurtTimer -= dt; continue; }
@@ -565,7 +565,7 @@ const EnemyManager = (() => {
     const killed = [];
     for (const e of _enemies) {
       if (e.dead || e.hidden || e.hurtTimer > 0) continue;
-      const ts = CONFIG.TILE_SIZE;
+
       const ex = e.x, ey = e.y;
       if (box.x < ex+ts && box.x+box.w > ex && box.y < ey+ts && box.y+box.h > ey) {
         e.hp -= damage;
@@ -596,7 +596,7 @@ const EnemyManager = (() => {
   }
 
   function needleBlast(damage, flags) {
-    const ts = CONFIG.TILE_SIZE;
+
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
       e.hp -= damage;
@@ -614,7 +614,7 @@ const EnemyManager = (() => {
           Loot.spawnOnGround(e.x + ts / 2, e.y + ts / 2, drops);
         }
         if (typeof Particles !== 'undefined') {
-          const ts = CONFIG.TILE_SIZE;
+
           Particles.emit(e.x + ts / 2, e.y + ts / 2, 8, e.color, {
             speedMin: 40, speedMax: 100, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 3, sizeMax: 6
           });
@@ -625,7 +625,7 @@ const EnemyManager = (() => {
   }
 
   function draw(ctx) {
-    const ts = CONFIG.TILE_SIZE;
+
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
@@ -660,7 +660,7 @@ const EnemyManager = (() => {
 
   function _getEnemySprite(id, color, symbol) {
     if (_spriteCache.has(id)) return _spriteCache.get(id);
-    const ts = CONFIG.TILE_SIZE;
+
     const canvas = document.createElement('canvas');
     canvas.width = ts;
     canvas.height = ts;

@@ -342,13 +342,7 @@ const NpcManager = (() => {
 
   /* ============ 針の一撃 ペナルティ取得 ============ */
   function getNeedlePenalty(flags) {
-    const n = flags.needleUseCount || 0;
-    const penalties = [];
-    const defs = Balance.NEEDLE_PENALTY;
-    for (const threshold of Object.keys(defs).map(Number).sort((a,b)=>a-b)) {
-      if (n >= threshold) penalties.push(defs[threshold]);
-    }
-    return penalties;
+    return [];
   }
 
   return {

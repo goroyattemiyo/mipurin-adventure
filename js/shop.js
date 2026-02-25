@@ -81,7 +81,8 @@ const Shop = (() => {
     { itemId: 'speed_honey',  price: 6,  stock: 3 },
     { itemId: 'torch',        price: 3,  stock: 5 },
     { itemId: 'antidote',     price: 2,  stock: 5 },
-    { itemId: 'hard_candy',   price: 5,  stock: 3 }
+    { itemId: 'hard_candy',   price: 5,  stock: 3 },
+    { itemId: 'needle_bundle', price: Balance.NEEDLE.SHOP_PRICE, stock: 5 }
   ];
 
   let _shopStock = []; // 現在の在庫（ゲーム進行中に減少）

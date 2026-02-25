@@ -13,9 +13,7 @@ const Balance = (() => {
     SPEED: 6,
     BASE_SPEED: 6,
     NEEDLE_DMG: 10,
-    NEEDLE_HP_COST: 1,
     ATTACK_COOLDOWN_SEC: 0.5,
-    NEEDLE_COOLDOWN_SEC: 2.0,
     INPUT_BUFFER_FRAMES: 7,
     KNOCKBACK_SPEED: 6,
     KNOCKBACK_DURATION: 0.15,
@@ -160,14 +158,15 @@ const Balance = (() => {
     WORLD_GREY: 30
   };
 
-  /* ============ 針の一撃 累積ペナルティ ============ */
-  const NEEDLE_PENALTY = {
-    1: { effect:'red_line' },
-    2: { effect:'walk_speed_down', multiplier:0.85 },
-    3: { effect:'vignette', intensity:0.3 },
-    4: { effect:'sprite_darken', variant:'dark_1' },
-    6: { effect:'sprite_darken', variant:'dark_2' },
-    10:{ effect:'sprite_darken', variant:'dark_3' }
+  /* ============ 針リソース管理 ============ */
+  const NEEDLE = {
+    MAX: 10,
+    INITIAL: 3,
+    REGEN_INTERVAL: 60,  // 秒
+    DROP_RATE_NORMAL: 0.15,
+    DROP_RATE_ELITE: 1.0,
+    SHOP_BUNDLE: 3,
+    SHOP_PRICE: 50
   };
 
   /* ============ スキン価格 ============ */
@@ -180,7 +179,7 @@ const Balance = (() => {
   return {
     PLAYER, ENEMIES, BOSSES, DUNGEON,
     ITEM_EFFECTS, POLLEN_BUDGET,
-    KILL_THRESHOLDS, NEEDLE_PENALTY, SKINS,
+    KILL_THRESHOLDS, NEEDLE, SKINS,
     dungeonEnemyHp, dungeonEnemyAtk, dungeonPollen, dungeonScore,
     EXP_CURVE
   };

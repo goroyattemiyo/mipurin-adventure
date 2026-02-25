@@ -23,7 +23,8 @@ const Inventory = (() => {
     queens_tear:    { id:'queens_tear',    name:'女王の涙', desc:'レイラの涙が結晶化したもの。温かい。', type:'key', stackable:false, maxStack:1, icon:'💧', color:'#AED6F1' },
     ancient_map:    { id:'ancient_map',    name:'古い地図', desc:'巣窟のミニマップが使えるようになる。', type:'key', stackable:false, maxStack:1, icon:'🗺', color:'#BDC3C7' },
     nest_key:       { id:'nest_key',       name:'巣窟鍵', desc:'巣窟のボス部屋を開ける鍵。', type:'consumable', stackable:true, maxStack:3, icon:'🔑', color:'#95A5A6' },
-    hana_pot:       { id:'hana_pot',       name:'ハナの蜂蜜ポット', desc:'母が使っていた蜂蜜ポット。マルシェが預かっていた。', type:'key', stackable:false, maxStack:1, icon:'🍯', color:'#F5A623' }
+    hana_pot:       { id:'hana_pot',       name:'ハナの蜂蜜ポット', desc:'母が使っていた蜂蜜ポット。マルシェが預かっていた。', type:'key', stackable:false, maxStack:1, icon:'🍯', color:'#F5A623' },
+    needle_bundle:  { id:'needle_bundle',  name:'針×3', desc:'針の補給パック。', type:'consumable', stackable:true, maxStack:9, icon:'📌', color:'#F5A623' }
   };
 
   /* ============ インベントリ状態 ============ */

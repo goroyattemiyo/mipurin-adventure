@@ -595,8 +595,8 @@ const EnemyManager = (() => {
     return { hitAny, killed };
   }
 
-  function needleBlast(damage, flags) {
-
+  function needleBlast(originX, originY, damage, flags) {
+    if (damage === undefined || damage === null) damage = Balance.PLAYER.NEEDLE_DMG;
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
       e.hp -= damage;
@@ -621,7 +621,6 @@ const EnemyManager = (() => {
         }
       }
     }
-    flags.needleUseCount++;
   }
 
   function draw(ctx) {

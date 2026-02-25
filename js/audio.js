@@ -56,6 +56,7 @@ const Audio = (() => {
   const SE_MAP = {
     attack:        'assets/se/attack.mp3',
     needle:        'assets/se/needle.mp3',
+    empty:         'assets/se/empty.mp3',
     hit:           'assets/se/hit.mp3',
     player_hurt:   'assets/se/player_hurt.mp3',
     enemy_die:     'assets/se/enemy_die.mp3',

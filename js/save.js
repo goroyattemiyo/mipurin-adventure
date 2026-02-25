@@ -53,6 +53,10 @@ const SaveManager = (() => {
         atk: gameState.player.atk,
         speed: gameState.player.speed,
         needleDmg: gameState.player.needleDmg,
+        level: gameState.player.level,
+        exp: gameState.player.exp,
+        totalExp: gameState.player.totalExp,
+        skillPoints: gameState.player.skillPoints,
         x: gameState.player.x,
         y: gameState.player.y,
         dir: gameState.player.dir

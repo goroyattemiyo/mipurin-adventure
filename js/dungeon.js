@@ -286,10 +286,10 @@ const Dungeon = (() => {
   /** 成長ポイント適用 */
   function applyGrowth(stat, player) {
     const caps = {
-      maxHp: Balance.PLAYER.MAX_HP_CAP,
-      atk: Balance.PLAYER.ATK_CAP,
-      speed: Balance.PLAYER.SPEED_CAP,
-      needleDmg: Balance.PLAYER.NEEDLE_DMG_CAP
+      maxHp: Number.POSITIVE_INFINITY,
+      atk: Number.POSITIVE_INFINITY,
+      speed: Number.POSITIVE_INFINITY,
+      needleDmg: Number.POSITIVE_INFINITY
     };
     if (!caps[stat]) return false;
 

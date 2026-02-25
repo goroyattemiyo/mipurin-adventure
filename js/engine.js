@@ -17,7 +17,7 @@ const Engine = (() => {
     w: 'up', s: 'down', a: 'left', d: 'right',
     z: 'attack', Z: 'attack',
     x: 'needle', X: 'needle',
-    c: 'interact', C: 'interact', Enter: 'interact',
+    c: 'dash', C: 'dash', Enter: 'interact',
     i: 'inventory', I: 'inventory',
     Escape: 'menu'
   };
@@ -58,6 +58,16 @@ const Engine = (() => {
       e.preventDefault();
       _clicked = true;
     }, { passive: false });
+
+    const btnC = document.getElementById('btn-c');
+    if (btnC) {
+      const press = (e) => { e.preventDefault(); _keys.dash = true; };
+      const release = (e) => { e.preventDefault(); _keys.dash = false; };
+      btnC.addEventListener('touchstart', press, { passive: false });
+      btnC.addEventListener('touchend', release, { passive: false });
+      btnC.addEventListener('mousedown', press);
+      window.addEventListener('mouseup', release);
+    }
   }
 
   function _handleTouch(e) {

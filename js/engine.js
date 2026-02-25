@@ -16,8 +16,8 @@ const Engine = (() => {
     ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
     w: 'up', s: 'down', a: 'left', d: 'right',
     z: 'attack', Z: 'attack',
-    x: 'needle', X: 'needle',
-    c: 'dash', C: 'dash', Enter: 'interact',
+    x: 'dash', X: 'dash',
+    c: 'needle', C: 'needle', Enter: 'interact',
     i: 'inventory', I: 'inventory',
     Escape: 'menu'
   };
@@ -61,8 +61,8 @@ const Engine = (() => {
 
     const btnC = document.getElementById('btn-c');
     if (btnC) {
-      const press = (e) => { e.preventDefault(); _keys.dash = true; };
-      const release = (e) => { e.preventDefault(); _keys.dash = false; };
+      const press = (e) => { e.preventDefault(); _keys.needle = true; };
+      const release = (e) => { e.preventDefault(); _keys.needle = false; };
       btnC.addEventListener('touchstart', press, { passive: false });
       btnC.addEventListener('touchend', release, { passive: false });
       btnC.addEventListener('mousedown', press);

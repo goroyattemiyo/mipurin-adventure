@@ -25,6 +25,16 @@ const Loot = (() => {
       drops.push({ type: 'equipment', item: item });
     }
 
+    const needleRate = isElite ? Balance.NEEDLE.DROP_RATE_ELITE : Balance.NEEDLE.DROP_RATE_NORMAL;
+    if (Math.random() < needleRate) {
+      if (typeof Game !== 'undefined' && Game.player) {
+        if (Game.player.needles < Game.player.needleMax) {
+          Game.player.needles++;
+          if (Game.addDropLog) Game.addDropLog('針 +1', '#F5A623');
+        }
+      }
+    }
+
     // ボスは3個確定ドロップ
     if (isBoss) {
       for (let i = 0; i < 2; i++) {

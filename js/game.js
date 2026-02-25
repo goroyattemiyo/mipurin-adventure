@@ -39,7 +39,8 @@ const Game = (() => {
     knockback:{x:0,y:0,timer:0}, hitStopFrames:0,
     invincibleTimer:0, poisoned:false,
     _buffDef:null, _buffSpeed:null, _buffAtk:null, _buffVision:null,
-    level: 1, exp: 0, totalExp: 0, skillPoints: 0
+    level: 1, exp: 0, totalExp: 0, skillPoints: 0,
+    needles: Balance.NEEDLE.INITIAL, needleMax: Balance.NEEDLE.MAX, needleRegenTimer: 0
   };
 
   /* ============ フラグ ============ */
@@ -556,6 +557,9 @@ const Game = (() => {
     player.atk = pd.atk ?? player.atk;
     player.speed = pd.speed ?? player.speed;
     player.needleDmg = pd.needleDmg ?? player.needleDmg;
+    player.needles = pd.needles ?? player.needles;
+    player.needleMax = pd.needleMax ?? player.needleMax;
+    player.needleRegenTimer = pd.needleRegenTimer ?? player.needleRegenTimer;
     player.level = pd.level ?? player.level;
     player.exp = pd.exp ?? player.exp;
     player.totalExp = pd.totalExp ?? player.totalExp;
@@ -645,7 +649,13 @@ const Game = (() => {
       if (result) {
         if (result.action === 'buy_item') {
           Inventory.removeItem('pollen', result.cost);
-          Inventory.addItem(result.itemId);
+          if (result.itemId === 'needle_bundle') {
+            const before = player.needles;
+            player.needles = Math.min(player.needleMax, player.needles + Balance.NEEDLE.SHOP_BUNDLE);
+            if (player.needles > before) _addLog('針を補充した');
+          } else {
+            Inventory.addItem(result.itemId);
+          }
           Analytics.logShopBuy(result.itemId, result.cost);
           Audio.playSe('item_get');
           const def = Inventory.ITEM_DEFS[result.itemId];
@@ -705,18 +715,19 @@ const Game = (() => {
       }
     }
 
-    // 針の一撃（Xキー）
-    if (Engine.consumePress('needle') && player.needleCooldown <= 0 && player.hp > Balance.PLAYER.NEEDLE_HP_COST) {
-      player.hp -= Balance.PLAYER.NEEDLE_HP_COST;
-      player.needleCooldown = Balance.PLAYER.NEEDLE_COOLDOWN_SEC;
-      flags.needleUseCount++;
-      _needleEffectTimer = 0.5;
-      EnemyManager.needleBlast(player.needleDmg, flags);
-      Engine.triggerShake(6, 10);
-      Audio.playSe('needle');
-      Analytics.logNeedleUse(_currentMapName, flags.needleUseCount);
-      // killCountフィルタ更新
-      Audio.updateKillCountFilter(flags.killCount);
+    // 針の一撃（Cキー）
+    if (Engine.consumePress('needle')) {
+      if (player.needles > 0) {
+        player.needles--;
+        flags.needleUseCount++;
+        _needleEffectTimer = 0.5;
+        EnemyManager.needleBlast(player.x, player.y, player.needleDmg, flags);
+        Engine.triggerShake(6, 10);
+        Audio.playSe('needle');
+        Analytics.logNeedleUse(_currentMapName, flags.needleUseCount);
+      } else {
+        Audio.playSe('empty');
+      }
     }
 
     // 敵更新
@@ -725,6 +736,11 @@ const Game = (() => {
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
     if (typeof Loot !== 'undefined') Loot.update(dt, player.x, player.y);
 
+    player.needleRegenTimer += dt;
+    if (player.needleRegenTimer >= Balance.NEEDLE.REGEN_INTERVAL) {
+      player.needleRegenTimer -= Balance.NEEDLE.REGEN_INTERVAL;
+      if (player.needles < player.needleMax) player.needles++;
+    }
     for (let i = _dropLogs.length - 1; i >= 0; i--) {
       _dropLogs[i].timer -= dt;
       if (_dropLogs[i].timer <= 0) _dropLogs.splice(i, 1);
@@ -958,18 +974,6 @@ const Game = (() => {
       }
     }
 
-    // 針ペナルティ: ビネット
-    const penalties = NpcManager.getNeedlePenalty(flags);
-    const vignette = penalties.find(p => p.effect === 'vignette');
-    if (vignette) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, PANEL.MAP_W, PANEL.MAP_H);
-      ctx.clip();
-      _drawVignette(ctx, vignette.intensity);
-      ctx.restore();
-    }
-
     _drawPanelBorders(ctx);
     _drawHud(ctx);
     Inventory.drawUI(ctx);
@@ -1083,28 +1087,36 @@ const Game = (() => {
       }
     }
 
-    if (Engine.consumePress('needle') && player.needleCooldown <= 0 && player.hp > Balance.PLAYER.NEEDLE_HP_COST) {
-      player.hp -= Balance.PLAYER.NEEDLE_HP_COST;
-      player.needleCooldown = Balance.PLAYER.NEEDLE_COOLDOWN_SEC;
-      flags.needleUseCount++;
-      _needleEffectTimer = 0.5;
-      const ts = CONFIG.TILE_SIZE;
-      const cx = player.x + ts/2, cy = player.y + ts/2;
-      const r = ts * 2;
-      const box = { x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
-      BossManager.checkHit(box, player.needleDmg, flags);
-      EnemyManager.needleBlast(player.needleDmg, flags);
-      Engine.triggerShake(6, 10);
-      Audio.playSe('needle');
-      Analytics.logNeedleUse('boss', flags.needleUseCount);
-      const boss = BossManager.getCurrentBoss();
-      if (boss && boss.hp <= 0) _bossLastAction = 'needle_finish';
+    if (Engine.consumePress('needle')) {
+      if (player.needles > 0) {
+        player.needles--;
+        flags.needleUseCount++;
+        _needleEffectTimer = 0.5;
+        const ts = CONFIG.TILE_SIZE;
+        const cx = player.x + ts/2, cy = player.y + ts/2;
+        const r = ts * 2;
+        const box = { x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
+        BossManager.checkHit(box, player.needleDmg, flags);
+        EnemyManager.needleBlast(player.x, player.y, player.needleDmg, flags);
+        Engine.triggerShake(6, 10);
+        Audio.playSe('needle');
+        Analytics.logNeedleUse('boss', flags.needleUseCount);
+        const boss = BossManager.getCurrentBoss();
+        if (boss && boss.hp <= 0) _bossLastAction = 'needle_finish';
+      } else {
+        Audio.playSe('empty');
+      }
     }
 
     EnemyManager.update(dt, player);
     BossManager.update(dt, player);
     if (typeof Particles !== 'undefined') Particles.update(dt);
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
+    player.needleRegenTimer += dt;
+    if (player.needleRegenTimer >= Balance.NEEDLE.REGEN_INTERVAL) {
+      player.needleRegenTimer -= Balance.NEEDLE.REGEN_INTERVAL;
+      if (player.needles < player.needleMax) player.needles++;
+    }
 
     if (_settings.invincible) player.hp = player.maxHp;
 
@@ -1433,6 +1445,7 @@ const Game = (() => {
     ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, x, infoY);
     ctx.fillText('ATK: ' + Math.floor(player.atk), x, infoY + PX(18));
     ctx.fillText('SP: ' + player.skillPoints, x, infoY + PX(36));
+    ctx.fillText(`針: ${player.needles}/${player.needleMax}`, x, infoY + PX(54));
   }
 
   function _getMiniMapData() {
@@ -1549,7 +1562,7 @@ const Game = (() => {
     ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Z=こうげき  X=はり  C=ダッシュ  I=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
+    ctx.fillText('Z=こうげき  C=はり  X=ダッシュ  I=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
   }
 
   function _getBottomHintText() {

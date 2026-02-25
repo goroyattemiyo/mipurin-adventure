@@ -245,7 +245,6 @@
     drawCircle(ctx, cx, cy+10, bodyR, base);
     dither(ctx, cx-headR+2, cy+2, headR, headR, base, shadow);
     drawCircle(ctx, cx-3, cy-3, 2, highlight);
-    drawOutline(ctx, ctx.getImageData(0,0,32,32), outline);
   }
 
   function drawEnemy(ctx, type, frame, r) {
@@ -389,6 +388,9 @@
       drawCircle(ctx, 32, 22, 18, '#ff6b8a');
       drawRoundedRect(ctx, 24, 34, 16, 20, 6, '#fff1d6');
       drawRoundedRect(ctx, 26, 10, 12, 6, 2, '#f1c40f');
+      drawEye(ctx, 26, 32, 3, outline, 'left');
+      drawEye(ctx, 38, 32, 3, outline, 'right');
+      drawCheek(ctx, 22, 36); drawCheek(ctx, 42, 36);
       if (frame===1) drawRoundedRect(ctx, 24, 20, 16, 2, 1, '#c0392b');
       if (frame===2) dither(ctx, 14, 6, 36, 8, '#fff8ff', '#f8d36a');
       if (frame===3) drawRoundedRect(ctx, 28, 10, 12, 2, 1, '#2A2A4A');
@@ -396,6 +398,9 @@
     if (type === 'ice_beetle') {
       drawRoundedRect(ctx, 16, 24, 32, 26, 10, '#85c1e9');
       drawRoundedRect(ctx, 22, 18, 20, 8, 4, '#bfe4ff');
+      drawEye(ctx, 26, 32, 3, outline, 'left');
+      drawEye(ctx, 38, 32, 3, outline, 'right');
+      drawCheek(ctx, 24, 36); drawCheek(ctx, 40, 36);
       if (frame===2) drawRoundedRect(ctx, 26, 10, 12, 6, 2, '#f8f8ff');
       if (frame===3) drawRoundedRect(ctx, 18, 26, 28, 2, 1, '#5dade2');
     }
@@ -404,6 +409,9 @@
       drawRoundedRect(ctx, 20, 18, 24, 6, 3, '#6c2eb9');
       drawRoundedRect(ctx, 8, 18, 6, 10, 2, '#4f4c6a');
       drawRoundedRect(ctx, 50, 18, 6, 10, 2, '#4f4c6a');
+      drawEye(ctx, 28, 34, 3, '#ff5a5f', 'left');
+      drawEye(ctx, 36, 34, 3, '#ff5a5f', 'right');
+      drawCheek(ctx, 26, 38); drawCheek(ctx, 40, 38);
       if (frame===1) dither(ctx, 10, 8, 44, 6, '#6c2eb9', '#4a235a');
       if (frame===2) drawRoundedRect(ctx, 26, 12, 12, 4, 2, '#f8d36a');
       if (frame===3) drawRoundedRect(ctx, 24, 32, 16, 2, 1, '#f5f2e8');
@@ -601,16 +609,22 @@
 
   function generateAll() {
     const r = rng(parseInt(seedInput.value,10) || 1);
-    renderSheet(enemyCanvas, 32, 32, enemyTypes, 3, drawEnemy, parseInt(enemyZoom.value,10), r);
-    renderSheet(npcCanvas, 32, 32, npcTypes, 2, drawNpc, parseInt(npcZoom.value,10), r);
-    renderSheet(bossCanvas, 64, 64, bossTypes, 4, drawBoss, parseInt(bossZoom.value,10), r);
-    renderPlayer(playerCanvas, parseInt(playerZoom.value,10), r);
-    renderTiles(tileCanvas, parseInt(tileZoom.value,10), r);
-    buildPreview(enemyPreview, enemyTypes, 32, 3, enemyCanvas);
-    buildPreview(npcPreview, npcTypes, 32, 2, npcCanvas);
-    updatePreview(enemyPreview, 0); updatePreview(npcPreview, 0);
-    tileLabels.innerHTML = '';
-    tileTypes.forEach(t => { const d = document.createElement('div'); d.className='label'; d.textContent=t; tileLabels.appendChild(d); });
+    const safe = (label, fn) => {
+      try { fn(); }
+      catch (err) { console.error(`[sprite-generator] ${label} failed`, err); }
+    };
+    safe('render enemies', () => renderSheet(enemyCanvas, 32, 32, enemyTypes, 3, drawEnemy, parseInt(enemyZoom.value,10), r));
+    safe('render npcs', () => renderSheet(npcCanvas, 32, 32, npcTypes, 2, drawNpc, parseInt(npcZoom.value,10), r));
+    safe('render bosses', () => renderSheet(bossCanvas, 64, 64, bossTypes, 4, drawBoss, parseInt(bossZoom.value,10), r));
+    safe('render player', () => renderPlayer(playerCanvas, parseInt(playerZoom.value,10), r));
+    safe('render tiles', () => renderTiles(tileCanvas, parseInt(tileZoom.value,10), r));
+    safe('build enemy preview', () => buildPreview(enemyPreview, enemyTypes, 32, 3, enemyCanvas));
+    safe('build npc preview', () => buildPreview(npcPreview, npcTypes, 32, 2, npcCanvas));
+    safe('update previews', () => { updatePreview(enemyPreview, 0); updatePreview(npcPreview, 0); });
+    safe('labels', () => {
+      tileLabels.innerHTML = '';
+      tileTypes.forEach(t => { const d = document.createElement('div'); d.className='label'; d.textContent=t; tileLabels.appendChild(d); });
+    });
   }
 
   function downloadCanvas(canvas, name) {

@@ -455,6 +455,10 @@ const MapManager = (() => {
       }
 
       if (type === 'shop') {
+        const npcIdx = center.y * cols + center.x;
+        if (SOLID[data[npcIdx]]) {
+          data[npcIdx] = tiles.floor;
+        }
         npcs.push({ id:'marche', x:center.x, y:center.y, name:'商人', symbol:'🎒', color:'#E67E22' });
         continue;
       }
@@ -465,10 +469,18 @@ const MapManager = (() => {
 
       if (type === 'elite') {
         const eliteType = _pick(rng, enemyPool);
+        const eliteIdx = center.y * cols + center.x;
+        if (SOLID[data[eliteIdx]]) {
+          data[eliteIdx] = tiles.floor;
+        }
         enemies.push({ type: eliteType, x: center.x, y: center.y, isElite: true });
         for (let k = 0; k < 2; k++) {
           const ex = _randInt(rng, room.x + 1, room.x + room.w - 2);
           const ey = _randInt(rng, room.y + 1, room.y + room.h - 2);
+          const eIdx = ey * cols + ex;
+          if (SOLID[data[eIdx]]) {
+            data[eIdx] = tiles.floor;
+          }
           enemies.push({ type: _pick(rng, enemyPool), x: ex, y: ey });
         }
         continue;
@@ -479,7 +491,39 @@ const MapManager = (() => {
         for (let k = 0; k < count; k++) {
           const ex = _randInt(rng, room.x + 1, room.x + room.w - 2);
           const ey = _randInt(rng, room.y + 1, room.y + room.h - 2);
+          const eIdx = ey * cols + ex;
+          if (SOLID[data[eIdx]]) {
+            data[eIdx] = tiles.floor;
+          }
           enemies.push({ type: _pick(rng, enemyPool), x: ex, y: ey });
+        }
+      }
+    }
+
+    // --- スポーン安全化: playerStart 周囲を床に ---
+    const safeOffsets = [
+      [0,0], [0,-1], [0,1], [-1,0], [1,0],
+      [-1,-1], [1,-1], [-1,1], [1,1]
+    ];
+    for (const [ox, oy] of safeOffsets) {
+      const sx = playerStart.x + ox;
+      const sy = playerStart.y + oy;
+      if (sx >= 0 && sx < cols && sy >= 0 && sy < rows) {
+        const idx = sy * cols + sx;
+        if (data[idx] !== TILE.SAVE_POINT && data[idx] !== TILE.EXIT) {
+          data[idx] = tiles.floor;
+        }
+      }
+    }
+
+    // --- スポーン安全化: EXIT 周囲を床に ---
+    for (const [ox, oy] of safeOffsets) {
+      const ex = exitPos.x + ox;
+      const ey = exitPos.y + oy;
+      if (ex >= 0 && ex < cols && ey >= 0 && ey < rows) {
+        const idx = ey * cols + ex;
+        if (data[idx] !== TILE.SAVE_POINT && data[idx] !== TILE.EXIT) {
+          data[idx] = tiles.floor;
         }
       }
     }

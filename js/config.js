@@ -28,8 +28,8 @@ const CONFIG = {
 
   // プレイヤー初期値
   PLAYER: {
-    HP: 5,
-    ATK: 1,
+    HP: 20,
+    ATK: 3,
     SPEED: 6,
     NEEDLE_DMG: 10,
     NEEDLE_HP_COST: 1,

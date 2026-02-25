@@ -6,10 +6,13 @@ const Balance = (() => {
 
   /* ============ プレイヤー基本値 ============ */
   const PLAYER = {
-    HP: 5, MAX_HP_CAP: 15,
-    ATK: 1, ATK_CAP: 5,
-    SPEED: 3, SPEED_CAP: 5,
-    NEEDLE_DMG: 10, NEEDLE_DMG_CAP: 20,
+    HP: 20,
+    BASE_HP: 20, HP_PER_LV: 2,
+    ATK: 3,
+    BASE_ATK: 3, ATK_PER_LV: 0.5,
+    SPEED: 6,
+    BASE_SPEED: 6,
+    NEEDLE_DMG: 10,
     NEEDLE_HP_COST: 1,
     ATTACK_COOLDOWN_SEC: 0.5,
     NEEDLE_COOLDOWN_SEC: 2.0,
@@ -20,6 +23,8 @@ const Balance = (() => {
     HITSTOP_FRAMES_TAKE: 5,
     INVINCIBLE_SEC: 1.0
   };
+
+  const EXP_CURVE = (lv) => Scaling.expForLevel(lv);
 
   /* ============ 敵テンプレート ============ */
   // 南の森
@@ -176,6 +181,7 @@ const Balance = (() => {
     PLAYER, ENEMIES, BOSSES, DUNGEON,
     ITEM_EFFECTS, POLLEN_BUDGET,
     KILL_THRESHOLDS, NEEDLE_PENALTY, SKINS,
-    dungeonEnemyHp, dungeonEnemyAtk, dungeonPollen, dungeonScore
+    dungeonEnemyHp, dungeonEnemyAtk, dungeonPollen, dungeonScore,
+    EXP_CURVE
   };
 })();

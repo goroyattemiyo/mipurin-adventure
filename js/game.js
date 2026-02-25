@@ -29,8 +29,8 @@ const Game = (() => {
   /* ============ プレイヤー ============ */
   const player = {
     x:0, y:0,
-    hp: Balance.PLAYER.HP, maxHp: Balance.PLAYER.HP,
-    atk: Balance.PLAYER.ATK, speed: Balance.PLAYER.SPEED,
+    hp: Balance.PLAYER.BASE_HP, maxHp: Balance.PLAYER.BASE_HP,
+    atk: Balance.PLAYER.BASE_ATK, speed: Balance.PLAYER.BASE_SPEED,
     needleDmg: Balance.PLAYER.NEEDLE_DMG,
     dir:'down', lastInputDir:'down',
     animFrame:0, animTimer:0,
@@ -38,7 +38,8 @@ const Game = (() => {
     inputBuffer:0, inputBufferAction:null,
     knockback:{x:0,y:0,timer:0}, hitStopFrames:0,
     invincibleTimer:0, poisoned:false,
-    _buffDef:null, _buffSpeed:null, _buffAtk:null, _buffVision:null
+    _buffDef:null, _buffSpeed:null, _buffAtk:null, _buffVision:null,
+    level: 1, exp: 0, totalExp: 0, skillPoints: 0
   };
 
   /* ============ フラグ ============ */
@@ -62,6 +63,7 @@ const Game = (() => {
   /* ============ エフェクト ============ */
   let _attackEffectTimer = 0;
   let _needleEffectTimer = 0;
+  let _levelUpEffectTimer = 0;
   let _vignetteGradient = null;
   let _vignetteIntensityLast = null;
   let _rightPanelBg = null;
@@ -113,6 +115,23 @@ const Game = (() => {
     if (!text) return;
     _logEntries.unshift({ text, time: Date.now() });
     if (_logEntries.length > 5) _logEntries.length = 5;
+  }
+
+  function _gainExp(amount) {
+    if (!amount || amount <= 0) return;
+    player.exp += amount;
+    player.totalExp += amount;
+    while (player.exp >= Scaling.expForLevel(player.level)) {
+      player.exp -= Scaling.expForLevel(player.level);
+      player.level++;
+      player.skillPoints++;
+      player.maxHp += Balance.PLAYER.HP_PER_LV;
+      player.hp = player.maxHp;
+      player.atk += Balance.PLAYER.ATK_PER_LV;
+      _addLog('レベル ' + player.level + ' に上がった！');
+      Audio.playSe('level_up');
+      _levelUpEffectTimer = 1.0;
+    }
   }
 
   function _queueDialogs(lines) {
@@ -513,6 +532,10 @@ const Game = (() => {
     player.atk = pd.atk ?? player.atk;
     player.speed = pd.speed ?? player.speed;
     player.needleDmg = pd.needleDmg ?? player.needleDmg;
+    player.level = pd.level ?? player.level;
+    player.exp = pd.exp ?? player.exp;
+    player.totalExp = pd.totalExp ?? player.totalExp;
+    player.skillPoints = pd.skillPoints ?? player.skillPoints;
     player.dir = pd.dir || player.dir;
     _pendingPlayerPosition = { x: pd.x ?? player.x, y: pd.y ?? player.y, dir: player.dir };
     Object.assign(flags, data.flags || {});
@@ -625,6 +648,7 @@ const Game = (() => {
     // エフェクトタイマー
     if (_attackEffectTimer > 0) _attackEffectTimer -= dt;
     if (_needleEffectTimer > 0) _needleEffectTimer -= dt;
+    if (_levelUpEffectTimer > 0) _levelUpEffectTimer = Math.max(0, _levelUpEffectTimer - dt);
 
     // プレイヤー移動
     PlayerController.update(player, dt);
@@ -635,13 +659,22 @@ const Game = (() => {
       player.attackCooldown = Balance.PLAYER.ATTACK_COOLDOWN_SEC;
       _attackEffectTimer = 0.2;
       const box = PlayerController.getAttackBox(player);
-      const hit = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
-      if (hit) {
+      const hitResult = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
+      if (hitResult.hitAny) {
         player.hitStopFrames = Balance.PLAYER.HITSTOP_FRAMES_GIVE;
         Engine.triggerShake(2, 3);
         Audio.playSe('hit');
       } else {
         Audio.playSe('attack');
+      }
+      if (hitResult.killed && hitResult.killed.length > 0) {
+        const aLv = Scaling.areaLevel(player.level, _currentMapName);
+        for (const k of hitResult.killed) {
+          const baseEnemy = Balance.ENEMIES[k.id];
+          if (!baseEnemy) continue;
+          const expGain = Scaling.enemyExp(baseEnemy.xp, aLv);
+          _gainExp(expGain);
+        }
       }
     }
 
@@ -661,6 +694,8 @@ const Game = (() => {
 
     // 敵更新
     EnemyManager.update(dt, player);
+    if (typeof Particles !== 'undefined') Particles.update(dt);
+    if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
 
     // ボス突入判定（該当地域で全滅時）
     if (!Dungeon.isActive() && typeof BossManager !== 'undefined') {
@@ -834,6 +869,23 @@ const Game = (() => {
     PlayerController.draw(ctx, player);
     PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
+    if (_levelUpEffectTimer > 0) {
+      const ts = CONFIG.TILE_SIZE;
+      const cx = player.x + ts / 2;
+      const cy = player.y + ts / 2;
+      const t = Math.max(0, Math.min(1, _levelUpEffectTimer));
+      const r = (1 - t) * ts * 3;
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (typeof Particles !== 'undefined') Particles.draw(ctx);
+    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
 
     ctx.restore(); // filterを完全にリセット
 
@@ -949,6 +1001,7 @@ const Game = (() => {
     if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
     if (_attackEffectTimer > 0) _attackEffectTimer -= dt;
     if (_needleEffectTimer > 0) _needleEffectTimer -= dt;
+    if (_levelUpEffectTimer > 0) _levelUpEffectTimer = Math.max(0, _levelUpEffectTimer - dt);
 
     PlayerController.update(player, dt);
     PlayerController.updateAnimation(player, dt);
@@ -959,7 +1012,7 @@ const Game = (() => {
       const box = PlayerController.getAttackBox(player);
       const hitBoss = BossManager.checkHit(box, Inventory.getEffectiveAtk(player), flags);
       const hitMinion = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
-      if (hitBoss || hitMinion) {
+      if (hitBoss || hitMinion.hitAny) {
         player.hitStopFrames = Balance.PLAYER.HITSTOP_FRAMES_GIVE;
         Engine.triggerShake(2, 3);
         Audio.playSe('hit');
@@ -968,6 +1021,15 @@ const Game = (() => {
       }
       const boss = BossManager.getCurrentBoss();
       if (boss && boss.hp <= 0 && !_bossLastAction) _bossLastAction = 'attack_finish';
+      if (hitMinion.killed && hitMinion.killed.length > 0) {
+        const aLv = Scaling.areaLevel(player.level, _currentMapName);
+        for (const k of hitMinion.killed) {
+          const baseEnemy = Balance.ENEMIES[k.id];
+          if (!baseEnemy) continue;
+          const expGain = Scaling.enemyExp(baseEnemy.xp, aLv);
+          _gainExp(expGain);
+        }
+      }
     }
 
     if (Engine.consumePress('needle') && player.needleCooldown <= 0 && player.hp > Balance.PLAYER.NEEDLE_HP_COST) {
@@ -990,6 +1052,8 @@ const Game = (() => {
 
     EnemyManager.update(dt, player);
     BossManager.update(dt, player);
+    if (typeof Particles !== 'undefined') Particles.update(dt);
+    if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
 
     if (_settings.invincible) player.hp = player.maxHp;
 
@@ -1047,6 +1111,23 @@ const Game = (() => {
     PlayerController.draw(ctx, player);
     PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
     PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
+    if (_levelUpEffectTimer > 0) {
+      const ts = CONFIG.TILE_SIZE;
+      const cx = player.x + ts / 2;
+      const cy = player.y + ts / 2;
+      const t = Math.max(0, Math.min(1, _levelUpEffectTimer));
+      const r = (1 - t) * ts * 3;
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (typeof Particles !== 'undefined') Particles.draw(ctx);
+    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
     ctx.restore();
 
     _drawPanelBorders(ctx);
@@ -1250,62 +1331,34 @@ const Game = (() => {
     ctx.strokeRect(PANEL.RIGHT_X + PX(8), PANEL.RIGHT_Y + PX(6), PANEL.RIGHT_W - PX(16), PX(128));
 
     ctx.fillStyle = '#F5A623';
-    ctx.font = `bold ${CONFIG.FONT_BASE}px monospace`;
+    ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('ミプリン', x, y);
+    ctx.fillText('Lv.' + player.level, x, y);
 
-    // HP bar
+    // EXP bar
     const barX = x;
-    const barY = y + PX(32);
+    const barY = y + PX(40);
     const barW = w - PX(10);
-    const barH = PX(14);
+    const barH = PX(12);
+    const expNeed = Scaling.expForLevel(player.level);
+    const expRate = Math.max(0, Math.min(1, player.exp / expNeed));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(barX, barY, barW, barH);
-    const hpRate = Math.max(0, Math.min(1, player.hp / player.maxHp));
-    const hpGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-    hpGrad.addColorStop(0, '#e74c3c');
-    hpGrad.addColorStop(1, '#2ecc71');
-    ctx.fillStyle = hpGrad;
-    ctx.fillRect(barX, barY, barW * hpRate, barH);
+    ctx.fillStyle = '#F5A623';
+    ctx.fillRect(barX, barY, barW * expRate, barH);
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.strokeRect(barX, barY, barW, barH);
+
+    // Stats
     ctx.fillStyle = '#fff';
     ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, barX + barW, barY + barH / 2);
-
-    // ATK
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#fff';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.fillText('⚔ ATK: ' + Inventory.getEffectiveAtk(player), x, barY + PX(26));
-
-    // Buffs
-    const buffs = [];
-    if (player._buffDef) buffs.push({ icon:'🛡', color:'#D4A03C', timer: player._buffDef.timer });
-    if (player._buffSpeed) buffs.push({ icon:'⚡', color:'#3498DB', timer: player._buffSpeed.timer });
-    if (player._buffAtk) buffs.push({ icon:'🍬', color:'#C0392B', timer: player._buffAtk.timer });
-    if (player._buffVision) buffs.push({ icon:'🔦', color:'#E67E22', timer: player._buffVision.timer });
-    let bx = x, by = barY + PX(50);
-    for (let i = 0; i < buffs.length; i++) {
-      const b = buffs[i];
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.fillRect(bx - PX(2), by - PX(2), PX(42), PX(20));
-      ctx.fillStyle = b.color;
-      ctx.font = `${CONFIG.FONT_SM}px monospace`;
-      ctx.fillText(b.icon, bx + PX(2), by);
-      ctx.fillStyle = '#fff';
-      ctx.fillText(Math.ceil(b.timer) + 's', bx + PX(18), by);
-      bx += PX(46);
-    }
-
-    // Pollen
-    const pc = Inventory.getCount('pollen');
-    ctx.fillStyle = '#F1C40F';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.fillText('● ' + pc + ' P', x, barY + PX(72));
+    ctx.textBaseline = 'top';
+    const infoY = barY + PX(18);
+    ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, x, infoY);
+    ctx.fillText('ATK: ' + Math.floor(player.atk), x, infoY + PX(18));
+    ctx.fillText('SP: ' + player.skillPoints, x, infoY + PX(36));
   }
 
   function _getMiniMapData() {
@@ -1422,7 +1475,7 @@ const Game = (() => {
     ctx.font = `${CONFIG.FONT_SM}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Z=こうげき  X=はり  C=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
+    ctx.fillText('Z=こうげき  X=はり  C=ダッシュ  I=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
   }
 
   function _getBottomHintText() {

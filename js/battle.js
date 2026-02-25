@@ -16,6 +16,15 @@ const PlayerController = (() => {
     return _animator;
   }
 
+  let _dashCooldown = 0;
+  const DASH_COOLDOWN = 0.8;
+  const DASH_DISTANCE_TILES = 3;
+  const DASH_DURATION = 0.12;
+  let _dashing = false;
+  let _dashTimer = 0;
+  let _dashDirX = 0;
+  let _dashDirY = 0;
+
   function _clampPlayerToMap(player) {
     const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
     if (!map) return;
@@ -74,23 +83,29 @@ const PlayerController = (() => {
       return;
     }
 
-    /* 方向入力 */
-    let dx = 0, dy = 0;
-    if (Engine.isPressed('up'))    { dy = -1; player.dir = 'up'; }
-    if (Engine.isPressed('down'))  { dy =  1; player.dir = 'down'; }
-    if (Engine.isPressed('left'))  { dx = -1; player.dir = 'left'; }
-    if (Engine.isPressed('right')) { dx =  1; player.dir = 'right'; }
+    if (_dashCooldown > 0) _dashCooldown -= dt;
+    if (Engine.consumePress('dash') && _dashCooldown <= 0 && !_dashing) {
+      _dashing = true;
+      _dashTimer = DASH_DURATION;
+      _dashDirX = player.dir === 'left' ? -1 : player.dir === 'right' ? 1 : 0;
+      _dashDirY = player.dir === 'up' ? -1 : player.dir === 'down' ? 1 : 0;
+      _dashCooldown = DASH_COOLDOWN;
+      player.invincibleTimer = DASH_DURATION + 0.05;
+      Audio.playSe('dash');
+      if (typeof Particles !== 'undefined') {
+        const ts = CONFIG.TILE_SIZE;
+        Particles.emit(player.x + ts / 2, player.y + ts / 2, 6, '#F5A623', {
+          speedMin: 20, speedMax: 50, lifeMin: 0.2, lifeMax: 0.4, sizeMin: 2, sizeMax: 4
+        });
+      }
+    }
 
-    if (dx !== 0 || dy !== 0) {
-      player.lastInputDir = player.dir;
-      player.animTimer += dt;
-      if (player.animTimer >= 0.15) { player.animTimer = 0; player.animFrame = (player.animFrame + 1) % 4; }
-
+    const moveWithCollision = (dx, dy, speed) => {
+      if (dx === 0 && dy === 0) return;
       const ts = CONFIG.TILE_SIZE;
-      const spd = player.speed * dt * 60;
-      const newPx = player.x + dx * spd;
-      const newPy = player.y + dy * spd;
       const margin = 4;
+      const newPx = player.x + dx * speed;
+      const newPy = player.y + dy * speed;
 
       /* X軸 */
       const tL = Math.floor((newPx + margin) / ts), tR = Math.floor((newPx + ts - margin - 1) / ts);
@@ -107,6 +122,33 @@ const PlayerController = (() => {
         &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
         player.y = newPy;
       }
+    };
+
+    if (_dashing) {
+      const dashSpeed = DASH_DISTANCE_TILES * CONFIG.TILE_SIZE / DASH_DURATION;
+      moveWithCollision(_dashDirX, _dashDirY, dashSpeed * dt);
+      _dashTimer -= dt;
+      if (_dashTimer <= 0) _dashing = false;
+      _clampPlayerToMap(player);
+      if (player.attackCooldown > 0) player.attackCooldown -= dt;
+      if (player.needleCooldown > 0) player.needleCooldown -= dt;
+      return;
+    }
+
+    /* 方向入力 */
+    let dx = 0, dy = 0;
+    if (Engine.isPressed('up'))    { dy = -1; player.dir = 'up'; }
+    if (Engine.isPressed('down'))  { dy =  1; player.dir = 'down'; }
+    if (Engine.isPressed('left'))  { dx = -1; player.dir = 'left'; }
+    if (Engine.isPressed('right')) { dx =  1; player.dir = 'right'; }
+
+    if (dx !== 0 || dy !== 0) {
+      player.lastInputDir = player.dir;
+      player.animTimer += dt;
+      if (player.animTimer >= 0.15) { player.animTimer = 0; player.animFrame = (player.animFrame + 1) % 4; }
+
+      const spd = player.speed * dt * 60;
+      moveWithCollision(dx, dy, spd);
     }
 
     _clampPlayerToMap(player);
@@ -240,44 +282,69 @@ const PlayerController = (() => {
    ============================================================ */
 const EnemyManager = (() => {
   let _enemies = [];
-  let _cleanupCounter = 0;
   const _spriteCache = new Map();
 
   const TEMPLATES = Balance.ENEMIES;
 
-  function _normalizePattern(pattern) {
-    switch (pattern) {
-      case 'ambush': return 'chase';
-      case 'explode': return 'wander_fast';
-      case 'swoop': return 'wander_fast';
-      case 'burrow': return 'wander';
-      case 'root_attack': return 'stationary';
-      case 'dive': return 'chase';
-      default: return pattern || 'wander';
-    }
+  function _allocEnemy() {
+    const slot = _enemies.find(e => e.dead);
+    if (slot) return slot;
+    const e = { dead: true };
+    _enemies.push(e);
+    return e;
   }
 
   function spawn(templateId, col, row) {
     const t = TEMPLATES[templateId];
     if (!t) { console.warn('Unknown enemy:', templateId); return; }
     const ts = CONFIG.TILE_SIZE;
-    _enemies.push({
-      id: templateId, name: t.name,
-      x: col * ts, y: row * ts,
-      hp: t.hp, maxHp: t.hp, atk: t.atk, speed: t.speed,
-      color: t.color, symbol: t.symbol, xp: t.xp, pollen: t.pollen || 1,
-      movePattern: _normalizePattern(t.pattern || t.movePattern),
-      moveTimer: Math.random() * 2,
-      moveDir: { x: 0, y: 0 },
-      hurtTimer: 0, dead: false
-    });
+    const e = _allocEnemy();
+    e.id = templateId;
+    e.name = t.name;
+    e.x = col * ts;
+    e.y = row * ts;
+    e.hp = t.hp;
+    e.maxHp = t.hp;
+    e.atk = t.atk;
+    e.speed = t.speed;
+    e.color = t.color;
+    e.symbol = t.symbol;
+    e.xp = t.xp;
+    e.pollen = t.pollen || 1;
+    e.movePattern = t.pattern || t.movePattern || 'wander';
+    e.moveTimer = Math.random() * 2;
+    e.moveDir = { x: 0, y: 0 };
+    e.hurtTimer = 0;
+    e.dead = false;
+    e.hidden = false;
+    e.state = '';
+    e.stateTimer = 0;
+    e.patternTimer = Math.random() * 2;
+    e.baseX = e.x;
+    e.baseY = e.y;
+    e.diveTimer = 1.5;
+    e.emergeHitDone = false;
   }
 
   function spawnFromMap(mapEnemies) {
-    _enemies = [];
-    _cleanupCounter = 0;
+    for (const e of _enemies) e.dead = true;
     if (!mapEnemies) return;
     for (const e of mapEnemies) { spawn(e.type, e.x, e.y); }
+  }
+
+  function _tryMove(e, dx, dy, speed) {
+    if (dx === 0 && dy === 0) return false;
+    const ts = CONFIG.TILE_SIZE;
+    const margin = 4;
+    const nx = e.x + dx * speed;
+    const ny = e.y + dy * speed;
+    const cL = Math.floor((nx + margin) / ts), cR = Math.floor((nx + ts - margin - 1) / ts);
+    const rT = Math.floor((ny + margin) / ts), rB = Math.floor((ny + ts - margin - 1) / ts);
+    if (!MapManager.isSolid(cL,rT)&&!MapManager.isSolid(cR,rT)&&!MapManager.isSolid(cL,rB)&&!MapManager.isSolid(cR,rB)) {
+      e.x = nx; e.y = ny;
+      return true;
+    }
+    return false;
   }
 
   function update(dt, player) {
@@ -287,48 +354,182 @@ const EnemyManager = (() => {
       if (e.hurtTimer > 0) { e.hurtTimer -= dt; continue; }
 
       const dx = player.x - e.x, dy = player.y - e.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const baseSpeed = e.speed * dt * 60;
 
-      e.moveTimer -= dt;
-      if (e.moveTimer <= 0) {
-        e.moveTimer = 1 + Math.random();
-        switch (e.movePattern) {
-          case 'wander':
-          case 'wander_fast':
+      switch (e.movePattern) {
+        case 'ambush': {
+          if (!e.state) { e.state = 'wait'; }
+          if (e.state === 'wait') {
+            e.moveDir.x = 0; e.moveDir.y = 0;
+            if (dist <= ts * 3) {
+              e.state = 'charge';
+              e.stateTimer = 0.35;
+              e.moveDir.x = dx / dist;
+              e.moveDir.y = dy / dist;
+            }
+          } else if (e.state === 'charge') {
+            _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed * 3.2);
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) { e.state = 'pause'; e.stateTimer = 1.0; }
+          } else if (e.state === 'pause') {
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) e.state = 'wait';
+          }
+          break;
+        }
+        case 'explode': {
+          if (!e.state) e.state = 'approach';
+          if (e.state === 'approach') {
+            if (dist <= ts * 1.5) {
+              e.state = 'explode_charge';
+              e.stateTimer = 0.8;
+            } else {
+              if (dist < ts * 6) { e.moveDir.x = dx / dist; e.moveDir.y = dy / dist; }
+              _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed * 1.1);
+            }
+          } else if (e.state === 'explode_charge') {
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) {
+              if (dist <= ts * 1.8) _damagePlayer(player, e);
+              if (typeof Particles !== 'undefined') {
+                Particles.emit(e.x + ts / 2, e.y + ts / 2, 10, '#E74C3C', {
+                  speedMin: 40, speedMax: 100, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 3, sizeMax: 6
+                });
+              }
+              e.dead = true;
+            }
+          }
+          break;
+        }
+        case 'swoop': {
+          if (!e.state) {
+            e.state = 'cruise';
+            e.moveDir.x = Math.random() < 0.5 ? -1 : 1;
+            e.moveDir.y = 0;
+          }
+          if (e.state === 'cruise') {
+            const moved = _tryMove(e, e.moveDir.x, 0, baseSpeed * 1.4);
+            if (!moved) e.moveDir.x *= -1;
+            if (Math.abs(dx) <= ts * 0.5) {
+              e.state = 'dive';
+              e.stateTimer = 0.4;
+            }
+          } else if (e.state === 'dive') {
+            _tryMove(e, 0, 1, baseSpeed * 2.5);
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) { e.state = 'pause'; e.stateTimer = 0.3; }
+          } else if (e.state === 'pause') {
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) { e.state = 'rise'; e.stateTimer = 0.4; }
+          } else if (e.state === 'rise') {
+            _tryMove(e, 0, -1, baseSpeed * 2.0);
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) e.state = 'cruise';
+          }
+          break;
+        }
+        case 'burrow': {
+          if (!e.state) { e.state = 'visible'; e.stateTimer = 3.0; e.hidden = false; }
+          if (e.state === 'visible') {
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) {
+              e.state = 'hidden';
+              e.stateTimer = 1.0;
+              e.hidden = true;
+            }
+          } else if (e.state === 'hidden') {
+            e.hidden = true;
+            _tryMove(e, dx / dist, dy / dist, baseSpeed * 2.2);
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) {
+              e.state = 'emerge';
+              e.stateTimer = 0.4;
+              e.hidden = false;
+              e.emergeHitDone = false;
+            }
+          } else if (e.state === 'emerge') {
+            if (!e.emergeHitDone && dist <= ts * 1.2) {
+              _damagePlayer(player, e);
+              e.emergeHitDone = true;
+            }
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) { e.state = 'visible'; e.stateTimer = 3.0; }
+          }
+          break;
+        }
+        case 'root_attack': {
+          if (!e.state) { e.state = 'root'; e.stateTimer = 2.0; }
+          e.stateTimer -= dt;
+          if (e.stateTimer <= 0) {
+            e.stateTimer = 2.0;
+            const alignedX = Math.abs(dx) <= ts * 0.5;
+            const alignedY = Math.abs(dy) <= ts * 0.5;
+            if ((alignedX || alignedY) && dist <= ts * 6) {
+              _damagePlayer(player, e);
+            }
+          }
+          break;
+        }
+        case 'dive': {
+          if (!e.state) { e.state = 'orbit'; e.diveTimer = 1.5; }
+          if (e.state === 'orbit') {
+            e.patternTimer += dt * 2;
+            const ox = Math.sin(e.patternTimer) * ts * 1.2;
+            const oy = Math.sin(e.patternTimer * 2) * ts * 0.8;
+            const tx = e.baseX + ox;
+            const ty = e.baseY + oy;
+            const ddx = tx - e.x;
+            const ddy = ty - e.y;
+            const d = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+            _tryMove(e, ddx / d, ddy / d, baseSpeed * 1.2);
+            e.diveTimer -= dt;
+            if (e.diveTimer <= 0) {
+              e.state = 'dive_dash';
+              e.stateTimer = 0.35;
+              e.moveDir.x = dx / dist;
+              e.moveDir.y = dy / dist;
+            }
+          } else if (e.state === 'dive_dash') {
+            const moved = _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed * 4.5);
+            if (!moved) {
+              e.state = 'dive_stun';
+              e.stateTimer = 0.6;
+            } else {
+              e.stateTimer -= dt;
+              if (e.stateTimer <= 0) { e.state = 'orbit'; e.diveTimer = 1.5; }
+            }
+          } else if (e.state === 'dive_stun') {
+            e.stateTimer -= dt;
+            if (e.stateTimer <= 0) { e.state = 'orbit'; e.diveTimer = 1.5; }
+          }
+          break;
+        }
+        case 'chase': {
+          if (dist < ts * 6) { e.moveDir.x = dx / dist; e.moveDir.y = dy / dist; }
+          else { e.moveDir.x = (Math.random()-0.5)*2; e.moveDir.y = (Math.random()-0.5)*2; }
+          _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed);
+          break;
+        }
+        case 'stationary':
+          e.moveDir.x = 0; e.moveDir.y = 0;
+          break;
+        case 'wander':
+        default: {
+          e.moveTimer -= dt;
+          if (e.moveTimer <= 0) {
+            e.moveTimer = 1 + Math.random();
             e.moveDir.x = (Math.random()-0.5) * 2;
             e.moveDir.y = (Math.random()-0.5) * 2;
-            break;
-          case 'chase':
-            if (dist < ts * 6 && dist > 0) { e.moveDir.x = dx/dist; e.moveDir.y = dy/dist; }
-            else { e.moveDir.x = (Math.random()-0.5)*2; e.moveDir.y = (Math.random()-0.5)*2; }
-            break;
-          case 'stationary':
-            e.moveDir.x = 0; e.moveDir.y = 0;
-            break;
+          }
+          _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed);
+          break;
         }
       }
 
-      if (e.speed > 0) {
-        const nx = e.x + e.moveDir.x * e.speed * dt * 60;
-        const ny = e.y + e.moveDir.y * e.speed * dt * 60;
-        const margin = 4;
-        const cL = Math.floor((nx+margin)/ts), cR = Math.floor((nx+ts-margin-1)/ts);
-        const rT = Math.floor((ny+margin)/ts), rB = Math.floor((ny+ts-margin-1)/ts);
-        if (!MapManager.isSolid(cL,rT)&&!MapManager.isSolid(cR,rT)&&!MapManager.isSolid(cL,rB)&&!MapManager.isSolid(cR,rB)) {
-          e.x = nx; e.y = ny;
-        } else {
-          e.moveDir.x *= -1; e.moveDir.y *= -1;
-        }
-      }
-
-      if (dist < ts * 0.7) {
+      if (!e.hidden && dist < ts * 0.7) {
         _damagePlayer(player, e);
       }
-    }
-    _cleanupCounter++;
-    if (_cleanupCounter >= 30) {
-      _enemies = _enemies.filter(e => !e.dead);
-      _cleanupCounter = 0;
     }
   }
 
@@ -344,39 +545,63 @@ const EnemyManager = (() => {
     player.knockback.timer = 0.3;
     player.hitStopFrames = 3;
     Engine.triggerShake(4, 6);
+    if (typeof DamageNumbers !== 'undefined') {
+      const ts = CONFIG.TILE_SIZE;
+      DamageNumbers.spawn(player.x + ts / 2, player.y, enemy.atk, false);
+    }
   }
 
   function checkAttackHit(box, damage, flags) {
     let hitAny = false;
+    const killed = [];
     for (const e of _enemies) {
-      if (e.dead || e.hurtTimer > 0) continue;
+      if (e.dead || e.hidden || e.hurtTimer > 0) continue;
       const ts = CONFIG.TILE_SIZE;
       const ex = e.x, ey = e.y;
       if (box.x < ex+ts && box.x+box.w > ex && box.y < ey+ts && box.y+box.h > ey) {
         e.hp -= damage;
         e.hurtTimer = 0.3;
         hitAny = true;
+        if (typeof DamageNumbers !== 'undefined') {
+          DamageNumbers.spawn(e.x + ts / 2, e.y, damage, false);
+        }
         if (e.hp <= 0) {
           e.dead = true;
           flags.killCount++;
           if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
           if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+          killed.push({ id: e.id, x: e.x, y: e.y, exp: e.xp, pollen: e.pollen || 1 });
+          if (typeof Particles !== 'undefined') {
+            Particles.emit(e.x + ts / 2, e.y + ts / 2, 8, e.color, {
+              speedMin: 40, speedMax: 100, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 3, sizeMax: 6
+            });
+          }
         }
       }
     }
-    return hitAny;
+    return { hitAny, killed };
   }
 
   function needleBlast(damage, flags) {
     for (const e of _enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.hidden) continue;
       e.hp -= damage;
       e.hurtTimer = 0.5;
+      if (typeof DamageNumbers !== 'undefined') {
+        const ts = CONFIG.TILE_SIZE;
+        DamageNumbers.spawn(e.x + ts / 2, e.y, damage, false);
+      }
       if (e.hp <= 0) {
         e.dead = true;
         flags.killCount++;
         if (typeof Inventory !== 'undefined') Inventory.addItem('pollen', e.pollen || 1);
         if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
+        if (typeof Particles !== 'undefined') {
+          const ts = CONFIG.TILE_SIZE;
+          Particles.emit(e.x + ts / 2, e.y + ts / 2, 8, e.color, {
+            speedMin: 40, speedMax: 100, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 3, sizeMax: 6
+          });
+        }
       }
     }
     flags.needleUseCount++;
@@ -385,9 +610,18 @@ const EnemyManager = (() => {
   function draw(ctx) {
     const ts = CONFIG.TILE_SIZE;
     for (const e of _enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.hidden) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
+      if (e.state === 'explode_charge' && Math.floor(Date.now() / 80) % 2) {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#E74C3C';
+        ctx.beginPath();
+        ctx.arc(x + ts / 2, y + ts / 2, ts / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       const sprite = _getEnemySprite(e.id, e.color, e.symbol);
       if (sprite) ctx.drawImage(sprite, x, y);
       if (e.hp < e.maxHp) {
@@ -399,7 +633,7 @@ const EnemyManager = (() => {
   }
 
   function getAliveCount() { return _enemies.filter(e => !e.dead).length; }
-  function clear() { _enemies = []; }
+  function clear() { for (const e of _enemies) e.dead = true; }
 
   function _getEnemySprite(id, color, symbol) {
     if (_spriteCache.has(id)) return _spriteCache.get(id);

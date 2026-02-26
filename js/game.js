@@ -82,6 +82,7 @@ const Game = (() => {
   let _dropLogs = [];
   let _autoSaveCooldown = 0;
   let _blessingShownThisRoom = false;
+  let _enemiesSpawnedThisRoom = false;
 
   /* ============ ダイアログ ============ */
   let _dialogText = '';
@@ -604,6 +605,7 @@ const Game = (() => {
   function _initMapScene(mapName) {
     _currentMapName = mapName;
     _blessingShownThisRoom = false;
+    _enemiesSpawnedThisRoom = false;
     const map = MapManager.loadMap(mapName);
     if (!map) return;
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
@@ -620,6 +622,7 @@ const Game = (() => {
     Shop.closeShop();
     _attackEffectTimer = 0; _needleEffectTimer = 0;
     if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
+    if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
     Collection.onAreaVisit(mapName);
     Analytics.logAreaVisit(mapName, true);
     Audio.playSceneBgm(mapName);
@@ -817,7 +820,7 @@ const Game = (() => {
       const remaining = EnemyManager.getAliveCount();
       if (remaining === 0) {
         // 祝福選択（まだ表示していなければ）
-        if (typeof BlessingUI !== 'undefined' && typeof Blessings !== 'undefined' && !BlessingUI.isActive() && !_blessingShownThisRoom) {
+        if (_enemiesSpawnedThisRoom && typeof BlessingUI !== 'undefined' && typeof Blessings !== 'undefined' && !BlessingUI.isActive() && !_blessingShownThisRoom) {
           _blessingShownThisRoom = true;
           var owned = Blessings.getOwnedBlessings();
           var count = 3;

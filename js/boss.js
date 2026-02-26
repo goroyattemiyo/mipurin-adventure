@@ -73,9 +73,15 @@ const BossManager = (() => {
 
   function _damagePlayer(player, sourceAtk) {
     if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
-    player.hp -= sourceAtk;
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    const def = skBonus.def || 0;
+    const invReduction = (typeof Inventory !== 'undefined') ? Inventory.getDefReduction(player) : 0;
+    const rawDmg = sourceAtk;
+    const finalDmg = Math.max(1, rawDmg - def - invReduction);
+    player.hp -= finalDmg;
     if (player.hp < 0) player.hp = 0;
-    player.invincibleTimer = 1.0;
+    const invulnBonus = skBonus.invuln || 0;
+    player.invincibleTimer = 1.0 + invulnBonus;
     const ts = CONFIG.TILE_SIZE;
     const bx = _boss ? _boss.x + ts : player.x;
     const by = _boss ? _boss.y + ts : player.y;

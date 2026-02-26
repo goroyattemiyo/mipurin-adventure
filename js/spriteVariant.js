@@ -152,27 +152,153 @@ const SpriteVariant = (() => {
    * @param {number} size - 描画サイズ
    * @param {object} colors - getEnemyColors の戻り値
    * @param {string} symbol - 表示記号
+   * @param {string} enemyId - 敵のID
    */
-  function drawEnemyBody(ctx, x, y, size, colors, symbol) {
-    // 本体
-    ctx.fillStyle = colors.body;
-    ctx.beginPath();
-    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-    ctx.fill();
+  function drawEnemyBody(ctx, x, y, size, colors, symbol, enemyId) {
+    ctx.save();
 
-    // アウトライン
+    // 敵種別にシルエット形状を変える
+    ctx.fillStyle = colors.body;
     ctx.strokeStyle = colors.outline;
     ctx.lineWidth = 2;
-    ctx.stroke();
 
-    // シンボル
-    if (symbol) {
-      ctx.fillStyle = '#fff';
-      ctx.font = `${Math.floor(size * 0.6)}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(symbol, x, y);
+    switch (enemyId) {
+      case 'green_slime':
+      case 'dark_slime':
+        // スライム: 半円＋波打つ下部
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size / 2, Math.PI, 0);
+        ctx.quadraticCurveTo(x + size / 2, y + size * 0.3, x + size * 0.3, y + size * 0.35);
+        ctx.quadraticCurveTo(x, y + size * 0.2, x - size * 0.3, y + size * 0.35);
+        ctx.quadraticCurveTo(x - size / 2, y + size * 0.3, x - size / 2, y - size * 0.1);
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'poison_mushroom':
+      case 'bomb_mushroom':
+        // キノコ: 傘＋軸
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.15, size / 2, size * 0.3, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = colors.outline;
+        ctx.fillRect(x - size * 0.12, y - size * 0.15, size * 0.24, size * 0.4);
+        break;
+
+      case 'spider':
+        // クモ: 楕円ボディ＋脚線
+        ctx.beginPath();
+        ctx.ellipse(x, y, size * 0.35, size * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = colors.outline;
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 4; i++) {
+          const angle = (Math.PI * 0.2) + (i * Math.PI * 0.2);
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(angle) * size * 0.3, y + Math.sin(angle) * size * 0.2);
+          ctx.lineTo(x + Math.cos(angle) * size * 0.55, y + Math.sin(angle) * size * 0.5);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - Math.cos(angle) * size * 0.3, y + Math.sin(angle) * size * 0.2);
+          ctx.lineTo(x - Math.cos(angle) * size * 0.55, y + Math.sin(angle) * size * 0.5);
+          ctx.stroke();
+        }
+        break;
+
+      case 'bat':
+        // コウモリ: 翼形状
+        ctx.beginPath();
+        ctx.ellipse(x, y, size * 0.15, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y);
+        ctx.quadraticCurveTo(x - size * 0.4, y - size * 0.4, x - size * 0.5, y - size * 0.1);
+        ctx.quadraticCurveTo(x - size * 0.35, y + size * 0.1, x - size * 0.1, y);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.1, y);
+        ctx.quadraticCurveTo(x + size * 0.4, y - size * 0.4, x + size * 0.5, y - size * 0.1);
+        ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.1, x + size * 0.1, y);
+        ctx.fill();
+        break;
+
+      case 'ice_worm':
+        // ワーム: 連結円
+        for (let i = 0; i < 4; i++) {
+          const sx = x - size * 0.3 + i * size * 0.2;
+          const sy = y + Math.sin(i * 1.2) * size * 0.08;
+          ctx.beginPath();
+          ctx.arc(sx, sy, size * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.stroke();
+        break;
+
+      case 'dark_flower': {
+        // 花: 花弁
+        const petalCount = 5;
+        for (let i = 0; i < petalCount; i++) {
+          const angle = (Math.PI * 2 * i) / petalCount;
+          const px = x + Math.cos(angle) * size * 0.25;
+          const py = y + Math.sin(angle) * size * 0.25;
+          ctx.beginPath();
+          ctx.ellipse(px, py, size * 0.18, size * 0.1, angle, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = colors.outline;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+
+      case 'shadow_bee':
+        // ハチ: 楕円＋縞＋翼
+        ctx.beginPath();
+        ctx.ellipse(x, y, size * 0.3, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(x - size * 0.25 + i * size * 0.2, y - size * 0.05, size * 0.08, size * 0.1);
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(x - size * 0.1, y - size * 0.25, size * 0.15, size * 0.08, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.1, y - size * 0.25, size * 0.15, size * 0.08, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      default:
+        // デフォルト: 円
+        ctx.beginPath();
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
     }
+
+    // 目を追加（共通）
+    const eyeSize = size * 0.06;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x - size * 0.1, y - size * 0.08, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + size * 0.1, y - size * 0.08, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(x - size * 0.1, y - size * 0.08, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + size * 0.1, y - size * 0.08, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 
   function clearCache() { _cache.clear(); }

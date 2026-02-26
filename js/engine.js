@@ -11,6 +11,10 @@ const Engine = (() => {
   // 入力状態
   const _keys = {};
   let _clicked = false;   // クリック／タップの1フレーム検出用
+  let _touchDirX = 0;
+  let _touchDirY = 0;
+  let _dpadCenter = null;
+  let _dpadActive = false;
 
   const _keyMap = {
     ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
@@ -34,6 +38,9 @@ const Engine = (() => {
     _ctx = _canvas.getContext('2d');
     _ctx.imageSmoothingEnabled = CONFIG.IMAGE_SMOOTHING;
 
+    _resizeCanvas();
+    window.addEventListener('resize', _resizeCanvas);
+
     // ── キーボード ──
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;  
@@ -54,12 +61,40 @@ const Engine = (() => {
     });
 
     // ── モバイルタッチ ──
-    _canvas.addEventListener('touchstart', _handleTouch, { passive: false });
-    _canvas.addEventListener('touchmove', _handleTouch, { passive: false });
     _canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
+      _keys.up = false;
+      _keys.down = false;
+      _keys.left = false;
+      _keys.right = false;
       _clicked = true;
+      const stick = document.getElementById('dpad-stick');
+      if (stick) stick.style.transform = 'translate(0, 0)';
     }, { passive: false });
+
+    const dpadArea = document.getElementById('dpad-area');
+    if (dpadArea) {
+      dpadArea.addEventListener('touchstart', _handleTouch, { passive: false });
+      dpadArea.addEventListener('touchmove', _handleTouch, { passive: false });
+      dpadArea.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        _keys.up = false; _keys.down = false; _keys.left = false; _keys.right = false;
+        const stick = document.getElementById('dpad-stick');
+        if (stick) stick.style.transform = 'translate(0, 0)';
+      }, { passive: false });
+    }
+
+    const btnA = document.getElementById('btn-a');
+    if (btnA) {
+      btnA.addEventListener('touchstart', (e) => { e.preventDefault(); _keys.attack = true; }, { passive: false });
+      btnA.addEventListener('touchend', (e) => { e.preventDefault(); _keys.attack = false; }, { passive: false });
+    }
+
+    const btnB = document.getElementById('btn-b');
+    if (btnB) {
+      btnB.addEventListener('touchstart', (e) => { e.preventDefault(); _keys.dash = true; }, { passive: false });
+      btnB.addEventListener('touchend', (e) => { e.preventDefault(); _keys.dash = false; }, { passive: false });
+    }
 
     const btnC = document.getElementById('btn-c');
     if (btnC) {
@@ -70,11 +105,85 @@ const Engine = (() => {
       btnC.addEventListener('mousedown', press);
       window.addEventListener('mouseup', release);
     }
+
+    const btnMenu = document.getElementById('btn-menu');
+    if (btnMenu) {
+      btnMenu.addEventListener('touchstart', (e) => { e.preventDefault(); _keys.menu = true; }, { passive: false });
+      btnMenu.addEventListener('touchend', (e) => { e.preventDefault(); _keys.menu = false; }, { passive: false });
+    }
   }
 
   function _handleTouch(e) {
     e.preventDefault();
-    // M9で仮想D-pad実装
+    if (e.touches.length === 0) return;
+
+    const dpadArea = document.getElementById('dpad-area');
+    if (!dpadArea) return;
+    const rect = dpadArea.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    _dpadCenter = { x: cx, y: cy };
+
+    const touch = e.touches[0];
+    if (touch.clientX < rect.left || touch.clientX > rect.right || touch.clientY < rect.top || touch.clientY > rect.bottom) {
+      return;
+    }
+
+    const dx = touch.clientX - cx;
+    const dy = touch.clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const deadzone = rect.width * 0.15;
+
+    _touchDirX = dx;
+    _touchDirY = dy;
+    _dpadActive = true;
+
+    // リセット
+    _keys.up = false;
+    _keys.down = false;
+    _keys.left = false;
+    _keys.right = false;
+
+    const stick = document.getElementById('dpad-stick');
+    if (dist > deadzone) {
+      const angle = Math.atan2(dy, dx);
+      if (angle > -Math.PI * 0.625 && angle < -Math.PI * 0.375) _keys.up = true;
+      else if (angle > Math.PI * 0.375 && angle < Math.PI * 0.625) _keys.down = true;
+      else if (angle > Math.PI * 0.75 || angle < -Math.PI * 0.75) _keys.left = true;
+      else if (angle > -Math.PI * 0.25 && angle < Math.PI * 0.25) _keys.right = true;
+      else if (angle >= -Math.PI * 0.375 && angle <= -Math.PI * 0.25) { _keys.up = true; _keys.right = true; }
+      else if (angle >= -Math.PI * 0.75 && angle <= -Math.PI * 0.625) { _keys.up = true; _keys.left = true; }
+      else if (angle >= Math.PI * 0.25 && angle <= Math.PI * 0.375) { _keys.down = true; _keys.right = true; }
+      else if (angle >= Math.PI * 0.625 && angle <= Math.PI * 0.75) { _keys.down = true; _keys.left = true; }
+
+      if (stick) {
+        const maxDist = rect.width * 0.35;
+        const clampDist = Math.min(dist, maxDist);
+        const sx = (dx / dist) * clampDist;
+        const sy = (dy / dist) * clampDist;
+        stick.style.transform = `translate(${sx}px, ${sy}px)`;
+      }
+    } else {
+      if (stick) stick.style.transform = 'translate(0, 0)';
+    }
+  }
+
+  function _resizeCanvas() {
+    const wrapper = document.getElementById('game-wrapper');
+    if (!wrapper || !_canvas) return;
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+    const aspect = CONFIG.CANVAS_WIDTH / CONFIG.CANVAS_HEIGHT;
+    let w, h;
+    if (ww / wh > aspect) {
+      h = wh;
+      w = h * aspect;
+    } else {
+      w = ww;
+      h = w / aspect;
+    }
+    _canvas.style.width = Math.floor(w) + 'px';
+    _canvas.style.height = Math.floor(h) + 'px';
   }
 
   function showCanvas() {

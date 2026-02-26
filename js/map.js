@@ -72,6 +72,23 @@ const MapManager = (() => {
         const x = col*ts, y = row*ts;
         _bgCtx.fillStyle = TILE_COLORS[tile]||'#333'; _bgCtx.fillRect(x,y,ts,ts);
         _bgCtx.strokeStyle = 'rgba(0,0,0,0.1)'; _bgCtx.strokeRect(x,y,ts,ts);
+
+        // 草・花系タイルにノイズテクスチャを追加
+        if (tile === TILE.GRASS || tile === TILE.DARK_GRASS || tile === TILE.FLOWER_GROUND) {
+          _bgCtx.fillStyle = 'rgba(0,0,0,0.05)';
+          // 疑似ノイズ
+          for (let n = 0; n < 3; n++) {
+            const nx = x + ((col * 7 + row * 13 + n * 37) % ts);
+            const ny = y + ((col * 11 + row * 3 + n * 23) % ts);
+            _bgCtx.fillRect(nx, ny, 2, 2);
+          }
+        }
+
+        // 壁・木系に陰影
+        if (tile === TILE.WALL || tile === TILE.TREE) {
+          _bgCtx.fillStyle = 'rgba(0,0,0,0.15)';
+          _bgCtx.fillRect(x, y + ts * 0.7, ts, ts * 0.3);
+        }
         const sym = TILE_SYMBOLS[tile];
         if (sym) { _bgCtx.fillStyle='#fff'; _bgCtx.fillText(sym,x+ts/2,y+ts/2); }
       }

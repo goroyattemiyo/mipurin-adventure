@@ -15,7 +15,8 @@ const Loot = (() => {
     drops.push({ type: 'pollen', amount: Scaling.enemyPollen(basePollen, areaLv) });
 
     // 装備ドロップ判定
-    let dropChance = 0.25; // 通常敵 25%
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    let dropChance = 0.25 + (skBonus.dropRate || 0); // 通常敵 25%
     let minRarity = null;
     if (isElite) { dropChance = 1.0; minRarity = 'rare'; }
     if (isBoss)  { dropChance = 1.0; minRarity = 'unique'; }

@@ -8,6 +8,20 @@ const EquipmentUI = (() => {
   const SLOT_NAMES = ['weapon', 'shield', 'head', 'body', 'accessory1', 'accessory2'];
   const SLOT_LABELS = ['武器', '盾', '頭', '体', 'アクセ1', 'アクセ2'];
 
+  function _getItemTotalStats(item) {
+    let atk = item.baseAtk || 0;
+    let def = item.baseDef || 0;
+    let hp = item.baseHp || 0;
+    if (item.affixes) {
+      for (const a of item.affixes) {
+        if (a.type === 'atk') atk += a.value;
+        if (a.type === 'defReduction') def += a.value;
+        if (a.type === 'hp') hp += a.value;
+      }
+    }
+    return { atk, def, hp };
+  }
+
   function open() {
     _open = true;
     _cursorSide = 'equip';
@@ -184,11 +198,19 @@ const EquipmentUI = (() => {
       ctx.fillText(`選択: ${item.name}`, PX(16), panelY + PX(14));
 
       if (equipped) {
-        const diffAtk = (item.baseAtk || 0) - (equipped.baseAtk || 0);
-        const diffDef = (item.baseDef || 0) - (equipped.baseDef || 0);
-        const diffHp = (item.baseHp || 0) - (equipped.baseHp || 0);
-        ctx.fillStyle = '#ccc';
-        ctx.fillText(`比較: ATK ${diffAtk >= 0 ? '+' : ''}${diffAtk}  DEF ${diffDef >= 0 ? '+' : ''}${diffDef}  HP ${diffHp >= 0 ? '+' : ''}${diffHp}`, PX(16), panelY + PX(32));
+        const itemStats = _getItemTotalStats(item);
+        const equippedStats = _getItemTotalStats(equipped);
+        const diffAtk = itemStats.atk - equippedStats.atk;
+        const diffDef = itemStats.def - equippedStats.def;
+        const diffHp = itemStats.hp - equippedStats.hp;
+        const fmtDiff = (v) => v > 0 ? `+${v}` : `${v}`;
+        const clrDiff = (v) => v > 0 ? '#8f8' : v < 0 ? '#f88' : '#888';
+        ctx.fillStyle = clrDiff(diffAtk);
+        ctx.fillText(`ATK ${fmtDiff(diffAtk)}`, PX(16), panelY + PX(32));
+        ctx.fillStyle = clrDiff(diffDef);
+        ctx.fillText(`DEF ${fmtDiff(diffDef)}`, PX(100), panelY + PX(32));
+        ctx.fillStyle = clrDiff(diffHp);
+        ctx.fillText(`HP ${fmtDiff(diffHp)}`, PX(184), panelY + PX(32));
       } else {
         ctx.fillStyle = '#8f8';
         ctx.fillText('（空スロットに装備）', PX(16), panelY + PX(32));

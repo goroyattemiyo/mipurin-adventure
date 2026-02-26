@@ -91,7 +91,8 @@ const PlayerController = (() => {
       _dashTimer = DASH_DURATION;
       _dashDirX = player.dir === 'left' ? -1 : player.dir === 'right' ? 1 : 0;
       _dashDirY = player.dir === 'up' ? -1 : player.dir === 'down' ? 1 : 0;
-      _dashCooldown = DASH_COOLDOWN;
+      const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+      _dashCooldown = Math.max(0.2, DASH_COOLDOWN + (skBonus.dashCD || 0));
       player.invincibleTimer = DASH_DURATION + 0.05;
       Audio.playSe('dash');
       if (typeof Particles !== 'undefined') {
@@ -554,9 +555,15 @@ const EnemyManager = (() => {
 
   function _damagePlayer(player, enemy) {
     if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
-    player.hp -= enemy.atk;
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    const def = skBonus.def || 0;
+    const invReduction = (typeof Inventory !== 'undefined') ? Inventory.getDefReduction(player) : 0;
+    const rawDmg = enemy.atk;
+    const finalDmg = Math.max(1, rawDmg - def - invReduction);
+    player.hp -= finalDmg;
     if (player.hp < 0) player.hp = 0;
-    player.invincibleTimer = 1.0;
+    const invulnBonus = skBonus.invuln || 0;
+    player.invincibleTimer = 1.0 + invulnBonus;
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
     player.knockback.x = (dx/dist) * 3;
@@ -565,23 +572,28 @@ const EnemyManager = (() => {
     player.hitStopFrames = 3;
     Engine.triggerShake(4, 6);
     if (typeof DamageNumbers !== 'undefined') {
-      DamageNumbers.spawn(player.x + ts / 2, player.y, enemy.atk, false);
+      DamageNumbers.spawn(player.x + ts / 2, player.y, finalDmg, false);
     }
   }
 
   function checkAttackHit(box, damage, flags) {
     let hitAny = false;
     const killed = [];
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    const critRate = skBonus.critRate || 0;
+    const critDmg = 1.5 + (skBonus.critDmg || 0);
     for (const e of _enemies) {
       if (e.dead || e.hidden || e.hurtTimer > 0) continue;
 
       const ex = e.x, ey = e.y;
       if (box.x < ex+ts && box.x+box.w > ex && box.y < ey+ts && box.y+box.h > ey) {
-        e.hp -= damage;
+        const isCrit = Math.random() < critRate;
+        const finalDmg = isCrit ? Math.ceil(damage * critDmg) : damage;
+        e.hp -= finalDmg;
         e.hurtTimer = 0.3;
         hitAny = true;
         if (typeof DamageNumbers !== 'undefined') {
-          DamageNumbers.spawn(e.x + ts / 2, e.y, damage, false);
+          DamageNumbers.spawn(e.x + ts / 2, e.y, finalDmg, isCrit);
         }
         if (e.hp <= 0) {
           e.dead = true;
@@ -606,12 +618,17 @@ const EnemyManager = (() => {
 
   function needleBlast(originX, originY, damage, flags) {
     if (damage === undefined || damage === null) damage = Balance.PLAYER.NEEDLE_DMG;
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    const critRate = skBonus.critRate || 0;
+    const critDmg = 1.5 + (skBonus.critDmg || 0);
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
-      e.hp -= damage;
+      const isCrit = Math.random() < critRate;
+      const finalDmg = isCrit ? Math.ceil(damage * critDmg) : damage;
+      e.hp -= finalDmg;
       e.hurtTimer = 0.5;
       if (typeof DamageNumbers !== 'undefined') {
-        DamageNumbers.spawn(e.x + ts / 2, e.y, damage, false);
+        DamageNumbers.spawn(e.x + ts / 2, e.y, finalDmg, isCrit);
       }
       if (e.hp <= 0) {
         e.dead = true;
@@ -660,7 +677,7 @@ const EnemyManager = (() => {
         if (e.isElite && colors.glow) {
           SpriteVariant.drawEliteGlow(ctx, ex, ey, e.size || ts, colors.glow, _elapsedTime);
         }
-        SpriteVariant.drawEnemyBody(ctx, ex, ey, e.size || ts * 0.8, colors, e.symbol || '?');
+        SpriteVariant.drawEnemyBody(ctx, ex, ey, e.size || ts * 0.8, colors, e.symbol || '?', e.id);
       } else {
         const sprite = _getEnemySprite(e.id, e.color, e.symbol);
         if (sprite) ctx.drawImage(sprite, x, y);

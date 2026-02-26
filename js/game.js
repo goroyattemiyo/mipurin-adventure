@@ -40,7 +40,8 @@ const Game = (() => {
     invincibleTimer:0, poisoned:false,
     _buffDef:null, _buffSpeed:null, _buffAtk:null, _buffVision:null,
     level: 1, exp: 0, totalExp: 0, skillPoints: 0,
-    needles: Balance.NEEDLE.INITIAL, needleMax: Balance.NEEDLE.MAX, needleRegenTimer: 0
+    needles: Balance.NEEDLE.INITIAL, needleMax: Balance.NEEDLE.MAX, needleRegenTimer: 0,
+    _regenTimer: 0
   };
 
   /* ============ フラグ ============ */
@@ -134,6 +135,9 @@ const Game = (() => {
 
   function _gainExp(amount) {
     if (!amount || amount <= 0) return;
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    const expMult = 1 + (skBonus.expMult || 0);
+    amount = Math.ceil(amount * expMult);
     player.exp += amount;
     player.totalExp += amount;
     while (player.exp >= Scaling.expForLevel(player.level)) {
@@ -731,7 +735,9 @@ const Game = (() => {
 
     // 攻撃（Zキー）
     if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
-      player.attackCooldown = Balance.PLAYER.ATTACK_COOLDOWN_SEC;
+      const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+      const atkSpeedMult = 1 + (skBonus.atkSpeed || 0);
+      player.attackCooldown = (Balance.PLAYER.ATTACK_COOLDOWN_SEC || 0.5) / atkSpeedMult;
       _attackEffectTimer = 0.2;
       const box = PlayerController.getAttackBox(player);
       const hitResult = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
@@ -759,7 +765,9 @@ const Game = (() => {
         player.needles--;
         flags.needleUseCount++;
         _needleEffectTimer = 0.5;
-        EnemyManager.needleBlast(player.x, player.y, player.needleDmg, flags);
+        const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+        const needleDmg = player.needleDmg + (skBonus.needleDmg || 0);
+        EnemyManager.needleBlast(player.x, player.y, needleDmg, flags);
         Engine.triggerShake(6, 10);
         Audio.playSe('needle');
         Analytics.logNeedleUse(_currentMapName, flags.needleUseCount);
@@ -774,9 +782,21 @@ const Game = (() => {
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
     if (typeof Loot !== 'undefined') Loot.update(dt, player.x, player.y);
 
+    // スキル: HP回復
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    if (skBonus.regen && skBonus.regen > 0) {
+      if (!player._regenTimer) player._regenTimer = 0;
+      player._regenTimer += dt;
+      if (player._regenTimer >= 10) {
+        player._regenTimer -= 10;
+        player.hp = Math.min(player.maxHp, player.hp + Math.floor(skBonus.regen));
+      }
+    }
+
     player.needleRegenTimer += dt;
-    if (player.needleRegenTimer >= Balance.NEEDLE.REGEN_INTERVAL) {
-      player.needleRegenTimer -= Balance.NEEDLE.REGEN_INTERVAL;
+    const needleInterval = Math.max(10, Balance.NEEDLE.REGEN_INTERVAL + (skBonus.needleCD || 0));
+    if (player.needleRegenTimer >= needleInterval) {
+      player.needleRegenTimer -= needleInterval;
       if (player.needles < player.needleMax) player.needles++;
     }
     for (let i = _dropLogs.length - 1; i >= 0; i--) {
@@ -1086,7 +1106,9 @@ const Game = (() => {
     PlayerController.updateAnimation(player, dt);
 
     if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
-      player.attackCooldown = Balance.PLAYER.ATTACK_COOLDOWN_SEC;
+      const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+      const atkSpeedMult = 1 + (skBonus.atkSpeed || 0);
+      player.attackCooldown = (Balance.PLAYER.ATTACK_COOLDOWN_SEC || 0.5) / atkSpeedMult;
       _attackEffectTimer = 0.2;
       const box = PlayerController.getAttackBox(player);
       const hitBoss = BossManager.checkHit(box, Inventory.getEffectiveAtk(player), flags);
@@ -1116,12 +1138,14 @@ const Game = (() => {
         player.needles--;
         flags.needleUseCount++;
         _needleEffectTimer = 0.5;
+        const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+        const needleDmg = player.needleDmg + (skBonus.needleDmg || 0);
         const ts = CONFIG.TILE_SIZE;
         const cx = player.x + ts/2, cy = player.y + ts/2;
         const r = ts * 2;
         const box = { x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
-        BossManager.checkHit(box, player.needleDmg, flags);
-        EnemyManager.needleBlast(player.x, player.y, player.needleDmg, flags);
+        BossManager.checkHit(box, needleDmg, flags);
+        EnemyManager.needleBlast(player.x, player.y, needleDmg, flags);
         Engine.triggerShake(6, 10);
         Audio.playSe('needle');
         Analytics.logNeedleUse('boss', flags.needleUseCount);
@@ -1136,9 +1160,22 @@ const Game = (() => {
     BossManager.update(dt, player);
     if (typeof Particles !== 'undefined') Particles.update(dt);
     if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
+
+    // スキル: HP回復
+    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
+    if (skBonus.regen && skBonus.regen > 0) {
+      if (!player._regenTimer) player._regenTimer = 0;
+      player._regenTimer += dt;
+      if (player._regenTimer >= 10) {
+        player._regenTimer -= 10;
+        player.hp = Math.min(player.maxHp, player.hp + Math.floor(skBonus.regen));
+      }
+    }
+
     player.needleRegenTimer += dt;
-    if (player.needleRegenTimer >= Balance.NEEDLE.REGEN_INTERVAL) {
-      player.needleRegenTimer -= Balance.NEEDLE.REGEN_INTERVAL;
+    const needleInterval = Math.max(10, Balance.NEEDLE.REGEN_INTERVAL + (skBonus.needleCD || 0));
+    if (player.needleRegenTimer >= needleInterval) {
+      player.needleRegenTimer -= needleInterval;
       if (player.needles < player.needleMax) player.needles++;
     }
 

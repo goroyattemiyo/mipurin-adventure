@@ -315,7 +315,7 @@
   </main>
 
   <script type="module">
-    import imglyRemoveBackground from '@imgly/background-removal';
+    import { removeBackground } from '@imgly/background-removal';
 
     class GeminiAPI {
       constructor(apiKey) { this.apiKey = apiKey; }
@@ -375,7 +375,7 @@
           output: { format: 'image/png', type: 'foreground' },
           progress: (key, current, total) => onProgress?.(key, current, total)
         };
-        return await imglyRemoveBackground(imageBlob, config);
+        return await removeBackground(imageBlob, config);
       }
     }
 
@@ -784,11 +784,11 @@
       setPreview(aiPreviewBox, state.rawCanvas);
       setPreview(bgBefore, state.rawCanvas);
       if (autoBg.value === 'on') {
-        await removeBackground();
+        await removeBg();
       }
     }
 
-    async function removeBackground() {
+    async function removeBg() {
       if (!state.rawBlob) return showError('先に画像を生成/アップロードしてください');
       const remover = new BgRemover();
       bgProgress.value = 0;
@@ -944,7 +944,7 @@
       setError('');
       setStatus('背景除去中...');
       try {
-        await removeBackground();
+        await removeBg();
         setStatus('背景除去完了');
       } catch (err) {
         showError(err.message);
@@ -1077,3 +1077,6 @@
   </script>
 </body>
 </html>
+
+
+

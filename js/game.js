@@ -81,6 +81,7 @@ const Game = (() => {
   let _logEntries = [];
   let _dropLogs = [];
   let _autoSaveCooldown = 0;
+  let _blessingShownThisRoom = false;
 
   /* ============ ダイアログ ============ */
   let _dialogText = '';
@@ -602,6 +603,7 @@ const Game = (() => {
 
   function _initMapScene(mapName) {
     _currentMapName = mapName;
+    _blessingShownThisRoom = false;
     const map = MapManager.loadMap(mapName);
     if (!map) return;
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
@@ -804,10 +806,30 @@ const Game = (() => {
       if (_dropLogs[i].timer <= 0) _dropLogs.splice(i, 1);
     }
 
+    // 祝福UI表示中はゲーム停止
+    if (typeof BlessingUI !== 'undefined' && BlessingUI.isActive()) {
+      BlessingUI.handleInput();
+      return;
+    }
+
     // ボス突入判定（該当地域で全滅時）
     if (!Dungeon.isActive() && typeof BossManager !== 'undefined') {
       const remaining = EnemyManager.getAliveCount();
       if (remaining === 0) {
+        // 祝福選択（まだ表示していなければ）
+        if (typeof BlessingUI !== 'undefined' && typeof Blessings !== 'undefined' && !BlessingUI.isActive() && !_blessingShownThisRoom) {
+          _blessingShownThisRoom = true;
+          var owned = Blessings.getOwnedBlessings();
+          var count = 3;
+          owned.forEach(function(b){ if(b.effect.type === 'extraChoice') count += b.effect.value; });
+          var choices = Blessings.getRandomBlessings(count, owned.map(function(b){return b.id;}));
+          if (choices.length > 0) {
+            BlessingUI.show(choices, function(selected){
+              Blessings.applyBlessing(selected, player);
+            });
+            return;
+          }
+        }
         if (_currentMapName === 'forest_north' && !flags.piece_a) {
           _pendingBossId = 'mushroom_king';
           _pendingBossReturnScene = SCENE.FOREST_NORTH;
@@ -1025,6 +1047,7 @@ const Game = (() => {
     SkillUI.draw(ctx);
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
+    if (typeof BlessingUI !== 'undefined') BlessingUI.draw(ctx, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
     _drawBottomPanel(ctx);
     if (CONFIG.DEBUG || location.search.includes('debug=1')) {
     ctx.save();
@@ -1694,6 +1717,7 @@ const Game = (() => {
   function _changeScene(scene){
     Analytics.logSceneChange(_currentScene, scene);
     Analytics.onSceneChange();
+    if ((scene === SCENE.TITLE || scene === SCENE.GAMEOVER) && typeof Blessings !== 'undefined') Blessings.resetBlessings();
     if (scene === SCENE.MENU) {
       const from = _currentScene;
       _menuFromGame = ![SCENE.TITLE, SCENE.PROLOGUE, SCENE.CREDITS, SCENE.SETTINGS, SCENE.COLLECTION, SCENE.MENU].includes(from);

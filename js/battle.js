@@ -343,6 +343,8 @@ const EnemyManager = (() => {
     e.baseY = e.y;
     e.diveTimer = 1.5;
     e.emergeHitDone = false;
+    e._flashTimer = 0;
+    e._telegraphTimer = 0;
   }
 
   function spawnFromMap(mapEnemies) {
@@ -371,6 +373,8 @@ const EnemyManager = (() => {
 
     for (const e of _enemies) {
       if (e.dead) continue;
+      if (e._flashTimer > 0) e._flashTimer -= dt;
+      if (e._telegraphTimer > 0) e._telegraphTimer -= dt;
       if (e.hurtTimer > 0) { e.hurtTimer -= dt; continue; }
 
       const dx = player.x - e.x, dy = player.y - e.y;
@@ -385,6 +389,7 @@ const EnemyManager = (() => {
             if (dist <= ts * 3) {
               e.state = 'charge';
               e.stateTimer = 0.35;
+              e._telegraphTimer = 0.4;
               e.moveDir.x = dx / dist;
               e.moveDir.y = dy / dist;
             }
@@ -404,6 +409,7 @@ const EnemyManager = (() => {
             if (dist <= ts * 1.5) {
               e.state = 'explode_charge';
               e.stateTimer = 0.8;
+              e._telegraphTimer = 0.6;
             } else {
               if (dist < ts * 6) { e.moveDir.x = dx / dist; e.moveDir.y = dy / dist; }
               _tryMove(e, e.moveDir.x, e.moveDir.y, baseSpeed * 1.1);
@@ -434,6 +440,7 @@ const EnemyManager = (() => {
             if (Math.abs(dx) <= ts * 0.5) {
               e.state = 'dive';
               e.stateTimer = 0.4;
+              e._telegraphTimer = 0.4;
             }
           } else if (e.state === 'dive') {
             _tryMove(e, 0, 1, baseSpeed * 2.5);
@@ -465,11 +472,13 @@ const EnemyManager = (() => {
             if (e.stateTimer <= 0) {
               e.state = 'emerge';
               e.stateTimer = 0.4;
+              e._telegraphTimer = 0.4;
               e.hidden = false;
               e.emergeHitDone = false;
             }
           } else if (e.state === 'emerge') {
             if (!e.emergeHitDone && dist <= ts * 1.2) {
+              e._telegraphTimer = 0.2;
               _damagePlayer(player, e);
               e.emergeHitDone = true;
             }
@@ -486,6 +495,7 @@ const EnemyManager = (() => {
             const alignedX = Math.abs(dx) <= ts * 0.5;
             const alignedY = Math.abs(dy) <= ts * 0.5;
             if ((alignedX || alignedY) && dist <= ts * 6) {
+              e._telegraphTimer = 0.5;
               _damagePlayer(player, e);
             }
           }
@@ -507,6 +517,7 @@ const EnemyManager = (() => {
             if (e.diveTimer <= 0) {
               e.state = 'dive_dash';
               e.stateTimer = 0.35;
+              e._telegraphTimer = 0.3;
               e.moveDir.x = dx / dist;
               e.moveDir.y = dy / dist;
             }
@@ -548,6 +559,7 @@ const EnemyManager = (() => {
       }
 
       if (!e.hidden && dist < ts * 0.7) {
+        e._telegraphTimer = 0.2;
         _damagePlayer(player, e);
       }
     }
@@ -564,6 +576,10 @@ const EnemyManager = (() => {
     if (player.hp < 0) player.hp = 0;
     const invulnBonus = skBonus.invuln || 0;
     player.invincibleTimer = 1.0 + invulnBonus;
+    if (typeof GameFeel !== 'undefined') GameFeel.onPlayerDamaged();
+    if (typeof DamageNumbers !== 'undefined') {
+      DamageNumbers.spawn(player.x + ts / 2, player.y - 20, finalDmg, 'normal');
+    }
     const dx = player.x - enemy.x, dy = player.y - enemy.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
     player.knockback.x = (dx/dist) * 3;
@@ -571,9 +587,6 @@ const EnemyManager = (() => {
     player.knockback.timer = 0.3;
     player.hitStopFrames = 3;
     Engine.triggerShake(4, 6);
-    if (typeof DamageNumbers !== 'undefined') {
-      DamageNumbers.spawn(player.x + ts / 2, player.y, finalDmg, false);
-    }
   }
 
   function checkAttackHit(box, damage, flags) {
@@ -587,16 +600,26 @@ const EnemyManager = (() => {
 
       const ex = e.x, ey = e.y;
       if (box.x < ex+ts && box.x+box.w > ex && box.y < ey+ts && box.y+box.h > ey) {
-        const isCrit = Math.random() < critRate;
-        const finalDmg = isCrit ? Math.ceil(damage * critDmg) : damage;
+        const isCrit = Math.random() < (critRate || 0);
+        const finalDmg = isCrit ? Math.floor(damage * critDmg) : damage;
         e.hp -= finalDmg;
         e.hurtTimer = 0.3;
+        e._flashTimer = 0.1;
         hitAny = true;
-        if (typeof DamageNumbers !== 'undefined') {
-          DamageNumbers.spawn(e.x + ts / 2, e.y, finalDmg, isCrit);
+        if (isCrit) {
+          if (typeof GameFeel !== 'undefined') GameFeel.onCriticalHit();
+          if (typeof DamageNumbers !== 'undefined') {
+            DamageNumbers.spawn(e.x + ts / 2, e.y - 20, finalDmg, 'critical');
+          }
+        } else {
+          if (typeof GameFeel !== 'undefined') GameFeel.onNormalHit();
+          if (typeof DamageNumbers !== 'undefined') {
+            DamageNumbers.spawn(e.x + ts / 2, e.y - 20, finalDmg, 'normal');
+          }
         }
         if (e.hp <= 0) {
           e.dead = true;
+          if (typeof GameFeel !== 'undefined') GameFeel.onEnemyDefeated();
           flags.killCount++;
           if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
           killed.push({ id: e.id, x: e.x, y: e.y, exp: e.xp, pollen: e.pollen || 1 });
@@ -623,15 +646,18 @@ const EnemyManager = (() => {
     const critDmg = 1.5 + (skBonus.critDmg || 0);
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
-      const isCrit = Math.random() < critRate;
-      const finalDmg = isCrit ? Math.ceil(damage * critDmg) : damage;
+      const isCrit = Math.random() < (critRate || 0);
+      const finalDmg = isCrit ? Math.floor(damage * critDmg) : damage;
       e.hp -= finalDmg;
       e.hurtTimer = 0.5;
+      e._flashTimer = 0.1;
+      if (typeof GameFeel !== 'undefined') GameFeel.onNeedleBlast();
       if (typeof DamageNumbers !== 'undefined') {
-        DamageNumbers.spawn(e.x + ts / 2, e.y, finalDmg, isCrit);
+        DamageNumbers.spawn(e.x + ts / 2, e.y - 20, finalDmg, isCrit ? 'critical' : 'normal');
       }
       if (e.hp <= 0) {
         e.dead = true;
+        if (typeof GameFeel !== 'undefined') GameFeel.onEnemyDefeated();
         flags.killCount++;
         if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
         if (typeof Loot !== 'undefined' && typeof Game !== 'undefined') {
@@ -655,6 +681,16 @@ const EnemyManager = (() => {
       if (e.dead || e.hidden) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
+
+      if (e._telegraphTimer > 0 && Math.floor(Date.now() / 80) % 2) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#ff3333';
+        ctx.beginPath();
+        ctx.arc(x + ts / 2, y + ts / 2, ts * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       if (e.state === 'explode_charge' && Math.floor(Date.now() / 80) % 2) {
         ctx.save();
@@ -681,6 +717,16 @@ const EnemyManager = (() => {
       } else {
         const sprite = _getEnemySprite(e.id, e.color, e.symbol);
         if (sprite) ctx.drawImage(sprite, x, y);
+      }
+
+      if (e._flashTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + ts / 2, y + ts / 2, ts * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
       if (e.hp < e.maxHp) {

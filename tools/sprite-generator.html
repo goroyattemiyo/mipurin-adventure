@@ -164,6 +164,8 @@
         <div>
           <label>ステータス</label>
           <div class="status" id="quotaStatus">待機中</div>
+          <div class="status">残りリクエスト推定: <span id="rateRemaining">-</span></div>
+          <div class="status">次回リトライ: <span id="rateRetry">-</span></div>
         </div>
       </div>
     </details>
@@ -203,6 +205,7 @@
           <textarea id="extraPrompt" placeholder="例: warm lighting, simple silhouette"></textarea>
           <div class="row">
             <button id="btnGenerate">AI 生成</button>
+            <button id="btnLocalMode" class="secondary">ローカルモード</button>
             <label class="chip">画像アップロード<input id="fileUpload" type="file" accept="image/*" style="display:none" /></label>
           </div>
         </div>
@@ -308,6 +311,8 @@
           <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
           <span class="hint">チェックしたプリセットのみ生成します。</span>
         </div>
+        <div class="hint" id="batchLimit">無料枠目安: 1日5体まで推奨</div>
+        <div class="status" id="batchLimitWarn"></div>
         <div class="status" id="batchStatus">未実行</div>
         <div class="grid grid-3" id="presetList"></div>
       </div>
@@ -337,7 +342,7 @@
       async generateImage(prompt) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
         const parts = [{ text: prompt }];
-        const res = await fetch(url, {
+        const res = await throttledFetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts }] })
@@ -346,6 +351,8 @@
         const data = await res.json();
         const b64 = findInlineBase64(data);
         if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
         return base64ToBlob(b64, 'image/png');
       }
 
@@ -355,7 +362,7 @@
           { text: prompt },
           { inline_data: { mime_type: 'image/png', data: imageBase64 } }
         ];
-        const res = await fetch(url, {
+        const res = await throttledFetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts }] })
@@ -364,6 +371,8 @@
         const data = await res.json();
         const b64 = findInlineBase64(data);
         if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
         return base64ToBlob(b64, 'image/png');
       }
     }
@@ -515,7 +524,7 @@
         for (let i = 0; i < presets.length; i++) {
           const preset = presets[i];
           options.onProgress?.(`生成中: ${preset.name} (${i+1}/${presets.length})`);
-          await sleep(2000);
+          await sleep(8000);
           const blob = await this.api.generateImage(preset.prompt);
           const fg = await this.remover.remove(blob);
           const fgCanvas = await blobToCanvas(fg);
@@ -574,6 +583,8 @@
     const quotaStatus = document.getElementById('quotaStatus');
     const globalStatus = document.getElementById('globalStatus');
     const errorBox = document.getElementById('errorBox');
+    const rateRemaining = document.getElementById('rateRemaining');
+    const rateRetry = document.getElementById('rateRetry');
     const charName = document.getElementById('charName');
     const style = document.getElementById('style');
     const size = document.getElementById('size');
@@ -591,7 +602,19 @@
     const importCode = document.getElementById('importCode');
     const presetList = document.getElementById('presetList');
     const batchStatus = document.getElementById('batchStatus');
+    const batchLimitWarn = document.getElementById('batchLimitWarn');
     const pixelSize = document.getElementById('pixelSize');
+    const btnLocalMode = document.getElementById('btnLocalMode');
+
+    const rateState = {
+      lastFetchAt: 0,
+      retryUntil: 0,
+      requestsMade: 0
+    };
+    const RATE_LIMIT_ESTIMATE = 500;
+    const MIN_FETCH_INTERVAL = 6000;
+    const RETRY_BACKOFFS = [10000, 20000, 40000];
+    const BATCH_SOFT_LIMIT = 5;
 
     function setError(msg) {
       errorBox.textContent = msg || '';
@@ -599,6 +622,36 @@
 
     function setStatus(msg) {
       globalStatus.textContent = msg || '';
+    }
+
+    function updateRateUI() {
+      const remaining = Math.max(0, RATE_LIMIT_ESTIMATE - rateState.requestsMade);
+      rateRemaining.textContent = `${remaining}`;
+      const now = Date.now();
+      if (rateState.retryUntil > now) {
+        const sec = Math.ceil((rateState.retryUntil - now) / 1000);
+        rateRetry.textContent = `${sec}s`;
+      } else {
+        rateRetry.textContent = '-';
+      }
+    }
+
+    async function throttledFetch(url, options, attempt = 0) {
+      const now = Date.now();
+      const waitForInterval = Math.max(0, MIN_FETCH_INTERVAL - (now - rateState.lastFetchAt));
+      if (waitForInterval > 0) {
+        await sleep(waitForInterval);
+      }
+      const res = await fetch(url, options);
+      rateState.lastFetchAt = Date.now();
+      if (res.status === 429 && attempt < RETRY_BACKOFFS.length) {
+        const backoff = RETRY_BACKOFFS[attempt];
+        rateState.retryUntil = Date.now() + backoff;
+        updateRateUI();
+        await sleep(backoff);
+        return throttledFetch(url, options, attempt + 1);
+      }
+      return res;
     }
 
     function findInlineBase64(data) {
@@ -898,6 +951,32 @@
       if (msg) setStatus('エラー');
     }
 
+    async function runLocalMode() {
+      if (!state.rawBlob) return showError('ローカルモード: 先に画像をアップロードしてください');
+      setStatus('ローカルモード実行中...');
+      try {
+        await removeBackground();
+        pixelize();
+        const dirGen = new DirectionGenerator();
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
+        renderDirections(state.directions);
+        generateFrames();
+        assembleSheet();
+        setStatus('ローカルモード完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function updateBatchLimitWarn() {
+      const selected = Array.from(document.querySelectorAll('.preset-check')).filter(i => i.checked).length;
+      if (selected > BATCH_SOFT_LIMIT) {
+        batchLimitWarn.textContent = `警告: 無料枠ユーザーは1日${BATCH_SOFT_LIMIT}体まで推奨（現在 ${selected} 体）`;
+      } else {
+        batchLimitWarn.textContent = '';
+      }
+    }
+
     // UI Bindings
     document.getElementById('saveKey').addEventListener('click', () => {
       const key = apiKeyInput.value.trim();
@@ -927,6 +1006,10 @@
         quotaStatus.textContent = '生成失敗';
         showError(e.message);
       }
+    });
+    btnLocalMode.addEventListener('click', async () => {
+      setError('');
+      await runLocalMode();
     });
 
     document.getElementById('fileUpload').addEventListener('change', async (e) => {
@@ -1071,6 +1154,12 @@
         card.innerHTML = `<input class="preset-check" type="checkbox" value="${p.id}" checked /> ${p.name} (${p.id})`;
         presetList.appendChild(card);
       });
+      document.querySelectorAll('.preset-check').forEach((el) => {
+        el.addEventListener('change', updateBatchLimitWarn);
+      });
+      updateBatchLimitWarn();
+      updateRateUI();
+      setInterval(updateRateUI, 1000);
     }
 
     init();

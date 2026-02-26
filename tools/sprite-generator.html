@@ -6,16 +6,14 @@
   <title>Sprite Generator v4</title>
   <style>
     :root {
-      --bg: #0b0f14;
-      --panel: #151c26;
-      --panel-2: #1b2430;
-      --text: #e6eef7;
-      --muted: #9bb0c8;
-      --accent: #7bdcff;
-      --accent-2: #ffd27b;
-      --danger: #ff6b6b;
-      --ok: #7bffb2;
-      --border: #2a3647;
+      --bg: #1a1a2e;
+      --panel: #202043;
+      --panel-2: #262654;
+      --text: #f4f4ff;
+      --muted: #b8b8d9;
+      --accent: #e94560;
+      --accent-2: #28c7fa;
+      --border: #2d2d5a;
       --shadow: rgba(0,0,0,0.35);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: "Noto Sans JP", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -23,13 +21,13 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: radial-gradient(1200px 800px at 20% -10%, #17202b 0%, #0b0f14 60%);
+      background: var(--bg);
       color: var(--text);
       font-family: var(--sans);
     }
     header {
-      padding: 28px 24px 16px;
-      font-size: 24px;
+      padding: 24px 20px 12px;
+      font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.04em;
     }
@@ -45,14 +43,14 @@
     summary {
       list-style: none;
       cursor: pointer;
-      padding: 14px 18px;
+      padding: 12px 18px;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 15px;
       border-bottom: 1px solid var(--border);
       background: rgba(0,0,0,0.2);
     }
     summary::-webkit-details-marker { display: none; }
-    .panel { padding: 16px 18px 20px; }
+    .panel { padding: 14px 18px 20px; }
     .grid { display: grid; gap: 12px; }
     .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -61,7 +59,7 @@
     input[type="text"], input[type="password"], textarea, select {
       width: 100%;
       padding: 10px 12px;
-      background: #0f141c;
+      background: #17172a;
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -70,7 +68,7 @@
     textarea { min-height: 72px; }
     button {
       background: var(--accent);
-      color: #04202c;
+      color: #1a0f13;
       border: none;
       padding: 10px 14px;
       border-radius: 10px;
@@ -80,19 +78,29 @@
     }
     button:hover { filter: brightness(1.05); }
     button:active { transform: translateY(1px); }
-    button.secondary { background: #2a3647; color: var(--text); }
-    button.danger { background: var(--danger); color: #240707; }
+    button.secondary { background: #2d2d5a; color: var(--text); }
+    button.danger { background: #ff6b6b; color: #2b0b0b; }
     .hint { color: var(--muted); font-size: 12px; }
     .status { font-size: 13px; color: var(--muted); }
-    .badge { padding: 3px 8px; border-radius: 999px; background: #253244; font-size: 11px; }
+    .badge { padding: 3px 8px; border-radius: 999px; background: #2d2d5a; font-size: 11px; }
     .preview {
-      background: #0f141c;
+      background: #17172a;
       border: 1px dashed var(--border);
       border-radius: 10px;
       padding: 10px;
       display: grid;
       place-items: center;
       min-height: 160px;
+    }
+    .checker {
+      background-color: #151528;
+      background-image:
+        linear-gradient(45deg, #1f1f3a 25%, transparent 25%),
+        linear-gradient(-45deg, #1f1f3a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1f1f3a 75%),
+        linear-gradient(-45deg, transparent 75%, #1f1f3a 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
     }
     canvas, img { image-rendering: pixelated; max-width: 100%; }
     .preview-grid {
@@ -101,23 +109,22 @@
       gap: 10px;
     }
     .preview-grid .slot { text-align: center; font-size: 12px; color: var(--muted); }
-    .preview-grid .slot canvas { width: 100%; height: auto; background: #0b0f14; }
-    .sheet-preview canvas { width: 100%; height: auto; background: #0b0f14; }
+    .preview-grid .slot canvas { width: 100%; height: auto; }
+    .sheet-preview canvas { width: 100%; height: auto; }
     .progress-row { display: flex; gap: 10px; align-items: center; }
     progress { width: 100%; height: 12px; }
     .code {
-      background: #0b0f14;
+      background: #121221;
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 12px;
       font-family: var(--mono);
       font-size: 12px;
       white-space: pre-wrap;
-      color: #d8e6f7;
+      color: #dcdcff;
     }
-    .muted { color: var(--muted); }
-    .small { font-size: 12px; }
-    .chip { background: #1f2a3a; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+    .chip { background: #25254a; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+    .error { color: #ffb3b3; font-size: 13px; }
     @media (max-width: 900px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .preview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -136,31 +143,33 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
-  <header>スプライトジェネレーター v4</header>
+  <header>Sprite Generator v4</header>
   <main>
+    <div class="status" id="globalStatus">待機中...</div>
+    <div class="error" id="errorBox"></div>
+
     <details open>
-      <summary>① API 設定パネル</summary>
+      <summary>① API 設定</summary>
       <div class="panel grid grid-2">
         <div>
           <label>Gemini API キー</label>
           <input id="apiKey" type="password" placeholder="AIza..." />
           <div class="row" style="margin-top:10px;">
-            <button id="saveKey">キーを保存</button>
-            <button id="clearKey" class="secondary">保存をクリア</button>
+            <button id="saveKey">保存</button>
+            <button id="clearKey" class="secondary">クリア</button>
             <span class="badge" id="apiStatus">未設定</span>
           </div>
           <div class="hint">API キーは localStorage に保存されます。</div>
         </div>
         <div>
           <label>ステータス</label>
-          <div class="status" id="quotaStatus">待機中...</div>
-          <div class="hint">Gemini API のクォータは API 側の制約に依存します。</div>
+          <div class="status" id="quotaStatus">待機中</div>
         </div>
       </div>
     </details>
 
     <details open>
-      <summary>② キャラクター生成パネル</summary>
+      <summary>② キャラクター生成</summary>
       <div class="panel grid grid-2">
         <div class="grid">
           <label>キャラ名</label>
@@ -171,7 +180,7 @@
               <select id="style">
                 <option value="chibi">chibi</option>
                 <option value="sd">SD</option>
-                <option value="real">リアル</option>
+                <option value="real">realistic</option>
               </select>
             </div>
             <div>
@@ -194,31 +203,26 @@
           <textarea id="extraPrompt" placeholder="例: warm lighting, simple silhouette"></textarea>
           <div class="row">
             <button id="btnGenerate">AI 生成</button>
-            <label class="chip">
-              画像アップロード
-              <input id="fileUpload" type="file" accept="image/*" style="display:none" />
-            </label>
+            <label class="chip">画像アップロード<input id="fileUpload" type="file" accept="image/*" style="display:none" /></label>
           </div>
-          <div class="hint">AI 生成は Gemini 2.5 Flash Image を使用します。</div>
         </div>
         <div>
-          <div class="preview" id="aiPreviewBox">
-            <span class="muted">プレビュー</span>
-          </div>
+          <label>プレビュー</label>
+          <div class="preview checker" id="aiPreviewBox"><span class="muted">未生成</span></div>
         </div>
       </div>
     </details>
 
     <details>
-      <summary>③ 背景除去パネル</summary>
+      <summary>③ 背景除去</summary>
       <div class="panel grid grid-2">
         <div>
           <label>Before</label>
-          <div class="preview" id="bgBefore"></div>
+          <div class="preview checker" id="bgBefore"></div>
         </div>
         <div>
           <label>After</label>
-          <div class="preview" id="bgAfter"></div>
+          <div class="preview checker" id="bgAfter"></div>
         </div>
         <div class="row">
           <button id="btnRemoveBg">背景除去</button>
@@ -231,7 +235,7 @@
     </details>
 
     <details open>
-      <summary>④ ピクセルアート変換パネル</summary>
+      <summary>④ ピクセルアート変換</summary>
       <div class="panel grid grid-2">
         <div class="grid">
           <label>パレット色数</label>
@@ -250,13 +254,13 @@
         </div>
         <div>
           <label>プレビュー</label>
-          <div class="preview" id="pixelPreview"></div>
+          <div class="preview checker" id="pixelPreview"></div>
         </div>
       </div>
     </details>
 
     <details>
-      <summary>⑤ 4方向スプライト生成パネル</summary>
+      <summary>⑤ 4方向スプライト生成</summary>
       <div class="panel grid">
         <div class="row">
           <button id="btnGenDirAI">AI で4方向生成</button>
@@ -268,28 +272,27 @@
     </details>
 
     <details>
-      <summary>⑥ アニメーションフレーム生成パネル</summary>
+      <summary>⑥ アニメーションフレーム</summary>
       <div class="panel grid">
         <div class="row">
-          <button id="btnGenFrames" class="secondary">プログラム生成</button>
-          <button id="btnPreviewAnim">アニメーションプレビュー</button>
-          <span class="hint">idle / walk1 / walk2 を自動生成します。</span>
+          <button id="btnGenFrames" class="secondary">フレーム生成</button>
+          <button id="btnPreviewAnim">ループ再生</button>
         </div>
-        <div class="preview" id="animPreview"></div>
+        <div class="preview checker" id="animPreview"></div>
       </div>
     </details>
 
     <details open>
-      <summary>⑦ スプライトシート出力パネル</summary>
+      <summary>⑦ スプライトシート出力</summary>
       <div class="panel grid grid-2">
         <div class="sheet-preview">
           <label>最終シート</label>
-          <div class="preview" id="sheetPreview"></div>
+          <div class="preview checker" id="sheetPreview"></div>
         </div>
         <div class="grid">
           <div class="row">
             <button id="btnDownloadPng">PNG ダウンロード</button>
-            <button id="btnDownloadJson" class="secondary">JSON メタデータ</button>
+            <button id="btnDownloadJson" class="secondary">JSON DL</button>
           </div>
           <label>ゲームにインポート</label>
           <div class="code" id="importCode">// まだ生成されていません</div>
@@ -298,13 +301,12 @@
     </details>
 
     <details>
-      <summary>⑧ バッチモードパネル</summary>
+      <summary>⑧ バッチモード</summary>
       <div class="panel grid">
         <div class="row">
           <button id="btnBatch">一括生成</button>
           <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
-          <label class="chip"><input id="batchUseAI" type="checkbox" checked /> AI方向生成</label>
-          <span class="hint">一括生成は時間がかかります。</span>
+          <span class="hint">チェックしたプリセットのみ生成します。</span>
         </div>
         <div class="status" id="batchStatus">未実行</div>
         <div class="grid grid-3" id="presetList"></div>
@@ -318,14 +320,14 @@
     class GeminiAPI {
       constructor(apiKey) { this.apiKey = apiKey; }
 
-      buildPrompt(name, style, extras) {
+      buildCharacterPrompt(name, style, size, extras) {
         const styleMap = {
           chibi: 'cute chibi',
           sd: 'super-deformed',
           real: 'detailed'
         };
         const s = styleMap[style] || 'cute chibi';
-        return `A single ${s} game character sprite of a ${name}, facing forward, pixel art style, transparent background, centered, full body, no shadow, clean edges. ${extras || ''}`.trim();
+        return `A single ${s} game character sprite of a ${name}, facing forward, pixel art style, transparent background, centered, full body, no shadow, clean edges. size ${size}px. ${extras || ''}`.trim();
       }
 
       buildDirectionPrompt(direction) {
@@ -479,17 +481,76 @@
         return sheet;
       }
 
-      generateJSON(name, frameSize) {
+      generateMeta(name, size) {
         return {
           name,
-          frameWidth: frameSize,
-          frameHeight: frameSize,
+          frameWidth: size,
+          frameHeight: size,
           columns: 3,
           rows: 4,
           directions: ['front', 'left', 'right', 'back'],
           framesPerDirection: 3,
           frameNames: ['idle', 'walk1', 'walk2'],
           animationSpeed: 150
+        };
+      }
+
+      generateImportCode(name, size) {
+        return `SpriteManager.register('${name}', {\n  src: 'assets/sprites/${name}-sheet.png',\n  frameWidth: ${size},\n  frameHeight: ${size},\n  directions: ['front','left','right','back'],\n  framesPerDirection: 3,\n  animSpeed: 150\n});\n\n// balance.js の ENEMIES に追加する例\n{ id: '${name}', ..., spriteId: '${name}' }`;
+      }
+    }
+
+    class BatchProcessor {
+      constructor(api, remover, converter, dirGen, frameGen, assembler) {
+        this.api = api;
+        this.remover = remover;
+        this.converter = converter;
+        this.dirGen = dirGen;
+        this.frameGen = frameGen;
+        this.assembler = assembler;
+      }
+
+      async run(presets, options) {
+        const zip = new JSZip();
+        for (let i = 0; i < presets.length; i++) {
+          const preset = presets[i];
+          options.onProgress?.(`生成中: ${preset.name} (${i+1}/${presets.length})`);
+          await sleep(2000);
+          const blob = await this.api.generateImage(preset.prompt);
+          const fg = await this.remover.remove(blob);
+          const fgCanvas = await blobToCanvas(fg);
+          const px = this.converter.convert(fgCanvas, {
+            targetSize: options.size,
+            paletteSize: 16,
+            outline: true,
+            dither: false
+          });
+          const dirs = options.useAI
+            ? await this.dirGen.generateWithAI(this.api, px)
+            : this.dirGen.generateProgrammatic(px);
+          const frames = {};
+          Object.keys(dirs).forEach((dir) => { frames[dir] = this.frameGen.generate(dirs[dir]); });
+          const sheet = this.assembler.assemble(frames, options.size);
+          const json = this.assembler.generateMeta(preset.id, options.size);
+          const sheetBlob = await canvasToBlob(sheet);
+          zip.file(`${preset.id}-sheet.png`, sheetBlob);
+          zip.file(`${preset.id}.json`, JSON.stringify(json, null, 2));
+        }
+        return zip;
+      }
+    }
+
+    class Pipeline {
+      constructor() {
+        this.state = {
+          rawBlob: null,
+          rawCanvas: null,
+          bgBlob: null,
+          bgCanvas: null,
+          pixelCanvas: null,
+          directions: null,
+          frames: null,
+          sheet: null
         };
       }
     }
@@ -506,24 +567,13 @@
       { id: 'ghost',     name: 'ゴースト',     prompt: 'a translucent floating ghost' }
     ];
 
-    // State
-    const state = {
-      apiKey: '',
-      rawBlob: null,
-      rawCanvas: null,
-      bgBlob: null,
-      bgCanvas: null,
-      pixelCanvas: null,
-      directions: null,
-      frames: null,
-      sheet: null,
-      batchZip: null
-    };
+    const state = new Pipeline().state;
 
-    // DOM
     const apiKeyInput = document.getElementById('apiKey');
     const apiStatus = document.getElementById('apiStatus');
     const quotaStatus = document.getElementById('quotaStatus');
+    const globalStatus = document.getElementById('globalStatus');
+    const errorBox = document.getElementById('errorBox');
     const charName = document.getElementById('charName');
     const style = document.getElementById('style');
     const size = document.getElementById('size');
@@ -534,7 +584,6 @@
     const bgAfter = document.getElementById('bgAfter');
     const bgProgress = document.getElementById('bgProgress');
     const bgProgressText = document.getElementById('bgProgressText');
-    const pixelSize = document.getElementById('pixelSize');
     const pixelPreview = document.getElementById('pixelPreview');
     const dirGrid = document.getElementById('dirGrid');
     const animPreview = document.getElementById('animPreview');
@@ -542,9 +591,16 @@
     const importCode = document.getElementById('importCode');
     const presetList = document.getElementById('presetList');
     const batchStatus = document.getElementById('batchStatus');
-    const batchUseAI = document.getElementById('batchUseAI');
+    const pixelSize = document.getElementById('pixelSize');
 
-    // Helpers
+    function setError(msg) {
+      errorBox.textContent = msg || '';
+    }
+
+    function setStatus(msg) {
+      globalStatus.textContent = msg || '';
+    }
+
     function findInlineBase64(data) {
       const parts = data?.candidates?.[0]?.content?.parts || [];
       for (const p of parts) {
@@ -599,11 +655,10 @@
     function refreshImportCode() {
       const name = charName.value.trim() || 'sprite';
       const sz = getFrameSize();
-      const code = `SpriteManager.register('${name}', {\n  src: 'assets/sprites/${name}-sheet.png',\n  frameWidth: ${sz},\n  frameHeight: ${sz},\n  directions: ['front','left','right','back'],\n  framesPerDirection: 3,\n  animSpeed: 150\n});\n\n// balance.js の ENEMIES に追加する例\n{ id: '${name}', ..., spriteId: '${name}' }`;
-      importCode.textContent = code;
+      const assembler = new SheetAssembler();
+      importCode.textContent = assembler.generateImportCode(name, sz);
     }
 
-    // Pixel helpers
     function medianCut(imgData, paletteSize) {
       const pixels = [];
       for (let i = 0; i < imgData.data.length; i += 4) {
@@ -679,9 +734,7 @@
           const eg = g - nc[1];
           const eb = b - nc[2];
           data[i] = nc[0]; data[i+1] = nc[1]; data[i+2] = nc[2];
-          if (dither) {
-            diffuse(err, i, w, er, eg, eb);
-          }
+          if (dither) diffuse(err, i, w, er, eg, eb);
         }
       }
     }
@@ -723,7 +776,8 @@
       }
     }
 
-    // Core pipeline handlers
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
     async function setRawImage(blob) {
       state.rawBlob = blob;
       state.rawCanvas = await blobToCanvas(blob);
@@ -735,7 +789,7 @@
     }
 
     async function removeBackground() {
-      if (!state.rawBlob) return alert('先に画像を生成/アップロードしてください');
+      if (!state.rawBlob) return showError('先に画像を生成/アップロードしてください');
       const remover = new BgRemover();
       bgProgress.value = 0;
       bgProgressText.textContent = '0%';
@@ -751,7 +805,7 @@
 
     function pixelize() {
       const source = state.bgCanvas || state.rawCanvas;
-      if (!source) return alert('画像がありません');
+      if (!source) return showError('画像がありません');
       const converter = new PixelConverter();
       const pxSize = getFrameSize();
       const paletteSize = parseInt(document.getElementById('palette').value, 10);
@@ -773,13 +827,13 @@
         label.textContent = dir;
         const canvas = directions?.[dir];
         const box = document.createElement('div');
-        box.className = 'preview';
+        box.className = 'preview checker';
         if (canvas) box.appendChild(canvas);
         const retry = document.createElement('button');
         retry.textContent = `${dir} リトライ`;
         retry.className = 'secondary small';
         retry.addEventListener('click', async () => {
-          if (!state.pixelCanvas) return alert('先にピクセル化してください');
+          if (!state.pixelCanvas) return showError('先にピクセル化してください');
           await regenerateDirection(dir);
         });
         slot.appendChild(label);
@@ -791,7 +845,7 @@
 
     async function regenerateDirection(dir) {
       const key = apiKeyInput.value.trim();
-      if (!key) return alert('API キーが必要です');
+      if (!key) return showError('API キーが必要です');
       const api = new GeminiAPI(key);
       const frontBase64 = state.pixelCanvas.toDataURL('image/png').split(',')[1];
       const blob = await api.editImage(api.buildDirectionPrompt(dir), frontBase64);
@@ -801,7 +855,7 @@
     }
 
     function generateFrames() {
-      if (!state.directions) return alert('方向画像がありません');
+      if (!state.directions) return showError('方向画像がありません');
       const gen = new FrameGenerator();
       state.frames = {};
       Object.keys(state.directions).forEach((dir) => {
@@ -810,7 +864,7 @@
     }
 
     function assembleSheet() {
-      if (!state.frames) return alert('フレームがありません');
+      if (!state.frames) return showError('フレームがありません');
       const assembler = new SheetAssembler();
       const frameSize = getFrameSize();
       state.sheet = assembler.assemble(state.frames, frameSize);
@@ -820,7 +874,7 @@
 
     let animTimer = null;
     function previewAnimation() {
-      if (!state.frames) return alert('フレームがありません');
+      if (!state.frames) return showError('フレームがありません');
       animPreview.innerHTML = '';
       const c = document.createElement('canvas');
       c.width = getFrameSize();
@@ -839,6 +893,11 @@
       }, 200);
     }
 
+    function showError(msg) {
+      setError(msg);
+      if (msg) setStatus('エラー');
+    }
+
     // UI Bindings
     document.getElementById('saveKey').addEventListener('click', () => {
       const key = apiKeyInput.value.trim();
@@ -852,142 +911,153 @@
     });
 
     document.getElementById('btnGenerate').addEventListener('click', async () => {
+      setError('');
       const key = apiKeyInput.value.trim();
-      if (!key) return alert('API キーが必要です');
+      if (!key) return showError('API キーが必要です');
       const api = new GeminiAPI(key);
-      const prompt = api.buildPrompt(charName.value, style.value, extraPrompt.value);
+      const prompt = api.buildCharacterPrompt(charName.value, style.value, size.value, extraPrompt.value);
       quotaStatus.textContent = '生成中...';
+      setStatus('AI 生成中...');
       try {
         const blob = await api.generateImage(prompt);
         await setRawImage(blob);
         quotaStatus.textContent = '生成完了';
+        setStatus('生成完了');
       } catch (e) {
         quotaStatus.textContent = '生成失敗';
-        alert(e.message);
+        showError(e.message);
       }
     });
 
     document.getElementById('fileUpload').addEventListener('change', async (e) => {
+      setError('');
       const file = e.target.files?.[0];
       if (!file) return;
-      await setRawImage(file);
+      try {
+        await setRawImage(file);
+      } catch (err) {
+        showError(err.message);
+      }
     });
 
-    document.getElementById('btnRemoveBg').addEventListener('click', removeBackground);
-    document.getElementById('btnPixelize').addEventListener('click', pixelize);
+    document.getElementById('btnRemoveBg').addEventListener('click', async () => {
+      setError('');
+      setStatus('背景除去中...');
+      try {
+        await removeBackground();
+        setStatus('背景除去完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    document.getElementById('btnPixelize').addEventListener('click', () => {
+      setError('');
+      pixelize();
+    });
     document.getElementById('palette').addEventListener('input', pixelize);
-    document.getElementById('pixelSize').addEventListener('change', () => {
+    document.getElementById('outline').addEventListener('change', pixelize);
+    document.getElementById('dither').addEventListener('change', pixelize);
+    pixelSize.addEventListener('change', () => {
       size.value = pixelSize.value;
       pixelize();
       refreshImportCode();
     });
-    document.getElementById('outline').addEventListener('change', pixelize);
-    document.getElementById('dither').addEventListener('change', pixelize);
     size.addEventListener('change', () => {
       pixelSize.value = size.value;
       refreshImportCode();
     });
 
     document.getElementById('btnGenDirAI').addEventListener('click', async () => {
+      setError('');
       const key = apiKeyInput.value.trim();
-      if (!key) return alert('API キーが必要です');
-      if (!state.pixelCanvas) return alert('先にピクセル化してください');
+      if (!key) return showError('API キーが必要です');
+      if (!state.pixelCanvas) return showError('先にピクセル化してください');
       const api = new GeminiAPI(key);
       const dirGen = new DirectionGenerator();
-      quotaStatus.textContent = '4方向生成中...';
+      setStatus('4方向生成中...');
       try {
         state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
         renderDirections(state.directions);
-        quotaStatus.textContent = '完了';
+        setStatus('完了');
       } catch (e) {
-        quotaStatus.textContent = '失敗';
-        alert(e.message);
+        showError(e.message);
       }
     });
 
     document.getElementById('btnGenDirProg').addEventListener('click', () => {
-      if (!state.pixelCanvas) return alert('先にピクセル化してください');
+      setError('');
+      if (!state.pixelCanvas) return showError('先にピクセル化してください');
       const dirGen = new DirectionGenerator();
       state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
       renderDirections(state.directions);
     });
 
     document.getElementById('btnGenFrames').addEventListener('click', () => {
+      setError('');
       generateFrames();
       assembleSheet();
     });
 
     document.getElementById('btnPreviewAnim').addEventListener('click', () => {
+      setError('');
       generateFrames();
       previewAnimation();
     });
 
     document.getElementById('btnDownloadPng').addEventListener('click', async () => {
-      if (!state.sheet) return alert('シートがありません');
+      setError('');
+      if (!state.sheet) return showError('シートがありません');
       const blob = await canvasToBlob(state.sheet);
       saveAs(blob, `${charName.value}-sheet.png`);
     });
 
     document.getElementById('btnDownloadJson').addEventListener('click', async () => {
+      setError('');
       const assembler = new SheetAssembler();
-      const json = assembler.generateJSON(charName.value, getFrameSize());
+      const json = assembler.generateMeta(charName.value, getFrameSize());
       const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
       saveAs(blob, `${charName.value}.json`);
     });
 
-    // Batch mode
-    let batchReady = false;
     document.getElementById('btnBatch').addEventListener('click', async () => {
+      setError('');
       const key = apiKeyInput.value.trim();
-      if (!key) return alert('API キーが必要です');
+      if (!key) return showError('API キーが必要です');
       const api = new GeminiAPI(key);
       const remover = new BgRemover();
       const converter = new PixelConverter();
       const dirGen = new DirectionGenerator();
       const frameGen = new FrameGenerator();
       const assembler = new SheetAssembler();
+      const batch = new BatchProcessor(api, remover, converter, dirGen, frameGen, assembler);
 
-      state.batchZip = new JSZip();
-      batchReady = false;
+      const selected = Array.from(document.querySelectorAll('.preset-check')).filter(i => i.checked).map(i => i.value);
+      const presets = ENEMY_PRESETS.filter(p => selected.includes(p.id));
+      if (presets.length === 0) return showError('プリセットを選択してください');
 
-      for (let i = 0; i < ENEMY_PRESETS.length; i++) {
-        const preset = ENEMY_PRESETS[i];
-        batchStatus.textContent = `生成中: ${preset.name} (${i+1}/${ENEMY_PRESETS.length})`;
-        const blob = await api.generateImage(preset.prompt);
-        const fg = await remover.remove(blob);
-        const fgCanvas = await blobToCanvas(fg);
-        const px = converter.convert(fgCanvas, {
-          targetSize: getFrameSize(),
-          paletteSize: 16,
-          outline: true,
-          dither: false
+      setStatus('バッチ実行中...');
+      try {
+        const zip = await batch.run(presets, {
+          size: getFrameSize(),
+          useAI: true,
+          onProgress: (msg) => { batchStatus.textContent = msg; }
         });
-        let dirs;
-        if (batchUseAI.checked) {
-          dirs = await dirGen.generateWithAI(api, px);
-        } else {
-          dirs = dirGen.generateProgrammatic(px);
-        }
-        const frames = {};
-        Object.keys(dirs).forEach((dir) => { frames[dir] = frameGen.generate(dirs[dir]); });
-        const sheet = assembler.assemble(frames, getFrameSize());
-        const json = assembler.generateJSON(preset.id, getFrameSize());
-        const sheetBlob = await canvasToBlob(sheet);
-        state.batchZip.file(`${preset.id}-sheet.png`, sheetBlob);
-        state.batchZip.file(`${preset.id}.json`, JSON.stringify(json, null, 2));
+        window.__batchZip = zip;
+        batchStatus.textContent = 'バッチ完了。ZIP ダウンロード可能。';
+        setStatus('バッチ完了');
+      } catch (err) {
+        showError(err.message);
       }
-
-      batchReady = true;
-      batchStatus.textContent = 'バッチ完了。ZIP ダウンロード可能。';
     });
 
     document.getElementById('btnBatchZip').addEventListener('click', async () => {
-      if (!state.batchZip || !batchReady) return alert('先に一括生成してください');
-      const blob = await state.batchZip.generateAsync({ type: 'blob' });
+      setError('');
+      if (!window.__batchZip) return showError('先に一括生成してください');
+      const blob = await window.__batchZip.generateAsync({ type: 'blob' });
       saveAs(blob, 'sprites-batch.zip');
     });
 
-    // Init
     function init() {
       const savedKey = localStorage.getItem('gemini_api_key') || '';
       apiKeyInput.value = savedKey;
@@ -996,9 +1066,9 @@
       refreshImportCode();
       renderDirections({});
       ENEMY_PRESETS.forEach((p) => {
-        const card = document.createElement('div');
+        const card = document.createElement('label');
         card.className = 'chip';
-        card.textContent = `${p.name} (${p.id})`;
+        card.innerHTML = `<input class="preset-check" type="checkbox" value="${p.id}" checked /> ${p.name} (${p.id})`;
         presetList.appendChild(card);
       });
     }

@@ -56,61 +56,41 @@ const Particles = (() => {
     for (const p of _pool) p.alive = false;
   }
 
-  return { emit, update, draw, clear };
-})();
-
-// ダメージ数字ポップアップ
-const DamageNumbers = (() => {
-  const _nums = [];
-
-  function spawn(x, y, value, isCritical) {
-    _nums.push({
-      x,
-      y: y - 10,
-      value: Math.floor(value),
-      vy: -60,
-      life: 0.8,
-      maxLife: 0.8,
-      critical: !!isCritical,
-      alive: true
+  function burstSlash(x, y) {
+    emit(x, y, 6 + Math.floor(Math.random() * 3), '#ffffff', {
+      speedMin: 40, speedMax: 120, lifeMin: 0.2, lifeMax: 0.4, sizeMin: 2, sizeMax: 4
     });
   }
 
-  function update(dt) {
-    for (const n of _nums) {
-      if (!n.alive) continue;
-      n.y += n.vy * dt;
-      n.vy += 40 * dt; // 減速して浮く→落ちる
-      n.life -= dt;
-      if (n.life <= 0) n.alive = false;
-    }
-    // cleanup every 60 frames
-    if (Math.random() < 0.02) {
-      const alive = _nums.filter(n => n.alive);
-      _nums.length = 0;
-      _nums.push(...alive);
-    }
+  function burstSpark(x, y, color) {
+    emit(x, y, 5 + Math.floor(Math.random() * 4), color || '#ffd700', {
+      speedMin: 50, speedMax: 140, lifeMin: 0.25, lifeMax: 0.5, sizeMin: 2, sizeMax: 5
+    });
   }
 
-  function draw(ctx) {
-    for (const n of _nums) {
-      if (!n.alive) continue;
-      const alpha = Math.max(0, n.life / n.maxLife);
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      const size = n.critical ? CONFIG.FONT_LG : CONFIG.FONT_BASE;
-      ctx.font = `bold ${size}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      // 影
-      ctx.fillStyle = '#000';
-      ctx.fillText(n.value, n.x + 2, n.y + 2);
-      // 本体
-      ctx.fillStyle = n.critical ? '#FFD700' : '#FFFFFF';
-      ctx.fillText(n.value, n.x, n.y);
-      ctx.restore();
-    }
+  function burstStar(x, y) {
+    emit(x, y, 10 + Math.floor(Math.random() * 6), '#ffdd55', {
+      speedMin: 60, speedMax: 180, lifeMin: 0.3, lifeMax: 0.6, sizeMin: 2, sizeMax: 6
+    });
   }
 
-  return { spawn, update, draw };
+  function burstDebris(x, y, color) {
+    emit(x, y, 15 + Math.floor(Math.random() * 6), color || '#aaa', {
+      speedMin: 30, speedMax: 110, lifeMin: 0.4, lifeMax: 0.7, sizeMin: 2, sizeMax: 6, gravity: 120
+    });
+  }
+
+  function burstPetals(x, y, color) {
+    emit(x, y, 20 + Math.floor(Math.random() * 11), color || '#ff9bd4', {
+      speedMin: 10, speedMax: 60, lifeMin: 0.6, lifeMax: 1.0, sizeMin: 2, sizeMax: 4, gravity: 40
+    });
+  }
+
+  function trailDash(x, y, alpha) {
+    emit(x, y, 3, `rgba(255,255,255,${alpha || 0.5})`, {
+      speedMin: 0, speedMax: 20, lifeMin: 0.1, lifeMax: 0.2, sizeMin: 4, sizeMax: 8
+    });
+  }
+
+  return { emit, update, draw, clear, burstSlash, burstSpark, burstStar, burstDebris, burstPetals, trailDash };
 })();

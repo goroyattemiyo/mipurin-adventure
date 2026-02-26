@@ -210,7 +210,12 @@ const Engine = (() => {
       let skipped = 0;
 
       while (_accumulator >= CONFIG.FRAME_DURATION && skipped < CONFIG.MAX_FRAME_SKIP) {
-        updateFn(CONFIG.FRAME_DURATION / 1000);
+        const dt = CONFIG.FRAME_DURATION / 1000;
+        if (typeof GameFeel !== 'undefined') GameFeel.update(dt);
+        const hitStopped = (typeof GameFeel !== 'undefined' && GameFeel.isHitStopped && GameFeel.isHitStopped());
+        if (!hitStopped) {
+          updateFn(dt);
+        }
         _accumulator -= CONFIG.FRAME_DURATION;
         skipped++;
       }

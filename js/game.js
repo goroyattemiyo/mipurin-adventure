@@ -966,6 +966,7 @@ const Game = (() => {
 
   function _drawMapScene(ctx) {
     ctx.save();
+    if (typeof GameFeel !== 'undefined') GameFeel.applyShake(ctx);
 
     // killCount世界演出
     const worldFx = NpcManager.getWorldEffects(flags);
@@ -993,7 +994,6 @@ const Game = (() => {
       ctx.restore();
     }
     if (typeof Particles !== 'undefined') Particles.draw(ctx);
-    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
     if (typeof Loot !== 'undefined') Loot.draw(ctx);
 
     ctx.restore(); // filterを完全にリセット
@@ -1015,6 +1015,9 @@ const Game = (() => {
         ctx.restore();
       }
     }
+
+    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
+    if (typeof GameFeel !== 'undefined') GameFeel.drawFlash(ctx, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
     _drawPanelBorders(ctx);
     _drawHud(ctx);

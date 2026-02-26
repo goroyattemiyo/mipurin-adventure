@@ -1,719 +1,1009 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>スプライトジェネレーター v3</title>
-<style>
-  :root { --bg:#1a1a2a; --panel:#0f1424; --accent:#F5A623; --text:#eee; --muted:#777; }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:monospace}
-  h1{margin:18px 0 8px;color:var(--accent)}
-  h2{margin:12px 0 6px;color:#fff;font-size:18px}
-  .wrap{max-width:1200px;margin:0 auto;padding:16px}
-  .panel{background:var(--panel);border:1px solid rgba(245,166,35,0.3);border-radius:10px;padding:12px;margin-bottom:16px}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  button{background:var(--accent);color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold}
-  button.secondary{background:#555;color:#eee}
-  input, select{background:#0b0f1c;color:#eee;border:1px solid #333;padding:6px 8px;border-radius:6px}
-  canvas{image-rendering:pixelated;border:1px solid #222;border-radius:6px}
-  .small{color:var(--muted);font-size:12px}
-  .label{font-size:12px;color:#ddd;text-align:center}
-  details{background:#0b0f1c;border:1px solid #222;border-radius:8px;padding:10px}
-  summary{cursor:pointer;color:#f8d36a}
-  .preview-grid{display:grid;grid-template-columns:repeat(6, 1fr);gap:6px;margin-top:10px}
-  .preview-item{display:flex;flex-direction:column;align-items:center;gap:4px}
-  .info{color:#aaa;font-size:12px}
-  .checker{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);
-    background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprite Generator v4</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #151c26;
+      --panel-2: #1b2430;
+      --text: #e6eef7;
+      --muted: #9bb0c8;
+      --accent: #7bdcff;
+      --accent-2: #ffd27b;
+      --danger: #ff6b6b;
+      --ok: #7bffb2;
+      --border: #2a3647;
+      --shadow: rgba(0,0,0,0.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: "Noto Sans JP", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 20% -10%, #17202b 0%, #0b0f14 60%);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+    header {
+      padding: 28px 24px 16px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    main { padding: 0 16px 40px; max-width: 1200px; margin: 0 auto; }
+    details {
+      margin: 12px 0;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 24px var(--shadow);
+      overflow: hidden;
+    }
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+    }
+    summary::-webkit-details-marker { display: none; }
+    .panel { padding: 16px 18px 20px; }
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    label { font-size: 13px; color: var(--muted); }
+    input[type="text"], input[type="password"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f141c;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--sans);
+    }
+    textarea { min-height: 72px; }
+    button {
+      background: var(--accent);
+      color: #04202c;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.05s ease, filter 0.2s ease;
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #2a3647; color: var(--text); }
+    button.danger { background: var(--danger); color: #240707; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .status { font-size: 13px; color: var(--muted); }
+    .badge { padding: 3px 8px; border-radius: 999px; background: #253244; font-size: 11px; }
+    .preview {
+      background: #0f141c;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      place-items: center;
+      min-height: 160px;
+    }
+    canvas, img { image-rendering: pixelated; max-width: 100%; }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+    }
+    .preview-grid .slot { text-align: center; font-size: 12px; color: var(--muted); }
+    .preview-grid .slot canvas { width: 100%; height: auto; background: #0b0f14; }
+    .sheet-preview canvas { width: 100%; height: auto; background: #0b0f14; }
+    .progress-row { display: flex; gap: 10px; align-items: center; }
+    progress { width: 100%; height: 12px; }
+    .code {
+      background: #0b0f14;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      color: #d8e6f7;
+    }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .chip { background: #1f2a3a; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .preview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@imgly/background-removal": "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/+esm"
+    }
+  }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <h1>スプライトジェネレーター v3 – かわいいドットキャラ</h1>
-
-  <div class="panel">
-    <details>
-      <summary>使い方</summary>
-      <div class="small" style="margin-top:8px;">
-        <div>このツールは「ミプリンの冒険」向けのスプライトシートをCanvas 2Dだけで生成します。</div>
-        <div>Seedを変更してRegenerateすると、ディテールや配置が変化します。</div>
-        <div>PNG/JSONをダウンロードし、`assets/sprites/` に配置してSpriteManagerのフォーマットに合わせて使用できます。</div>
-        <div>ZIPで一括ダウンロードも可能です。</div>
+  <header>スプライトジェネレーター v4</header>
+  <main>
+    <details open>
+      <summary>① API 設定パネル</summary>
+      <div class="panel grid grid-2">
+        <div>
+          <label>Gemini API キー</label>
+          <input id="apiKey" type="password" placeholder="AIza..." />
+          <div class="row" style="margin-top:10px;">
+            <button id="saveKey">キーを保存</button>
+            <button id="clearKey" class="secondary">保存をクリア</button>
+            <span class="badge" id="apiStatus">未設定</span>
+          </div>
+          <div class="hint">API キーは localStorage に保存されます。</div>
+        </div>
+        <div>
+          <label>ステータス</label>
+          <div class="status" id="quotaStatus">待機中...</div>
+          <div class="hint">Gemini API のクォータは API 側の制約に依存します。</div>
+        </div>
       </div>
     </details>
-  </div>
 
-  <div class="panel">
-    <div class="row">
-      <label>Seed</label>
-      <input id="seed" type="number" value="12345" />
-      <button id="regen">Regenerate</button>
-      <button id="downloadAll" class="secondary">Download All (ZIP)</button>
-    </div>
-    <div class="small">64色パレット + パステル強め / アウトラインは有彩色暗色 / 3fpsプレビュー</div>
-  </div>
+    <details open>
+      <summary>② キャラクター生成パネル</summary>
+      <div class="panel grid grid-2">
+        <div class="grid">
+          <label>キャラ名</label>
+          <input id="charName" type="text" value="poison_mushroom" />
+          <div class="grid grid-3">
+            <div>
+              <label>スタイル</label>
+              <select id="style">
+                <option value="chibi">chibi</option>
+                <option value="sd">SD</option>
+                <option value="real">リアル</option>
+              </select>
+            </div>
+            <div>
+              <label>サイズ</label>
+              <select id="size">
+                <option value="32">32×32</option>
+                <option value="48">48×48</option>
+                <option value="64" selected>64×64</option>
+              </select>
+            </div>
+            <div>
+              <label>自動背景除去</label>
+              <select id="autoBg">
+                <option value="on">ON</option>
+                <option value="off">OFF</option>
+              </select>
+            </div>
+          </div>
+          <label>追加プロンプト</label>
+          <textarea id="extraPrompt" placeholder="例: warm lighting, simple silhouette"></textarea>
+          <div class="row">
+            <button id="btnGenerate">AI 生成</button>
+            <label class="chip">
+              画像アップロード
+              <input id="fileUpload" type="file" accept="image/*" style="display:none" />
+            </label>
+          </div>
+          <div class="hint">AI 生成は Gemini 2.5 Flash Image を使用します。</div>
+        </div>
+        <div>
+          <div class="preview" id="aiPreviewBox">
+            <span class="muted">プレビュー</span>
+          </div>
+        </div>
+      </div>
+    </details>
 
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;">
-      <h2>Enemy Sprites (32x32, 3 frames)</h2>
-      <div class="info">32x32 / 3 frames / 9 types</div>
-    </div>
-    <div class="row" style="margin:8px 0;">
-      <button id="dlEnemy">Download PNG</button>
-      <button id="dlEnemyJson" class="secondary">Download JSON</button>
-      <label class="small">Zoom</label>
-      <input id="enemyZoom" type="range" min="1" max="8" value="4" />
-    </div>
-    <canvas id="enemyCanvas" class="checker" width="96" height="288"></canvas>
-    <div id="enemyPreview" class="preview-grid"></div>
-  </div>
+    <details>
+      <summary>③ 背景除去パネル</summary>
+      <div class="panel grid grid-2">
+        <div>
+          <label>Before</label>
+          <div class="preview" id="bgBefore"></div>
+        </div>
+        <div>
+          <label>After</label>
+          <div class="preview" id="bgAfter"></div>
+        </div>
+        <div class="row">
+          <button id="btnRemoveBg">背景除去</button>
+          <div class="progress-row" style="flex:1;">
+            <progress id="bgProgress" value="0" max="100"></progress>
+            <span class="small" id="bgProgressText">0%</span>
+          </div>
+        </div>
+      </div>
+    </details>
 
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;">
-      <h2>NPC Sprites (32x32, 2 frames)</h2>
-      <div class="info">32x32 / 2 frames / 8 types</div>
-    </div>
-    <div class="row" style="margin:8px 0;">
-      <button id="dlNpc">Download PNG</button>
-      <button id="dlNpcJson" class="secondary">Download JSON</button>
-      <label class="small">Zoom</label>
-      <input id="npcZoom" type="range" min="1" max="8" value="4" />
-    </div>
-    <canvas id="npcCanvas" class="checker" width="64" height="256"></canvas>
-    <div id="npcPreview" class="preview-grid"></div>
-  </div>
+    <details open>
+      <summary>④ ピクセルアート変換パネル</summary>
+      <div class="panel grid grid-2">
+        <div class="grid">
+          <label>パレット色数</label>
+          <input id="palette" type="range" min="4" max="32" value="16" />
+          <label>出力サイズ</label>
+          <select id="pixelSize">
+            <option value="32">32</option>
+            <option value="48">48</option>
+            <option value="64" selected>64</option>
+          </select>
+          <div class="row">
+            <label><input id="outline" type="checkbox" checked /> 輪郭線</label>
+            <label><input id="dither" type="checkbox" /> ディザリング</label>
+          </div>
+          <button id="btnPixelize" class="secondary">ピクセル化更新</button>
+        </div>
+        <div>
+          <label>プレビュー</label>
+          <div class="preview" id="pixelPreview"></div>
+        </div>
+      </div>
+    </details>
 
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;">
-      <h2>Boss Sprites (64x64, 4 frames)</h2>
-      <div class="info">64x64 / 4 frames / 3 types</div>
-    </div>
-    <div class="row" style="margin:8px 0;">
-      <button id="dlBoss">Download PNG</button>
-      <button id="dlBossJson" class="secondary">Download JSON</button>
-      <label class="small">Zoom</label>
-      <input id="bossZoom" type="range" min="1" max="6" value="2" />
-    </div>
-    <canvas id="bossCanvas" class="checker" width="256" height="192"></canvas>
-  </div>
+    <details>
+      <summary>⑤ 4方向スプライト生成パネル</summary>
+      <div class="panel grid">
+        <div class="row">
+          <button id="btnGenDirAI">AI で4方向生成</button>
+          <button id="btnGenDirProg" class="secondary">プログラム生成</button>
+          <span class="hint">AI は正面画像から左/右/後ろを生成します。</span>
+        </div>
+        <div class="preview-grid" id="dirGrid"></div>
+      </div>
+    </details>
 
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;">
-      <h2>Player Sprites (32x32, 14 frames)</h2>
-      <div class="info">32x32 / 14 frames / walk4x3 + attack2</div>
-    </div>
-    <div class="row" style="margin:8px 0;">
-      <button id="dlPlayer">Download PNG</button>
-      <button id="dlPlayerJson" class="secondary">Download JSON</button>
-      <label class="small">Zoom</label>
-      <input id="playerZoom" type="range" min="1" max="8" value="4" />
-    </div>
-    <canvas id="playerCanvas" class="checker" width="448" height="32"></canvas>
-  </div>
+    <details>
+      <summary>⑥ アニメーションフレーム生成パネル</summary>
+      <div class="panel grid">
+        <div class="row">
+          <button id="btnGenFrames" class="secondary">プログラム生成</button>
+          <button id="btnPreviewAnim">アニメーションプレビュー</button>
+          <span class="hint">idle / walk1 / walk2 を自動生成します。</span>
+        </div>
+        <div class="preview" id="animPreview"></div>
+      </div>
+    </details>
 
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;">
-      <h2>Tile Sprites (32x32)</h2>
-      <div class="info">32x32 / 19 tiles</div>
-    </div>
-    <div class="row" style="margin:8px 0;">
-      <button id="dlTiles">Download PNG</button>
-      <button id="dlTilesJson" class="secondary">Download JSON</button>
-      <label class="small">Zoom</label>
-      <input id="tileZoom" type="range" min="1" max="8" value="4" />
-    </div>
-    <canvas id="tileCanvas" class="checker" width="320" height="128"></canvas>
-    <div id="tileLabels" class="preview-grid"></div>
-  </div>
-</div>
+    <details open>
+      <summary>⑦ スプライトシート出力パネル</summary>
+      <div class="panel grid grid-2">
+        <div class="sheet-preview">
+          <label>最終シート</label>
+          <div class="preview" id="sheetPreview"></div>
+        </div>
+        <div class="grid">
+          <div class="row">
+            <button id="btnDownloadPng">PNG ダウンロード</button>
+            <button id="btnDownloadJson" class="secondary">JSON メタデータ</button>
+          </div>
+          <label>ゲームにインポート</label>
+          <div class="code" id="importCode">// まだ生成されていません</div>
+        </div>
+      </div>
+    </details>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script>
-(() => {
-  const palette = {
-    warm: ['#fff1d6','#fbd18a','#f5a623','#f29f68','#e07b39','#c96a2a','#a85b2a','#7a4a2a'],
-    cool: ['#e8f6ff','#bfe4ff','#85c1e9','#5dade2','#3498db','#2980b9','#4ad1c8','#7ef0ff'],
-    nature: ['#d7f5d0','#9ee6a1','#6acb6e','#2ecc71','#27ae60','#1e8449','#145a32','#2d5a1e'],
-    dark: ['#1a1a2a','#2a2a4a','#3b3f5c','#4f4c6a','#5b6d7a','#3a2a4a','#4a235a','#11111a'],
-    earth: ['#f2e0c9','#d5b88c','#c4a035','#b7950b','#8b7355','#6b5b3a','#7f8c8d','#708090'],
-    accent: ['#ff6b8a','#ff5a5f','#e74c3c','#f1c40f','#fff8ff','#f5f2e8','#f8f8ff','#ffd1e8'],
-    metallic: ['#e6edf0','#d1d8e0','#bdc3c7','#95a5a6','#f7dc6f','#f1c40f','#a9cce3','#9b59b6'],
-    pastel: ['#f9e79f','#f7c6e3','#d7bde2','#aed6f1','#d4efdf','#fadbd8','#fcf3cf','#f5cba7']
-  };
+    <details>
+      <summary>⑧ バッチモードパネル</summary>
+      <div class="panel grid">
+        <div class="row">
+          <button id="btnBatch">一括生成</button>
+          <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
+          <label class="chip"><input id="batchUseAI" type="checkbox" checked /> AI方向生成</label>
+          <span class="hint">一括生成は時間がかかります。</span>
+        </div>
+        <div class="status" id="batchStatus">未実行</div>
+        <div class="grid grid-3" id="presetList"></div>
+      </div>
+    </details>
+  </main>
 
-  const enemyTypes = ['poison_mushroom','green_slime','spider','bomb_mushroom','dark_slime','bat','ice_worm','dark_flower','shadow_bee'];
-  const npcTypes = ['elder','merchant','healer','guard','child','fairy','cat','mushroom_friend'];
-  const bossTypes = ['mushroom_king','ice_beetle','dark_queen'];
-  const tileTypes = ['grass','path','wall','water','tree','house','fence','well','flower','bridge','save_point','sign','chest','stump','bush','cave_floor','anchor','seal_wall','exit'];
+  <script type="module">
+    import imglyRemoveBackground from '@imgly/background-removal';
 
-  const enemyCanvas = document.getElementById('enemyCanvas');
-  const npcCanvas = document.getElementById('npcCanvas');
-  const bossCanvas = document.getElementById('bossCanvas');
-  const tileCanvas = document.getElementById('tileCanvas');
-  const playerCanvas = document.getElementById('playerCanvas');
-  const seedInput = document.getElementById('seed');
+    class GeminiAPI {
+      constructor(apiKey) { this.apiKey = apiKey; }
 
-  const enemyZoom = document.getElementById('enemyZoom');
-  const npcZoom = document.getElementById('npcZoom');
-  const bossZoom = document.getElementById('bossZoom');
-  const tileZoom = document.getElementById('tileZoom');
-  const playerZoom = document.getElementById('playerZoom');
+      buildPrompt(name, style, extras) {
+        const styleMap = {
+          chibi: 'cute chibi',
+          sd: 'super-deformed',
+          real: 'detailed'
+        };
+        const s = styleMap[style] || 'cute chibi';
+        return `A single ${s} game character sprite of a ${name}, facing forward, pixel art style, transparent background, centered, full body, no shadow, clean edges. ${extras || ''}`.trim();
+      }
 
-  const enemyPreview = document.getElementById('enemyPreview');
-  const npcPreview = document.getElementById('npcPreview');
-  const tileLabels = document.getElementById('tileLabels');
+      buildDirectionPrompt(direction) {
+        return `Redraw this exact character sprite facing ${direction}. Keep the same art style, colors, proportions, and transparent background. Only change the facing direction.`;
+      }
 
-  let animTick = 0;
-  let rafId = null;
+      async generateImage(prompt) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
+        const parts = [{ text: prompt }];
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+        if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+        const data = await res.json();
+        const b64 = findInlineBase64(data);
+        if (!b64) throw new Error('No image data in response');
+        return base64ToBlob(b64, 'image/png');
+      }
 
-  document.getElementById('regen').addEventListener('click', generateAll);
-
-  function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
-  function pick(arr, r) { return arr[Math.floor(r() * arr.length)]; }
-  function randRange(r, min, max) { return min + (max - min) * r(); }
-
-  function hexToHsl(hex) {
-    const n = parseInt(hex.slice(1),16);
-    const r = ((n>>16)&255)/255, g = ((n>>8)&255)/255, b = (n&255)/255;
-    const max = Math.max(r,g,b), min = Math.min(r,g,b);
-    let h=0,s=0,l=(max+min)/2;
-    if (max!==min) {
-      const d = max-min;
-      s = l>0.5 ? d/(2-max-min) : d/(max+min);
-      switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}
-      h/=6;
+      async editImage(prompt, imageBase64) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
+        const parts = [
+          { text: prompt },
+          { inline_data: { mime_type: 'image/png', data: imageBase64 } }
+        ];
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+        if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+        const data = await res.json();
+        const b64 = findInlineBase64(data);
+        if (!b64) throw new Error('No image data in response');
+        return base64ToBlob(b64, 'image/png');
+      }
     }
-    return {h,s,l};
-  }
-  function hslToHex(h,s,l){
-    function hue2rgb(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
-    let r,g,b;
-    if(s===0){r=g=b=l;} else {const q=l<0.5?l*(1+s):l+s-l*s;const p=2*l-q;r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);} 
-    return '#' + [r,g,b].map(v=>Math.round(v*255).toString(16).padStart(2,'0')).join('');
-  }
-  function shade(base, amount) {
-    const hsl = hexToHsl(base);
-    const l = Math.max(0, Math.min(1, hsl.l + amount));
-    return hslToHex(hsl.h, hsl.s, l);
-  }
 
-  function drawRoundedRect(ctx, x, y, w, h, r, color) {
-    ctx.fillStyle = color;
-    for (let yy=0; yy<h; yy++) for (let xx=0; xx<w; xx++) {
-      const dx = Math.min(xx, w-1-xx), dy = Math.min(yy, h-1-yy);
-      if (dx<r && dy<r && (dx-r)*(dx-r)+(dy-r)*(dy-r) > r*r) continue;
-      ctx.fillRect(x+xx, y+yy, 1, 1);
+    class BgRemover {
+      async remove(imageBlob, onProgress) {
+        const config = {
+          model: 'isnet_fp16',
+          output: { format: 'image/png', type: 'foreground' },
+          progress: (key, current, total) => onProgress?.(key, current, total)
+        };
+        return await imglyRemoveBackground(imageBlob, config);
+      }
     }
-  }
-  function drawCircle(ctx, cx, cy, r, color){
-    ctx.fillStyle = color;
-    for (let y=-r;y<=r;y++) for (let x=-r;x<=r;x++) if (x*x+y*y<=r*r) ctx.fillRect(cx+x, cy+y, 1, 1);
-  }
-  function drawEye(ctx, x, y, size, color, highlightDir){
-    drawCircle(ctx, x, y, size, color);
-    const hx = highlightDir==='right'?1:-1;
-    ctx.fillStyle = '#fff'; ctx.fillRect(x-1+hx, y-1, 1, 1);
-  }
-  function drawCheek(ctx, x, y){ drawCircle(ctx, x, y, 1, '#ffb3c1'); }
-  function dither(ctx, x, y, w, h, c1, c2){
-    for (let j=0;j<h;j++) for (let i=0;i<w;i++) ctx.fillStyle=((i+j)%2?c1:c2), ctx.fillRect(x+i,y+j,1,1);
-  }
-  function drawOutline(imageData, color){
-    const d = imageData.data; const w=imageData.width, h=imageData.height;
-    const out = new Uint8ClampedArray(d.length);
-    const col = hexToRgb(color);
-    function idx(x,y){return (y*w+x)*4;}
-    for (let y=1;y<h-1;y++) for (let x=1;x<w-1;x++) {
-      const i = idx(x,y);
-      if (d[i+3]===0) {
-        let near=false;
-        for (let oy=-1;oy<=1;oy++) for (let ox=-1;ox<=1;ox++) {
-          if (d[idx(x+ox,y+oy)+3]>0) near=true;
+
+    class PixelConverter {
+      convert(sourceCanvas, options = {}) {
+        const { targetSize = 64, paletteSize = 16, outline = true, dither = false } = options;
+        const small = document.createElement('canvas');
+        small.width = small.height = targetSize;
+        const sctx = small.getContext('2d');
+        sctx.imageSmoothingEnabled = false;
+        sctx.clearRect(0,0,targetSize,targetSize);
+        sctx.drawImage(sourceCanvas, 0, 0, targetSize, targetSize);
+
+        const imgData = sctx.getImageData(0, 0, targetSize, targetSize);
+        const palette = medianCut(imgData, paletteSize);
+        applyPalette(imgData, palette, dither);
+        if (outline) addOutline(imgData);
+        sctx.putImageData(imgData, 0, 0);
+        return small;
+      }
+    }
+
+    class DirectionGenerator {
+      async generateWithAI(geminiApi, frontCanvas) {
+        const frontBase64 = frontCanvas.toDataURL('image/png').split(',')[1];
+        const directions = { front: frontCanvas };
+        for (const dir of ['left', 'right', 'back']) {
+          const prompt = geminiApi.buildDirectionPrompt(dir);
+          const blob = await geminiApi.editImage(prompt, frontBase64);
+          directions[dir] = await blobToCanvas(blob);
         }
-        if (near) { out[i]=col.r; out[i+1]=col.g; out[i+2]=col.b; out[i+3]=255; }
+        return directions;
+      }
+
+      generateProgrammatic(frontCanvas) {
+        return {
+          front: frontCanvas,
+          right: this._flipH(frontCanvas),
+          left: frontCanvas,
+          back: this._darken(frontCanvas, 0.7)
+        };
+      }
+
+      _flipH(canvas) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.translate(c.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(canvas, 0, 0);
+        return c;
+      }
+
+      _darken(canvas, factor) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        const img = ctx.getImageData(0, 0, c.width, c.height);
+        for (let i = 0; i < img.data.length; i += 4) {
+          img.data[i] *= factor;
+          img.data[i+1] *= factor;
+          img.data[i+2] *= factor;
+        }
+        ctx.putImageData(img, 0, 0);
+        return c;
       }
     }
-    for (let i=0;i<d.length;i++) if (out[i+3]) d[i]=out[i], d[i+1]=out[i+1], d[i+2]=out[i+2], d[i+3]=out[i+3];
-  }
-  function hexToRgb(hex){const n=parseInt(hex.slice(1),16);return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
 
-  function cuteBody(ctx, cx, cy, headR, bodyR, base, outline){
-    const shadow = shade(base, -0.12);
-    const highlight = shade(base, 0.12);
-    drawCircle(ctx, cx, cy, headR, base);
-    drawCircle(ctx, cx, cy+10, bodyR, base);
-    dither(ctx, cx-headR+2, cy+2, headR, headR, base, shadow);
-    drawCircle(ctx, cx-3, cy-3, 2, highlight);
-  }
-
-  function drawEnemy(ctx, type, frame, r) {
-    const outline = '#2A2A4A';
-    if (type === 'poison_mushroom') {
-      const cap = '#ff6b8a';
-      const capS = shade(cap,-0.1);
-      const stem = '#fff1d6';
-      const hop = frame===1?-1:frame===2?1:0;
-      drawRoundedRect(ctx, 8, 8+hop, 16, 12, 6, cap);
-      dither(ctx, 9, 12+hop, 14, 4, cap, capS);
-      drawRoundedRect(ctx, 12, 18+hop, 8, 10, 4, stem);
-      drawCircle(ctx, 12, 12+hop, 2, '#fff');
-      drawCircle(ctx, 20, 13+hop, 2, '#fff');
-      drawEye(ctx, 14, 20+hop, 2, '#5b3a29', 'left');
-      drawEye(ctx, 18, 20+hop, 2, '#5b3a29', 'right');
-      drawCheek(ctx, 12, 22+hop); drawCheek(ctx, 20, 22+hop);
-    }
-    if (type === 'green_slime') {
-      const base = '#9ee6a1';
-      const wob = frame===1?-1:frame===2?1:0;
-      drawRoundedRect(ctx, 8, 12+wob, 16, 14, 7, base);
-      drawCircle(ctx, 12, 14+wob, 3, '#fff');
-      drawCircle(ctx, 19, 15+wob, 3, '#fff');
-      drawEye(ctx, 12, 18+wob, 2, '#2A2A4A', 'left');
-      drawEye(ctx, 18, 18+wob, 2, '#2A2A4A', 'right');
-      drawCheek(ctx, 10, 20+wob); drawCheek(ctx, 20, 20+wob);
-    }
-    if (type === 'spider') {
-      const base = '#d7bde2';
-      drawCircle(ctx, 16, 16, 7, base);
-      for (let i=0;i<8;i++){ const dx = i<4?-6:-2; const dy = i%2?2:-1; drawRoundedRect(ctx, 6+i*2, 20+dy, 3, 2, 1, '#7f8c8d'); }
-      drawEye(ctx, 13, 14, 2, '#ff5a5f', 'left');
-      drawEye(ctx, 19, 14, 2, '#ff5a5f', 'right');
-      drawCheek(ctx, 12, 17); drawCheek(ctx, 20, 17);
-    }
-    if (type === 'bomb_mushroom') {
-      const cap = '#2a2a4a';
-      const stem = '#f5f2e8';
-      const blink = frame===1;
-      drawRoundedRect(ctx, 8, 8, 16, 12, 6, cap);
-      drawRoundedRect(ctx, 12, 18, 8, 10, 4, stem);
-      drawRoundedRect(ctx, 15, 4, 2, 4, 1, '#8b5a2b');
-      drawCircle(ctx, 16, 3, 2, blink?'#ff5a5f':'#f1c40f');
-      drawEye(ctx, 13, 20, 2, '#ff5a5f', 'left');
-      drawEye(ctx, 19, 20, 2, '#ff5a5f', 'right');
-      drawCheek(ctx, 12, 22); drawCheek(ctx, 20, 22);
-    }
-    if (type === 'dark_slime') {
-      const base = '#a68bdc';
-      drawRoundedRect(ctx, 8, 12, 16, 14, 7, base);
-      drawEye(ctx, 12, 18, 2, '#ff5a5f', 'left');
-      drawEye(ctx, 18, 18, 2, '#ff5a5f', 'right');
-      dither(ctx, 8, 10, 16, 4, '#6c2eb9', base);
-    }
-    if (type === 'bat') {
-      const base = '#f7c6e3';
-      drawRoundedRect(ctx, 12, 14, 8, 10, 5, base);
-      drawRoundedRect(ctx, 4, 12, 10, 6, 4, '#d7bde2');
-      drawRoundedRect(ctx, 18, 12, 10, 6, 4, '#d7bde2');
-      drawEye(ctx, 13, 16, 2, '#2A2A4A', 'left');
-      drawEye(ctx, 19, 16, 2, '#2A2A4A', 'right');
-      drawCheek(ctx, 12, 19); drawCheek(ctx, 20, 19);
-    }
-    if (type === 'ice_worm') {
-      for (let i=0;i<4;i++) drawCircle(ctx, 10+i*5, 16+i%2, 4, '#bfe4ff');
-      drawEye(ctx, 8, 14, 2, '#3498db', 'left');
-      drawEye(ctx, 12, 14, 2, '#3498db', 'right');
-      drawCheek(ctx, 9, 17); drawCheek(ctx, 13, 17);
-    }
-    if (type === 'dark_flower') {
-      for (let i=0;i<8;i++) drawCircle(ctx, 16+Math.round(Math.cos(i)*6), 16+Math.round(Math.sin(i)*6), 2, '#4a235a');
-      drawCircle(ctx, 16, 16, 4, '#f1c40f');
-      drawEye(ctx, 14, 15, 2, '#2A2A4A', 'left');
-      drawEye(ctx, 18, 15, 2, '#2A2A4A', 'right');
-      drawCheek(ctx, 13, 18); drawCheek(ctx, 19, 18);
-    }
-    if (type === 'shadow_bee') {
-      drawRoundedRect(ctx, 10, 14, 12, 10, 5, '#2a2a4a');
-      drawRoundedRect(ctx, 8, 10, 6, 4, 2, '#aed6f1');
-      drawRoundedRect(ctx, 18, 10, 6, 4, 2, '#aed6f1');
-      drawEye(ctx, 12, 16, 2, '#ff5a5f', 'left');
-      drawEye(ctx, 18, 16, 2, '#ff5a5f', 'right');
-      drawCheek(ctx, 12, 19); drawCheek(ctx, 20, 19);
-    }
-  }
-
-  function drawNpc(ctx, type, frame, r) {
-    const outline = '#5B3A29';
-    const bounce = frame===1?-1:0;
-    if (type === 'elder') {
-      cuteBody(ctx, 16, 12+bounce, 7, 6, '#f5a623', outline);
-      drawRoundedRect(ctx, 8, 20+bounce, 2, 10, 1, '#8b5a2b');
-      drawCircle(ctx, 12, 10+bounce, 1, '#fff');
-      drawCircle(ctx, 20, 10+bounce, 1, '#fff');
-      drawRoundedRect(ctx, 12, 22+bounce, 8, 4, 2, '#f5f2e8');
-    }
-    if (type === 'merchant') {
-      cuteBody(ctx, 16, 12+bounce, 7, 6, '#e67e22', outline);
-      drawRoundedRect(ctx, 12, 18+bounce, 8, 6, 2, '#8b7355');
-      if (frame===1) drawRoundedRect(ctx, 20, 18+bounce, 6, 4, 2, '#f8d36a');
-    }
-    if (type === 'healer') {
-      cuteBody(ctx, 16, 12+bounce, 7, 6, '#f5f2e8', outline);
-      drawRoundedRect(ctx, 14, 16+bounce, 4, 4, 1, '#e74c3c');
-    }
-    if (type === 'guard') {
-      cuteBody(ctx, 16, 12+bounce, 7, 6, '#708090', outline);
-      drawRoundedRect(ctx, 22, 14+bounce, 2, 12, 1, '#c4a035');
-    }
-    if (type === 'child') {
-      drawCircle(ctx, 16, 12+bounce, 6, '#f8d36a');
-      drawCircle(ctx, 16, 22+bounce, 5, '#f8d36a');
-      drawEye(ctx, 13, 12+bounce, 2, '#2A2A4A', 'left');
-      drawEye(ctx, 19, 12+bounce, 2, '#2A2A4A', 'right');
-      drawCheek(ctx, 12, 15+bounce); drawCheek(ctx, 20, 15+bounce);
-    }
-    if (type === 'fairy') {
-      cuteBody(ctx, 16, 12+bounce, 6, 5, '#1abc9c', outline);
-      drawRoundedRect(ctx, 8, 10+bounce, 4, 3, 2, '#aed6f1');
-      drawRoundedRect(ctx, 20, 10+bounce, 4, 3, 2, '#aed6f1');
-      drawCircle(ctx, 24, 6+bounce, 1, '#f1c40f');
-    }
-    if (type === 'cat') {
-      drawCircle(ctx, 16, 14+bounce, 7, '#f5cba7');
-      drawRoundedRect(ctx, 10, 6+bounce, 4, 4, 1, '#f5cba7');
-      drawRoundedRect(ctx, 18, 6+bounce, 4, 4, 1, '#f5cba7');
-      drawEye(ctx, 13, 13+bounce, 2, '#2A2A4A', 'left');
-      drawEye(ctx, 19, 13+bounce, 2, '#2A2A4A', 'right');
-      if (frame===1) drawRoundedRect(ctx, 6, 20+bounce, 6, 2, 1, '#f5cba7');
-    }
-    if (type === 'mushroom_friend') {
-      drawEnemy(ctx, 'poison_mushroom', 0, r);
-      drawCircle(ctx, 16, 20, 2, '#fff');
-    }
-  }
-
-  function drawBoss(ctx, type, frame, r) {
-    const outline = '#2A2A4A';
-    if (type === 'mushroom_king') {
-      drawCircle(ctx, 32, 22, 18, '#ff6b8a');
-      drawRoundedRect(ctx, 24, 34, 16, 20, 6, '#fff1d6');
-      drawRoundedRect(ctx, 26, 10, 12, 6, 2, '#f1c40f');
-      drawEye(ctx, 26, 32, 3, outline, 'left');
-      drawEye(ctx, 38, 32, 3, outline, 'right');
-      drawCheek(ctx, 22, 36); drawCheek(ctx, 42, 36);
-      if (frame===1) drawRoundedRect(ctx, 24, 20, 16, 2, 1, '#c0392b');
-      if (frame===2) dither(ctx, 14, 6, 36, 8, '#fff8ff', '#f8d36a');
-      if (frame===3) drawRoundedRect(ctx, 28, 10, 12, 2, 1, '#2A2A4A');
-    }
-    if (type === 'ice_beetle') {
-      drawRoundedRect(ctx, 16, 24, 32, 26, 10, '#85c1e9');
-      drawRoundedRect(ctx, 22, 18, 20, 8, 4, '#bfe4ff');
-      drawEye(ctx, 26, 32, 3, outline, 'left');
-      drawEye(ctx, 38, 32, 3, outline, 'right');
-      drawCheek(ctx, 24, 36); drawCheek(ctx, 40, 36);
-      if (frame===2) drawRoundedRect(ctx, 26, 10, 12, 6, 2, '#f8f8ff');
-      if (frame===3) drawRoundedRect(ctx, 18, 26, 28, 2, 1, '#5dade2');
-    }
-    if (type === 'dark_queen') {
-      drawRoundedRect(ctx, 18, 22, 28, 28, 10, '#3b3f5c');
-      drawRoundedRect(ctx, 20, 18, 24, 6, 3, '#6c2eb9');
-      drawRoundedRect(ctx, 8, 18, 6, 10, 2, '#4f4c6a');
-      drawRoundedRect(ctx, 50, 18, 6, 10, 2, '#4f4c6a');
-      drawEye(ctx, 28, 34, 3, '#ff5a5f', 'left');
-      drawEye(ctx, 36, 34, 3, '#ff5a5f', 'right');
-      drawCheek(ctx, 26, 38); drawCheek(ctx, 40, 38);
-      if (frame===1) dither(ctx, 10, 8, 44, 6, '#6c2eb9', '#4a235a');
-      if (frame===2) drawRoundedRect(ctx, 26, 12, 12, 4, 2, '#f8d36a');
-      if (frame===3) drawRoundedRect(ctx, 24, 32, 16, 2, 1, '#f5f2e8');
-    }
-  }
-
-  function drawPlayer(ctx, frame, r) {
-    const body = '#f8d36a';
-    const stripe = '#2A2A4A';
-    const wing = '#aed6f1';
-    const y = frame%3===1?-1:0;
-    const dir = Math.floor(frame/3);
-    drawRoundedRect(ctx, 12, 10+y, 8, 8, 4, body);
-    drawRoundedRect(ctx, 12, 18+y, 8, 8, 4, body);
-    drawRoundedRect(ctx, 12, 14+y, 8, 2, 1, stripe);
-    drawEye(ctx, 13, 12+y, 2, '#2A2A4A', 'left');
-    drawEye(ctx, 19, 12+y, 2, '#2A2A4A', 'right');
-    drawCheek(ctx, 12, 15+y); drawCheek(ctx, 20, 15+y);
-    if (dir===0) drawRoundedRect(ctx, 8, 10+y, 4, 3, 2, wing);
-    if (dir===1) drawRoundedRect(ctx, 20, 10+y, 4, 3, 2, wing);
-    if (dir===2) drawRoundedRect(ctx, 10, 9+y, 5, 3, 2, wing);
-    if (dir===3) drawRoundedRect(ctx, 17, 9+y, 5, 3, 2, wing);
-  }
-
-  function drawTile(ctx, type, r) {
-    if (type === 'grass') {
-      dither(ctx,0,0,32,32,'#9ee6a1','#6acb6e');
-      for (let i=0;i<6;i++) drawCircle(ctx, Math.floor(randRange(r,4,28)), Math.floor(randRange(r,4,28)), 1, '#ffb3c1');
-    }
-    if (type === 'path') {
-      dither(ctx,0,0,32,32,'#d5b88c','#c4a035');
-      drawCircle(ctx, 10, 20, 1, '#7f8c8d');
-    }
-    if (type === 'wall') {
-      dither(ctx,0,0,32,32,'#6b5b3a','#8b7355');
-      for (let y=0;y<32;y+=8) dither(ctx,0,y,32,1,'#4a3a28','#6b5b3a');
-    }
-    if (type === 'water') {
-      dither(ctx,0,0,32,32,'#5dade2','#2980b9');
-      for (let i=0;i<32;i+=6) drawRoundedRect(ctx,i,10,4,1,1,'#e8f6ff');
-    }
-    if (type === 'tree') {
-      drawRoundedRect(ctx, 12, 18, 8, 10, 3, '#8b7355');
-      drawCircle(ctx, 16, 14, 9, '#2ecc71');
-    }
-    if (type === 'house') {
-      drawRoundedRect(ctx, 8, 14, 16, 12, 3, '#8b7355');
-      drawRoundedRect(ctx, 10, 10, 12, 6, 2, '#6b5b3a');
-      drawRoundedRect(ctx, 12, 18, 4, 6, 1, '#2A2A4A');
-      drawRoundedRect(ctx, 18, 18, 4, 4, 1, '#e8f6ff');
-    }
-    if (type === 'fence') {
-      drawRoundedRect(ctx, 8, 8, 2, 16, 1, '#8b7355');
-      drawRoundedRect(ctx, 22, 8, 2, 16, 1, '#8b7355');
-      drawRoundedRect(ctx, 8, 12, 16, 2, 1, '#6b5b3a');
-    }
-    if (type === 'well') {
-      drawCircle(ctx, 16, 18, 6, '#708090');
-      drawRoundedRect(ctx, 12, 16, 8, 4, 2, '#2A2A4A');
-    }
-    if (type === 'flower') {
-      dither(ctx,0,0,32,32,'#9ee6a1','#6acb6e');
-      for (let i=0;i<6;i++) drawCircle(ctx, 8+i*4, 16, 1, pick(palette.accent, r));
-    }
-    if (type === 'bridge') {
-      dither(ctx,0,0,32,32,'#8b7355','#6b5b3a');
-      for (let i=0;i<32;i+=4) drawRoundedRect(ctx,i,14,2,6,1,'#5B3A29');
-    }
-    if (type === 'save_point') {
-      drawRoundedRect(ctx, 12, 20, 8, 6, 2, '#8b7355');
-      drawCircle(ctx, 16, 14, 6, '#f8d36a');
-      drawRoundedRect(ctx, 16, 6, 1, 4, 1, '#fff8ff');
-    }
-    if (type === 'sign') {
-      drawRoundedRect(ctx, 14, 10, 4, 12, 1, '#8b7355');
-      drawRoundedRect(ctx, 8, 8, 16, 6, 2, '#c4a035');
-    }
-    if (type === 'chest') {
-      drawRoundedRect(ctx, 8, 14, 16, 10, 3, '#daa520');
-      drawRoundedRect(ctx, 8, 18, 16, 2, 1, '#6b5b3a');
-      drawRoundedRect(ctx, 15, 18, 2, 4, 1, '#f8f8ff');
-    }
-    if (type === 'stump') {
-      drawCircle(ctx, 16, 18, 6, '#6b5b3a');
-      drawRoundedRect(ctx, 12, 16, 8, 4, 2, '#c4a035');
-    }
-    if (type === 'bush') {
-      drawCircle(ctx, 12, 18, 5, '#2ecc71');
-      drawCircle(ctx, 20, 18, 5, '#2ecc71');
-      drawCircle(ctx, 14, 16, 1, '#ff5a5f');
-      drawCircle(ctx, 18, 20, 1, '#ff5a5f');
-    }
-    if (type === 'cave_floor') {
-      dither(ctx,0,0,32,32,'#3b3f5c','#2b2f44');
-      drawRoundedRect(ctx, 8, 8, 6, 1, 1, '#1a1a2a');
-    }
-    if (type === 'anchor') {
-      drawRoundedRect(ctx, 15, 8, 2, 16, 1, '#708090');
-      drawRoundedRect(ctx, 10, 20, 12, 2, 1, '#708090');
-    }
-    if (type === 'seal_wall') {
-      drawRoundedRect(ctx, 4, 4, 24, 24, 4, '#2ecc71');
-      for (let i=8;i<24;i+=6) drawRoundedRect(ctx, i, 10, 2, 8, 1, '#f8f8ff');
-    }
-    if (type === 'exit') {
-      drawRoundedRect(ctx, 6, 6, 20, 20, 4, '#2ecc71');
-      drawRoundedRect(ctx, 10, 10, 12, 12, 2, '#1a1a2a');
-    }
-  }
-
-  function makeJson(sheetW, sheetH, frameW, frameH, names, framesPer) {
-    const frames = [];
-    const animations = {};
-    const cols = sheetW / frameW;
-    for (let i=0;i<names.length;i++) {
-      for (let f=0;f<framesPer;f++) {
-        const idx = i * framesPer + f;
-        const sx = (idx % cols) * frameW;
-        const sy = Math.floor(idx / cols) * frameH;
-        frames.push({ sx, sy, sw: frameW, sh: frameH });
+    class FrameGenerator {
+      generate(directionCanvas) {
+        return {
+          idle: directionCanvas,
+          walk1: this._shiftY(directionCanvas, -1),
+          walk2: this._shiftY(directionCanvas, 1)
+        };
       }
-      const base = i * framesPer;
-      animations[names[i] + '_idle'] = { frames: [base], fps: 3, loop: true };
-      if (framesPer > 1) animations[names[i] + '_move'] = { frames: [base, base+1], fps: 3, loop: true };
-      if (framesPer > 2) animations[names[i] + '_hurt'] = { frames: [base+2], fps: 3, loop: false };
-      if (framesPer > 3) animations[names[i] + '_special'] = { frames: [base+2, base+3], fps: 3, loop: false };
-    }
-    return { sheet: { w: sheetW, h: sheetH, frameW, frameH }, frames, animations };
-  }
 
-  function renderSheet(canvas, frameW, frameH, names, framesPer, drawFn, zoom, r) {
-    canvas.width = frameW * framesPer;
-    canvas.height = frameH * names.length;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    ctx.imageSmoothingEnabled = false;
-    for (let i=0;i<names.length;i++) {
-      for (let f=0;f<framesPer;f++) {
-        ctx.save(); ctx.translate(f*frameW, i*frameH);
-        drawFn(ctx, names[i], f, r);
-        ctx.restore();
+      _shiftY(canvas, dy) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.drawImage(canvas, 0, dy);
+        return c;
       }
     }
-    canvas.style.width = canvas.width * zoom + 'px';
-    canvas.style.height = canvas.height * zoom + 'px';
-  }
 
-  function renderPlayer(canvas, zoom, r) {
-    canvas.width = 32 * 14;
-    canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    for (let i=0;i<14;i++) {
-      ctx.save(); ctx.translate(i*32, 0); drawPlayer(ctx, i, r); ctx.restore();
+    class SheetAssembler {
+      assemble(allFrames, frameSize) {
+        const cols = 3, rows = 4;
+        const sheet = document.createElement('canvas');
+        sheet.width = frameSize * cols;
+        sheet.height = frameSize * rows;
+        const ctx = sheet.getContext('2d');
+        const order = ['front', 'left', 'right', 'back'];
+        const frames = ['idle', 'walk1', 'walk2'];
+        order.forEach((dir, row) => {
+          frames.forEach((frame, col) => {
+            ctx.drawImage(allFrames[dir][frame], col * frameSize, row * frameSize, frameSize, frameSize);
+          });
+        });
+        return sheet;
+      }
+
+      generateJSON(name, frameSize) {
+        return {
+          name,
+          frameWidth: frameSize,
+          frameHeight: frameSize,
+          columns: 3,
+          rows: 4,
+          directions: ['front', 'left', 'right', 'back'],
+          framesPerDirection: 3,
+          frameNames: ['idle', 'walk1', 'walk2'],
+          animationSpeed: 150
+        };
+      }
     }
-    canvas.style.width = canvas.width * zoom + 'px';
-    canvas.style.height = canvas.height * zoom + 'px';
-  }
 
-  function renderTiles(canvas, zoom, r) {
-    const cols = 10; const rows = Math.ceil(tileTypes.length / cols);
-    canvas.width = cols * 32; canvas.height = rows * 32;
-    const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width, canvas.height);
-    for (let i=0;i<tileTypes.length;i++) {
-      const x = (i % cols) * 32; const y = Math.floor(i / cols) * 32;
-      ctx.save(); ctx.translate(x, y); drawTile(ctx, tileTypes[i], r); ctx.restore();
+    const ENEMY_PRESETS = [
+      { id: 'slime',     name: '緑スライム',   prompt: 'a cute green slime monster' },
+      { id: 'mushroom',  name: '毒キノコ',     prompt: 'a purple poison mushroom creature' },
+      { id: 'spider',    name: '洞窟グモ',     prompt: 'a dark brown cave spider' },
+      { id: 'bat',       name: 'コウモリ',     prompt: 'a small grey bat with wings spread' },
+      { id: 'worm',      name: 'ミミズ',       prompt: 'a segmented earth worm monster' },
+      { id: 'flower',    name: '食虫花',       prompt: 'a carnivorous flower with teeth' },
+      { id: 'bee',       name: '女王蜂',       prompt: 'a large queen bee with a crown' },
+      { id: 'golem',     name: 'ゴーレム',     prompt: 'a stone golem with glowing eyes' },
+      { id: 'ghost',     name: 'ゴースト',     prompt: 'a translucent floating ghost' }
+    ];
+
+    // State
+    const state = {
+      apiKey: '',
+      rawBlob: null,
+      rawCanvas: null,
+      bgBlob: null,
+      bgCanvas: null,
+      pixelCanvas: null,
+      directions: null,
+      frames: null,
+      sheet: null,
+      batchZip: null
+    };
+
+    // DOM
+    const apiKeyInput = document.getElementById('apiKey');
+    const apiStatus = document.getElementById('apiStatus');
+    const quotaStatus = document.getElementById('quotaStatus');
+    const charName = document.getElementById('charName');
+    const style = document.getElementById('style');
+    const size = document.getElementById('size');
+    const extraPrompt = document.getElementById('extraPrompt');
+    const autoBg = document.getElementById('autoBg');
+    const aiPreviewBox = document.getElementById('aiPreviewBox');
+    const bgBefore = document.getElementById('bgBefore');
+    const bgAfter = document.getElementById('bgAfter');
+    const bgProgress = document.getElementById('bgProgress');
+    const bgProgressText = document.getElementById('bgProgressText');
+    const pixelSize = document.getElementById('pixelSize');
+    const pixelPreview = document.getElementById('pixelPreview');
+    const dirGrid = document.getElementById('dirGrid');
+    const animPreview = document.getElementById('animPreview');
+    const sheetPreview = document.getElementById('sheetPreview');
+    const importCode = document.getElementById('importCode');
+    const presetList = document.getElementById('presetList');
+    const batchStatus = document.getElementById('batchStatus');
+    const batchUseAI = document.getElementById('batchUseAI');
+
+    // Helpers
+    function findInlineBase64(data) {
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      for (const p of parts) {
+        if (p.inlineData?.data) return p.inlineData.data;
+        if (p.inline_data?.data) return p.inline_data.data;
+      }
+      return null;
     }
-    canvas.style.width = canvas.width * zoom + 'px';
-    canvas.style.height = canvas.height * zoom + 'px';
-  }
 
-  function buildPreview(container, names, size, frames, sheetCanvas) {
-    container.innerHTML = '';
-    for (let i=0;i<names.length;i++) {
-      const item = document.createElement('div'); item.className='preview-item';
-      const c = document.createElement('canvas'); c.width=size; c.height=size; c.className='checker';
-      c.style.width='64px'; c.style.height='64px';
-      const label = document.createElement('div'); label.className='label'; label.textContent=names[i];
-      item.appendChild(c); item.appendChild(label); container.appendChild(item);
-      item._canvas=c; item._index=i; item._frames=frames; item._size=size; item._sheet=sheetCanvas;
+    function base64ToBlob(base64, mime) {
+      const bin = atob(base64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
     }
-  }
 
-  function updatePreview(container, frameIndex) {
-    for (const item of container.children) {
-      const c = item._canvas; if (!c) continue;
+    function blobToImg(blob) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.src = url;
+      });
+    }
+
+    async function blobToCanvas(blob) {
+      const img = await blobToImg(blob);
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
       const ctx = c.getContext('2d');
-      const f = frameIndex % item._frames;
-      const sx = f * item._size; const sy = item._index * item._size;
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0,0,c.width,c.height);
-      ctx.drawImage(item._sheet, sx, sy, item._size, item._size, 0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0);
+      return c;
     }
-  }
 
-  function generateAll() {
-    const r = rng(parseInt(seedInput.value,10) || 1);
-    const safe = (label, fn) => {
-      try { fn(); }
-      catch (err) { console.error(`[sprite-generator] ${label} failed`, err); }
-    };
-    safe('render enemies', () => renderSheet(enemyCanvas, 32, 32, enemyTypes, 3, drawEnemy, parseInt(enemyZoom.value,10), r));
-    safe('render npcs', () => renderSheet(npcCanvas, 32, 32, npcTypes, 2, drawNpc, parseInt(npcZoom.value,10), r));
-    safe('render bosses', () => renderSheet(bossCanvas, 64, 64, bossTypes, 4, drawBoss, parseInt(bossZoom.value,10), r));
-    safe('render player', () => renderPlayer(playerCanvas, parseInt(playerZoom.value,10), r));
-    safe('render tiles', () => renderTiles(tileCanvas, parseInt(tileZoom.value,10), r));
-    safe('build enemy preview', () => buildPreview(enemyPreview, enemyTypes, 32, 3, enemyCanvas));
-    safe('build npc preview', () => buildPreview(npcPreview, npcTypes, 32, 2, npcCanvas));
-    safe('update previews', () => { updatePreview(enemyPreview, 0); updatePreview(npcPreview, 0); });
-    safe('labels', () => {
-      tileLabels.innerHTML = '';
-      tileTypes.forEach(t => { const d = document.createElement('div'); d.className='label'; d.textContent=t; tileLabels.appendChild(d); });
+    function canvasToBlob(canvas) {
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    }
+
+    function setPreview(el, canvas) {
+      el.innerHTML = '';
+      if (!canvas) {
+        el.innerHTML = '<span class="muted">未生成</span>';
+        return;
+      }
+      el.appendChild(canvas);
+    }
+
+    function getFrameSize() {
+      return parseInt(pixelSize.value, 10);
+    }
+
+    function refreshImportCode() {
+      const name = charName.value.trim() || 'sprite';
+      const sz = getFrameSize();
+      const code = `SpriteManager.register('${name}', {\n  src: 'assets/sprites/${name}-sheet.png',\n  frameWidth: ${sz},\n  frameHeight: ${sz},\n  directions: ['front','left','right','back'],\n  framesPerDirection: 3,\n  animSpeed: 150\n});\n\n// balance.js の ENEMIES に追加する例\n{ id: '${name}', ..., spriteId: '${name}' }`;
+      importCode.textContent = code;
+    }
+
+    // Pixel helpers
+    function medianCut(imgData, paletteSize) {
+      const pixels = [];
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const a = imgData.data[i+3];
+        if (a === 0) continue;
+        pixels.push([imgData.data[i], imgData.data[i+1], imgData.data[i+2]]);
+      }
+      if (pixels.length === 0) return [[0,0,0]];
+      let boxes = [pixels];
+      while (boxes.length < paletteSize) {
+        boxes.sort((a,b) => colorRange(b) - colorRange(a));
+        const box = boxes.shift();
+        if (!box || box.length <= 1) break;
+        const [rRange, gRange, bRange] = channelRange(box);
+        const channel = rRange >= gRange && rRange >= bRange ? 0 : gRange >= bRange ? 1 : 2;
+        box.sort((p1,p2) => p1[channel] - p2[channel]);
+        const mid = Math.floor(box.length / 2);
+        boxes.push(box.slice(0, mid));
+        boxes.push(box.slice(mid));
+      }
+      return boxes.map(avgColor);
+    }
+
+    function channelRange(box) {
+      let rMin=255, rMax=0, gMin=255, gMax=0, bMin=255, bMax=0;
+      for (const [r,g,b] of box) {
+        if (r < rMin) rMin = r; if (r > rMax) rMax = r;
+        if (g < gMin) gMin = g; if (g > gMax) gMax = g;
+        if (b < bMin) bMin = b; if (b > bMax) bMax = b;
+      }
+      return [rMax-rMin, gMax-gMin, bMax-bMin];
+    }
+
+    function colorRange(box) {
+      const [r,g,b] = channelRange(box);
+      return Math.max(r,g,b);
+    }
+
+    function avgColor(box) {
+      let r=0,g=0,b=0;
+      for (const p of box) { r+=p[0]; g+=p[1]; b+=p[2]; }
+      const n = Math.max(1, box.length);
+      return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+    }
+
+    function nearestColor([r,g,b], palette) {
+      let best = palette[0];
+      let bestD = Infinity;
+      for (const c of palette) {
+        const dr = r - c[0];
+        const dg = g - c[1];
+        const db = b - c[2];
+        const d = dr*dr + dg*dg + db*db;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      return best;
+    }
+
+    function applyPalette(imgData, palette, dither) {
+      const w = imgData.width;
+      const h = imgData.height;
+      const data = imgData.data;
+      const err = new Float32Array(data.length);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (data[i+3] === 0) continue;
+          let r = data[i] + err[i];
+          let g = data[i+1] + err[i+1];
+          let b = data[i+2] + err[i+2];
+          const nc = nearestColor([r,g,b], palette);
+          const er = r - nc[0];
+          const eg = g - nc[1];
+          const eb = b - nc[2];
+          data[i] = nc[0]; data[i+1] = nc[1]; data[i+2] = nc[2];
+          if (dither) {
+            diffuse(err, i, w, er, eg, eb);
+          }
+        }
+      }
+    }
+
+    function diffuse(err, idx, w, er, eg, eb) {
+      const weights = [
+        { off: 4, w: 7/16 },
+        { off: (w-1) * 4, w: 3/16 },
+        { off: w * 4, w: 5/16 },
+        { off: (w+1) * 4, w: 1/16 }
+      ];
+      for (const t of weights) {
+        const j = idx + t.off;
+        if (j < 0 || j >= err.length) continue;
+        err[j] += er * t.w;
+        err[j+1] += eg * t.w;
+        err[j+2] += eb * t.w;
+      }
+    }
+
+    function addOutline(imgData) {
+      const w = imgData.width;
+      const h = imgData.height;
+      const data = imgData.data;
+      const copy = new Uint8ClampedArray(data);
+      for (let y = 1; y < h-1; y++) {
+        for (let x = 1; x < w-1; x++) {
+          const i = (y * w + x) * 4;
+          if (copy[i+3] !== 0) continue;
+          let hasNeighbor = false;
+          for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const j = ((y+dy) * w + (x+dx)) * 4;
+            if (copy[j+3] !== 0) { hasNeighbor = true; break; }
+          }
+          if (hasNeighbor) {
+            data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 255;
+          }
+        }
+      }
+    }
+
+    // Core pipeline handlers
+    async function setRawImage(blob) {
+      state.rawBlob = blob;
+      state.rawCanvas = await blobToCanvas(blob);
+      setPreview(aiPreviewBox, state.rawCanvas);
+      setPreview(bgBefore, state.rawCanvas);
+      if (autoBg.value === 'on') {
+        await removeBackground();
+      }
+    }
+
+    async function removeBackground() {
+      if (!state.rawBlob) return alert('先に画像を生成/アップロードしてください');
+      const remover = new BgRemover();
+      bgProgress.value = 0;
+      bgProgressText.textContent = '0%';
+      const result = await remover.remove(state.rawBlob, (key, current, total) => {
+        const pct = total ? Math.floor((current / total) * 100) : 0;
+        bgProgress.value = pct;
+        bgProgressText.textContent = `${pct}% (${key})`;
+      });
+      state.bgBlob = result;
+      state.bgCanvas = await blobToCanvas(result);
+      setPreview(bgAfter, state.bgCanvas);
+    }
+
+    function pixelize() {
+      const source = state.bgCanvas || state.rawCanvas;
+      if (!source) return alert('画像がありません');
+      const converter = new PixelConverter();
+      const pxSize = getFrameSize();
+      const paletteSize = parseInt(document.getElementById('palette').value, 10);
+      state.pixelCanvas = converter.convert(source, {
+        targetSize: pxSize,
+        paletteSize,
+        outline: document.getElementById('outline').checked,
+        dither: document.getElementById('dither').checked
+      });
+      setPreview(pixelPreview, state.pixelCanvas);
+    }
+
+    function renderDirections(directions) {
+      dirGrid.innerHTML = '';
+      ['front','left','right','back'].forEach((dir) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        const label = document.createElement('div');
+        label.textContent = dir;
+        const canvas = directions?.[dir];
+        const box = document.createElement('div');
+        box.className = 'preview';
+        if (canvas) box.appendChild(canvas);
+        const retry = document.createElement('button');
+        retry.textContent = `${dir} リトライ`;
+        retry.className = 'secondary small';
+        retry.addEventListener('click', async () => {
+          if (!state.pixelCanvas) return alert('先にピクセル化してください');
+          await regenerateDirection(dir);
+        });
+        slot.appendChild(label);
+        slot.appendChild(box);
+        slot.appendChild(retry);
+        dirGrid.appendChild(slot);
+      });
+    }
+
+    async function regenerateDirection(dir) {
+      const key = apiKeyInput.value.trim();
+      if (!key) return alert('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const frontBase64 = state.pixelCanvas.toDataURL('image/png').split(',')[1];
+      const blob = await api.editImage(api.buildDirectionPrompt(dir), frontBase64);
+      const c = await blobToCanvas(blob);
+      state.directions[dir] = c;
+      renderDirections(state.directions);
+    }
+
+    function generateFrames() {
+      if (!state.directions) return alert('方向画像がありません');
+      const gen = new FrameGenerator();
+      state.frames = {};
+      Object.keys(state.directions).forEach((dir) => {
+        state.frames[dir] = gen.generate(state.directions[dir]);
+      });
+    }
+
+    function assembleSheet() {
+      if (!state.frames) return alert('フレームがありません');
+      const assembler = new SheetAssembler();
+      const frameSize = getFrameSize();
+      state.sheet = assembler.assemble(state.frames, frameSize);
+      setPreview(sheetPreview, state.sheet);
+      refreshImportCode();
+    }
+
+    let animTimer = null;
+    function previewAnimation() {
+      if (!state.frames) return alert('フレームがありません');
+      animPreview.innerHTML = '';
+      const c = document.createElement('canvas');
+      c.width = getFrameSize();
+      c.height = getFrameSize();
+      c.style.width = '200px';
+      c.style.height = '200px';
+      const ctx = c.getContext('2d');
+      animPreview.appendChild(c);
+      const frames = ['idle','walk1','walk2'];
+      let idx = 0;
+      if (animTimer) clearInterval(animTimer);
+      animTimer = setInterval(() => {
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.drawImage(state.frames.front[frames[idx]], 0, 0);
+        idx = (idx + 1) % frames.length;
+      }, 200);
+    }
+
+    // UI Bindings
+    document.getElementById('saveKey').addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      localStorage.setItem('gemini_api_key', key);
+      apiStatus.textContent = key ? '保存済み' : '未設定';
     });
-  }
+    document.getElementById('clearKey').addEventListener('click', () => {
+      localStorage.removeItem('gemini_api_key');
+      apiKeyInput.value = '';
+      apiStatus.textContent = '未設定';
+    });
 
-  function downloadCanvas(canvas, name) {
-    const a = document.createElement('a'); a.download = name; a.href = canvas.toDataURL('image/png'); a.click();
-  }
-  function downloadJson(data, name) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.download = name; a.href = URL.createObjectURL(blob); a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
+    document.getElementById('btnGenerate').addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      if (!key) return alert('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const prompt = api.buildPrompt(charName.value, style.value, extraPrompt.value);
+      quotaStatus.textContent = '生成中...';
+      try {
+        const blob = await api.generateImage(prompt);
+        await setRawImage(blob);
+        quotaStatus.textContent = '生成完了';
+      } catch (e) {
+        quotaStatus.textContent = '生成失敗';
+        alert(e.message);
+      }
+    });
 
-  document.getElementById('dlEnemy').addEventListener('click', () => downloadCanvas(enemyCanvas, 'enemy_sheet.png'));
-  document.getElementById('dlNpc').addEventListener('click', () => downloadCanvas(npcCanvas, 'npc_sheet.png'));
-  document.getElementById('dlBoss').addEventListener('click', () => downloadCanvas(bossCanvas, 'boss_sheet.png'));
-  document.getElementById('dlTiles').addEventListener('click', () => downloadCanvas(tileCanvas, 'tile_sheet.png'));
-  document.getElementById('dlPlayer').addEventListener('click', () => downloadCanvas(playerCanvas, 'player_sheet.png'));
+    document.getElementById('fileUpload').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await setRawImage(file);
+    });
 
-  document.getElementById('dlEnemyJson').addEventListener('click', () => downloadJson(makeJson(enemyCanvas.width, enemyCanvas.height, 32, 32, enemyTypes, 3), 'enemy_sheet.json'));
-  document.getElementById('dlNpcJson').addEventListener('click', () => downloadJson(makeJson(npcCanvas.width, npcCanvas.height, 32, 32, npcTypes, 2), 'npc_sheet.json'));
-  document.getElementById('dlBossJson').addEventListener('click', () => downloadJson(makeJson(bossCanvas.width, bossCanvas.height, 64, 64, bossTypes, 4), 'boss_sheet.json'));
-  document.getElementById('dlTilesJson').addEventListener('click', () => {
-    const frames = tileTypes.map((t, i) => ({ name: t, sx:(i%10)*32, sy:Math.floor(i/10)*32, sw:32, sh:32 }));
-    downloadJson({ sheet: { w: tileCanvas.width, h: tileCanvas.height, frameW: 32, frameH: 32 }, frames, animations: {} }, 'tile_sheet.json');
-  });
-  document.getElementById('dlPlayerJson').addEventListener('click', () => {
-    const frames = []; for (let i=0;i<14;i++) frames.push({ sx:i*32, sy:0, sw:32, sh:32 });
-    const animations = {
-      walk_down:{frames:[0,1,2],fps:3,loop:true},
-      walk_left:{frames:[3,4,5],fps:3,loop:true},
-      walk_right:{frames:[6,7,8],fps:3,loop:true},
-      walk_up:{frames:[9,10,11],fps:3,loop:true},
-      attack:{frames:[12,13],fps:3,loop:false}
-    };
-    downloadJson({ sheet:{w:playerCanvas.width,h:playerCanvas.height,frameW:32,frameH:32}, frames, animations }, 'player_sheet.json');
-  });
+    document.getElementById('btnRemoveBg').addEventListener('click', removeBackground);
+    document.getElementById('btnPixelize').addEventListener('click', pixelize);
+    document.getElementById('palette').addEventListener('input', pixelize);
+    document.getElementById('pixelSize').addEventListener('change', () => {
+      size.value = pixelSize.value;
+      pixelize();
+      refreshImportCode();
+    });
+    document.getElementById('outline').addEventListener('change', pixelize);
+    document.getElementById('dither').addEventListener('change', pixelize);
+    size.addEventListener('change', () => {
+      pixelSize.value = size.value;
+      refreshImportCode();
+    });
 
-  document.getElementById('downloadAll').addEventListener('click', async () => {
-    const zip = new JSZip();
-    zip.file('enemy_sheet.png', enemyCanvas.toDataURL('image/png').split(',')[1], {base64:true});
-    zip.file('npc_sheet.png', npcCanvas.toDataURL('image/png').split(',')[1], {base64:true});
-    zip.file('boss_sheet.png', bossCanvas.toDataURL('image/png').split(',')[1], {base64:true});
-    zip.file('tile_sheet.png', tileCanvas.toDataURL('image/png').split(',')[1], {base64:true});
-    zip.file('player_sheet.png', playerCanvas.toDataURL('image/png').split(',')[1], {base64:true});
+    document.getElementById('btnGenDirAI').addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      if (!key) return alert('API キーが必要です');
+      if (!state.pixelCanvas) return alert('先にピクセル化してください');
+      const api = new GeminiAPI(key);
+      const dirGen = new DirectionGenerator();
+      quotaStatus.textContent = '4方向生成中...';
+      try {
+        state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+        renderDirections(state.directions);
+        quotaStatus.textContent = '完了';
+      } catch (e) {
+        quotaStatus.textContent = '失敗';
+        alert(e.message);
+      }
+    });
 
-    zip.file('enemy_sheet.json', JSON.stringify(makeJson(enemyCanvas.width, enemyCanvas.height, 32, 32, enemyTypes, 3), null, 2));
-    zip.file('npc_sheet.json', JSON.stringify(makeJson(npcCanvas.width, npcCanvas.height, 32, 32, npcTypes, 2), null, 2));
-    zip.file('boss_sheet.json', JSON.stringify(makeJson(bossCanvas.width, bossCanvas.height, 64, 64, bossTypes, 4), null, 2));
-    const tileFrames = tileTypes.map((t, i) => ({ name: t, sx:(i%10)*32, sy:Math.floor(i/10)*32, sw:32, sh:32 }));
-    zip.file('tile_sheet.json', JSON.stringify({ sheet: { w: tileCanvas.width, h: tileCanvas.height, frameW:32, frameH:32 }, frames: tileFrames, animations:{} }, null, 2));
-    const pFrames = []; for (let i=0;i<14;i++) pFrames.push({ sx:i*32, sy:0, sw:32, sh:32 });
-    zip.file('player_sheet.json', JSON.stringify({ sheet:{w:playerCanvas.width,h:playerCanvas.height,frameW:32,frameH:32}, frames:pFrames, animations:{ walk_down:{frames:[0,1,2],fps:3,loop:true}, walk_left:{frames:[3,4,5],fps:3,loop:true}, walk_right:{frames:[6,7,8],fps:3,loop:true}, walk_up:{frames:[9,10,11],fps:3,loop:true}, attack:{frames:[12,13],fps:3,loop:false} } }, null, 2));
+    document.getElementById('btnGenDirProg').addEventListener('click', () => {
+      if (!state.pixelCanvas) return alert('先にピクセル化してください');
+      const dirGen = new DirectionGenerator();
+      state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
+      renderDirections(state.directions);
+    });
 
-    const blob = await zip.generateAsync({type:'blob'});
-    const a = document.createElement('a'); a.download = 'sprite_sheets_v3.zip'; a.href = URL.createObjectURL(blob); a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  });
+    document.getElementById('btnGenFrames').addEventListener('click', () => {
+      generateFrames();
+      assembleSheet();
+    });
 
-  function updateZoom() {
-    enemyCanvas.style.width = enemyCanvas.width * parseInt(enemyZoom.value,10) + 'px';
-    enemyCanvas.style.height = enemyCanvas.height * parseInt(enemyZoom.value,10) + 'px';
-    npcCanvas.style.width = npcCanvas.width * parseInt(npcZoom.value,10) + 'px';
-    npcCanvas.style.height = npcCanvas.height * parseInt(npcZoom.value,10) + 'px';
-    bossCanvas.style.width = bossCanvas.width * parseInt(bossZoom.value,10) + 'px';
-    bossCanvas.style.height = bossCanvas.height * parseInt(bossZoom.value,10) + 'px';
-    tileCanvas.style.width = tileCanvas.width * parseInt(tileZoom.value,10) + 'px';
-    tileCanvas.style.height = tileCanvas.height * parseInt(tileZoom.value,10) + 'px';
-    playerCanvas.style.width = playerCanvas.width * parseInt(playerZoom.value,10) + 'px';
-    playerCanvas.style.height = playerCanvas.height * parseInt(playerZoom.value,10) + 'px';
-  }
-  enemyZoom.addEventListener('input', updateZoom);
-  npcZoom.addEventListener('input', updateZoom);
-  bossZoom.addEventListener('input', updateZoom);
-  tileZoom.addEventListener('input', updateZoom);
-  playerZoom.addEventListener('input', updateZoom);
+    document.getElementById('btnPreviewAnim').addEventListener('click', () => {
+      generateFrames();
+      previewAnimation();
+    });
 
-  function startAnim() {
-    if (rafId) return;
-    const step = () => {
-      animTick++;
-      updatePreview(enemyPreview, Math.floor(animTick/20));
-      updatePreview(npcPreview, Math.floor(animTick/20));
-      rafId = requestAnimationFrame(step);
-    };
-    rafId = requestAnimationFrame(step);
-  }
+    document.getElementById('btnDownloadPng').addEventListener('click', async () => {
+      if (!state.sheet) return alert('シートがありません');
+      const blob = await canvasToBlob(state.sheet);
+      saveAs(blob, `${charName.value}-sheet.png`);
+    });
 
-  generateAll();
-  startAnim();
-})();
-</script>
+    document.getElementById('btnDownloadJson').addEventListener('click', async () => {
+      const assembler = new SheetAssembler();
+      const json = assembler.generateJSON(charName.value, getFrameSize());
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      saveAs(blob, `${charName.value}.json`);
+    });
+
+    // Batch mode
+    let batchReady = false;
+    document.getElementById('btnBatch').addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      if (!key) return alert('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const remover = new BgRemover();
+      const converter = new PixelConverter();
+      const dirGen = new DirectionGenerator();
+      const frameGen = new FrameGenerator();
+      const assembler = new SheetAssembler();
+
+      state.batchZip = new JSZip();
+      batchReady = false;
+
+      for (let i = 0; i < ENEMY_PRESETS.length; i++) {
+        const preset = ENEMY_PRESETS[i];
+        batchStatus.textContent = `生成中: ${preset.name} (${i+1}/${ENEMY_PRESETS.length})`;
+        const blob = await api.generateImage(preset.prompt);
+        const fg = await remover.remove(blob);
+        const fgCanvas = await blobToCanvas(fg);
+        const px = converter.convert(fgCanvas, {
+          targetSize: getFrameSize(),
+          paletteSize: 16,
+          outline: true,
+          dither: false
+        });
+        let dirs;
+        if (batchUseAI.checked) {
+          dirs = await dirGen.generateWithAI(api, px);
+        } else {
+          dirs = dirGen.generateProgrammatic(px);
+        }
+        const frames = {};
+        Object.keys(dirs).forEach((dir) => { frames[dir] = frameGen.generate(dirs[dir]); });
+        const sheet = assembler.assemble(frames, getFrameSize());
+        const json = assembler.generateJSON(preset.id, getFrameSize());
+        const sheetBlob = await canvasToBlob(sheet);
+        state.batchZip.file(`${preset.id}-sheet.png`, sheetBlob);
+        state.batchZip.file(`${preset.id}.json`, JSON.stringify(json, null, 2));
+      }
+
+      batchReady = true;
+      batchStatus.textContent = 'バッチ完了。ZIP ダウンロード可能。';
+    });
+
+    document.getElementById('btnBatchZip').addEventListener('click', async () => {
+      if (!state.batchZip || !batchReady) return alert('先に一括生成してください');
+      const blob = await state.batchZip.generateAsync({ type: 'blob' });
+      saveAs(blob, 'sprites-batch.zip');
+    });
+
+    // Init
+    function init() {
+      const savedKey = localStorage.getItem('gemini_api_key') || '';
+      apiKeyInput.value = savedKey;
+      apiStatus.textContent = savedKey ? '保存済み' : '未設定';
+      pixelSize.value = size.value;
+      refreshImportCode();
+      renderDirections({});
+      ENEMY_PRESETS.forEach((p) => {
+        const card = document.createElement('div');
+        card.className = 'chip';
+        card.textContent = `${p.name} (${p.id})`;
+        presetList.appendChild(card);
+      });
+    }
+
+    init();
+  </script>
 </body>
 </html>

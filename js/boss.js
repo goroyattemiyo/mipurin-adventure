@@ -7,6 +7,7 @@ const BossManager = (() => {
   let _bullets = [];
   let _voiceText = '';
   let _voiceTimer = 0;
+  let _elapsedTime = 0;
 
   function spawn(bossId) {
     const t = Balance.BOSSES[bossId];
@@ -107,6 +108,7 @@ const BossManager = (() => {
 
   function update(dt, player) {
     if (!_boss || _boss.dead) return;
+    _elapsedTime += dt;
 
     if (_boss.hurtTimer > 0) _boss.hurtTimer -= dt;
 
@@ -275,10 +277,17 @@ const BossManager = (() => {
     const ts = CONFIG.TILE_SIZE;
     const x = Math.round(_boss.x), y = Math.round(_boss.y);
     const size = _boss.size;
+    const bx = x + (ts * size) / 2;
+    const by = y + (ts * size) / 2;
+
+    if (typeof SpriteVariant !== 'undefined') {
+      const bossGlowColor = 'hsla(0, 100%, 50%, 0.4)';
+      SpriteVariant.drawEliteGlow(ctx, bx, by, (ts * size) * 1.5, bossGlowColor, _elapsedTime);
+    }
 
     ctx.fillStyle = _boss.color || '#fff';
     ctx.beginPath();
-    ctx.arc(x + (ts * size) / 2, y + (ts * size) / 2, (ts * size) / 2 - 4, 0, Math.PI * 2);
+    ctx.arc(bx, by, (ts * size) / 2 - 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
@@ -288,7 +297,7 @@ const BossManager = (() => {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
-    ctx.fillText(_boss.symbol || 'B', x + (ts * size) / 2, y + (ts * size) / 2);
+    ctx.fillText(_boss.symbol || 'B', bx, by);
 
     const barW = ts * size + 20;
     const barX = x + (ts * size) / 2 - barW / 2;

@@ -25,6 +25,7 @@ const PlayerController = (() => {
   let _dashTimer = 0;
   let _dashDirX = 0;
   let _dashDirY = 0;
+  let _elapsedTime = 0;
 
   function _clampPlayerToMap(player) {
     const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
@@ -72,6 +73,7 @@ const PlayerController = (() => {
   }
 
   function update(player, dt) {
+    _elapsedTime += dt;
     if (player.hitStopFrames > 0) { player.hitStopFrames--; return; }
 
     /* ノックバック処理 */
@@ -202,12 +204,17 @@ const PlayerController = (() => {
   function draw(ctx, player) {
 
     const x = Math.round(player.x), y = Math.round(player.y);
+    const px = x + ts / 2, py = y + ts / 2;
 
     /* 影 */
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath();
     ctx.ellipse(x + ts / 2, y + ts - 2, ts / 3, ts / 6, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    if (typeof SpriteVariant !== 'undefined') {
+      SpriteVariant.drawPlayerGlow(ctx, px, py, _elapsedTime);
+    }
 
     /* 被ダメ点滅 */
     const hurt = player.knockback.timer > 0 && Math.floor(Date.now() / 80) % 2;
@@ -287,6 +294,7 @@ const EnemyManager = (() => {
   const ts = CONFIG.TILE_SIZE;
   let _enemies = [];
   const _spriteCache = new Map();
+  let _elapsedTime = 0;
 
   const TEMPLATES = Balance.ENEMIES;
 
@@ -358,6 +366,7 @@ const EnemyManager = (() => {
   }
 
   function update(dt, player) {
+    _elapsedTime += dt;
 
     for (const e of _enemies) {
       if (e.dead) continue;
@@ -629,11 +638,7 @@ const EnemyManager = (() => {
       if (e.dead || e.hidden) continue;
       const x = Math.round(e.x), y = Math.round(e.y);
       if (e.hurtTimer > 0 && Math.floor(Date.now()/60)%2) continue;
-      if (e.isElite) {
-        ctx.save();
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 12;
-      }
+
       if (e.state === 'explode_charge' && Math.floor(Date.now() / 80) % 2) {
         ctx.save();
         ctx.globalAlpha = 0.7;
@@ -643,9 +648,24 @@ const EnemyManager = (() => {
         ctx.fill();
         ctx.restore();
       }
-      const sprite = _getEnemySprite(e.id, e.color, e.symbol);
-      if (sprite) ctx.drawImage(sprite, x, y);
-      if (e.isElite) ctx.restore();
+
+      if (typeof SpriteVariant !== 'undefined') {
+        const colors = SpriteVariant.getEnemyColors(
+          e.id,
+          (typeof MapManager !== 'undefined' && MapManager.getCurrentMapName) ? MapManager.getCurrentMapName() : 'forest_south',
+          e.isElite || false
+        );
+        const ex = x + ts / 2;
+        const ey = y + ts / 2;
+        if (e.isElite && colors.glow) {
+          SpriteVariant.drawEliteGlow(ctx, ex, ey, e.size || ts, colors.glow, _elapsedTime);
+        }
+        SpriteVariant.drawEnemyBody(ctx, ex, ey, e.size || ts * 0.8, colors, e.symbol || '?');
+      } else {
+        const sprite = _getEnemySprite(e.id, e.color, e.symbol);
+        if (sprite) ctx.drawImage(sprite, x, y);
+      }
+
       if (e.hp < e.maxHp) {
         const bw = ts-4, bh = 3;
         ctx.fillStyle = '#333'; ctx.fillRect(x+2, y-4, bw, bh);

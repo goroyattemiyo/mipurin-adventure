@@ -982,6 +982,7 @@ const Game = (() => {
     if (player.hp <= 0) {
       Analytics.logPlayerDeath(_currentMapName, 'enemy', player.hp);
       Audio.playSe('game_over');
+      if (typeof Blessings !== 'undefined') Blessings.resetBlessings();
       _changeScene(SCENE.GAMEOVER);
     }
   }
@@ -1249,6 +1250,7 @@ const Game = (() => {
     if (player.hp <= 0) {
       Analytics.logPlayerDeath('boss', 'boss', player.hp);
       Audio.playSe('game_over');
+      if (typeof Blessings !== 'undefined') Blessings.resetBlessings();
       _changeScene(SCENE.GAMEOVER);
     }
   }

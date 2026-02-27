@@ -432,9 +432,14 @@ const MapManager = (() => {
     data[playerStart.y * cols + playerStart.x] = tiles.floor;
     data[exitPos.y * cols + exitPos.x] = TILE.EXIT;
 
-    if (rooms[0]) {
-      const sx = Math.min(cols - 2, Math.max(1, Math.floor(rooms[0].x + rooms[0].w / 2) + 1));
-      const sy = Math.min(rows - 2, Math.max(1, Math.floor(rooms[0].y + rooms[0].h / 2)));
+    if (rooms.length > 1) {
+      const saveRoom = rooms[1];
+      const sx = Math.min(cols - 2, Math.max(1, Math.floor(saveRoom.x + saveRoom.w / 2)));
+      const sy = Math.min(rows - 2, Math.max(1, Math.floor(saveRoom.y + saveRoom.h / 2)));
+      data[sy * cols + sx] = TILE.SAVE_POINT;
+    } else if (rooms[0]) {
+      const sx = Math.min(cols - 2, Math.max(1, Math.floor(rooms[0].x + rooms[0].w / 2) + 2));
+      const sy = Math.min(rows - 2, Math.max(1, Math.floor(rooms[0].y + rooms[0].h / 2) + 2));
       data[sy * cols + sx] = TILE.SAVE_POINT;
     }
 

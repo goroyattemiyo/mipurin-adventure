@@ -119,8 +119,11 @@ const Game = (() => {
   function _getAreaBannerText(mapName) {
     const name = _getMapDisplayName(mapName);
     if (mapName === 'village') return name;
+    if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
+      return name + '  B' + Dungeon.getFloor() + 'F';
+    }
     const aLv = Scaling.areaLevel(player.level, mapName);
-    return `${name}  エリア Lv.${aLv}`;
+    return name + '  エリア Lv.' + aLv;
   }
 
   function _addLog(text) {
@@ -957,20 +960,46 @@ const Game = (() => {
     const exit = PlayerController.checkExit(player);
     if (exit) {
       if (exit.type === 'random_exit') {
-        const map = MapManager.loadMap(_currentMapName);
-        if (map) {
-          player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-          player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-          player.dir = 'down';
-          _dialogActive = false; _dialogQueue = [];
-          Shop.closeShop();
-          _attackEffectTimer = 0; _needleEffectTimer = 0;
-          if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
-          _areaBannerText = _getAreaBannerText(_currentMapName);
-          _areaBannerTimer = _areaBannerDuration;
-          _miniMapDirty = true;
-          _autoSaveCooldown = 0;
+        if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
+          Dungeon.nextFloor();
+          const map = Dungeon.getMapForRenderer();
+          if (map && typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
+            MapManager.setCurrentMap(map);
+          }
+          if (map) {
+            player.x = map.playerStart.x * CONFIG.TILE_SIZE;
+            player.y = map.playerStart.y * CONFIG.TILE_SIZE;
+            player.dir = 'down';
+            if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
+            _blessingShownThisRoom = false;
+            _enemiesSpawnedThisRoom = false;
+            if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
+          }
+        } else {
+          const aLv = Scaling.areaLevel(player.level, _currentMapName);
+          const theme = MapManager.getThemeForArea ? MapManager.getThemeForArea(_currentMapName, aLv) : 'forest';
+          const seed = _currentMapName.length * 1000 + aLv * 7 + 42;
+          const map = MapManager.generateRandomMap(aLv, theme, seed);
+          if (typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
+            MapManager.setCurrentMap(map);
+          }
+          if (map) {
+            player.x = map.playerStart.x * CONFIG.TILE_SIZE;
+            player.y = map.playerStart.y * CONFIG.TILE_SIZE;
+            player.dir = 'down';
+            if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
+            _blessingShownThisRoom = false;
+            _enemiesSpawnedThisRoom = false;
+            if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
+          }
         }
+        _dialogActive = false; _dialogQueue = [];
+        Shop.closeShop();
+        _attackEffectTimer = 0; _needleEffectTimer = 0;
+        _areaBannerText = _getAreaBannerText(_currentMapName);
+        _areaBannerTimer = _areaBannerDuration;
+        _miniMapDirty = true;
+        _autoSaveCooldown = 0;
         return;
       }
       const sceneMap = {
@@ -1059,6 +1088,17 @@ const Game = (() => {
     Inventory.drawUI(ctx);
     Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
     if (typeof BlessingUI !== 'undefined') BlessingUI.draw(ctx, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+    if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(PX(8), PX(8), PX(160), PX(36));
+      ctx.fillStyle = '#F5A623';
+      ctx.font = 'bold ' + CONFIG.FONT_BASE + 'px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('B' + Dungeon.getFloor() + 'F  ' + Dungeon.getTheme(), PX(16), PX(26));
+      ctx.restore();
+    }
     _drawBottomPanel(ctx);
     if (CONFIG.DEBUG || location.search.includes('debug=1')) {
     ctx.save();

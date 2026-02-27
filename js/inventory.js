@@ -45,10 +45,6 @@ const Inventory = (() => {
       existing.count = Math.min(existing.count + count, def.maxStack);
       return true;
     }
-    if (_items.length > maxVisible) {
-      ctx.fillStyle = '#666';
-      ctx.fillText('...', bx + bw - PX(30), listBottom - PX(6));
-    }
     if (existing && !def.stackable) return false; // 既に所持
     if (_items.length >= MAX_SLOTS) return false; // 空きなし
     _items.push({ id: itemId, count: def.stackable ? Math.min(count, def.maxStack) : 1 });

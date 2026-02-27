@@ -32,20 +32,21 @@ window.BlessingUI = (() => {
     _onSelect = null;
   }
 
-  function handleInput(key) {
+  function handleInput() {
     if (!_active) return;
-    const k = (key || '').toLowerCase();
-    if (key === 'ArrowLeft' || k === 'a') {
+    if (typeof Engine === 'undefined') return;
+    if (Engine.consumePress('left')) {
       _selectedIndex = (_selectedIndex - 1 + _choices.length) % _choices.length;
-      return;
+      if (typeof Audio !== 'undefined') Audio.playSe('menu_move');
     }
-    if (key === 'ArrowRight' || k === 'd') {
+    if (Engine.consumePress('right')) {
       _selectedIndex = (_selectedIndex + 1) % _choices.length;
-      return;
+      if (typeof Audio !== 'undefined') Audio.playSe('menu_move');
     }
-    if (key === 'Enter' || k === 'e') {
+    if (Engine.consumePress('interact') || Engine.consumePress('attack')) {
       if (_onSelect && _choices[_selectedIndex]) {
         _onSelect(_choices[_selectedIndex]);
+        if (typeof Audio !== 'undefined') Audio.playSe('menu_select');
       }
       hide();
     }

@@ -2,6 +2,15 @@
  * battle.js - プレイヤー操作・移動・攻撃・敵管理
  * ミプリンの冒険 v0.6.0
  */
+function getBlessingBonus(type) {
+  if (typeof Blessings === 'undefined') return 0;
+  return Blessings.getStatBonus(type);
+}
+
+function hasBlessingEffect(type) {
+  return getBlessingBonus(type) > 0;
+}
+
 const PlayerController = (() => {
   const ts = CONFIG.TILE_SIZE;
   const P_COLOR = '#F5A623';
@@ -149,7 +158,7 @@ const PlayerController = (() => {
       player.animTimer += dt;
       if (player.animTimer >= 0.15) { player.animTimer = 0; player.animFrame = (player.animFrame + 1) % 4; }
 
-      const spd = player.speed * dt * 60;
+      const spd = player.speed * (1 + getBlessingBonus('speedMul')) * dt * 60;
       moveWithCollision(dx, dy, spd);
     }
 
@@ -567,12 +576,30 @@ const EnemyManager = (() => {
 
   function _damagePlayer(player, enemy) {
     if (player.knockback.timer > 0 || player.invincibleTimer > 0) return;
+    var dodgeChance = getBlessingBonus('dodge');
+    if (dodgeChance > 0 && Math.random() < dodgeChance) {
+      if (typeof DamageNumbers !== 'undefined') DamageNumbers.spawn(player.x + ts/2, player.y - 20, 'MISS', 'heal');
+      return;
+    }
+    if (typeof Blessings !== 'undefined' && Blessings.consumeBarrier()) {
+      if (typeof DamageNumbers !== 'undefined') DamageNumbers.spawn(player.x + ts/2, player.y - 20, 'BLOCK', 'heal');
+      if (typeof Particles !== 'undefined') Particles.emit(player.x + ts/2, player.y + ts/2, 6, '#ecf0f1', {speedMin:30,speedMax:60,lifeMin:0.2,lifeMax:0.4,sizeMin:3,sizeMax:5});
+      return;
+    }
     const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
     const def = skBonus.def || 0;
     const invReduction = (typeof Inventory !== 'undefined') ? Inventory.getDefReduction(player) : 0;
     const rawDmg = enemy.atk;
-    const finalDmg = Math.max(1, rawDmg - def - invReduction);
+    const defMulReduction = getBlessingBonus('defMul');
+    const finalDmg = Math.max(1, Math.floor((rawDmg - def - invReduction) * (1 - defMulReduction)));
     player.hp -= finalDmg;
+    var thornsVal = getBlessingBonus('thorns');
+    if (thornsVal > 0) {
+      enemy.hp -= thornsVal;
+      enemy._flashTimer = 0.15;
+      if (typeof DamageNumbers !== 'undefined') DamageNumbers.spawn(enemy.x + ts/2, enemy.y - 20, thornsVal, 'normal');
+      if (enemy.hp <= 0) enemy.dead = true;
+    }
     if (player.hp < 0) player.hp = 0;
     const invulnBonus = skBonus.invuln || 0;
     player.invincibleTimer = 1.0 + invulnBonus;
@@ -593,15 +620,16 @@ const EnemyManager = (() => {
     let hitAny = false;
     const killed = [];
     const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-    const critRate = skBonus.critRate || 0;
+    const critRate = (skBonus.critRate || 0) + getBlessingBonus('critRate');
     const critDmg = 1.5 + (skBonus.critDmg || 0);
     for (const e of _enemies) {
       if (e.dead || e.hidden || e.hurtTimer > 0) continue;
 
       const ex = e.x, ey = e.y;
       if (box.x < ex+ts && box.x+box.w > ex && box.y < ey+ts && box.y+box.h > ey) {
+        const blessedDmg = Math.floor(damage * (1 + getBlessingBonus('atkMul')));
         const isCrit = Math.random() < (critRate || 0);
-        const finalDmg = isCrit ? Math.floor(damage * critDmg) : damage;
+        const finalDmg = isCrit ? Math.floor(blessedDmg * critDmg) : blessedDmg;
         e.hp -= finalDmg;
         e.hurtTimer = 0.3;
         e._flashTimer = 0.1;
@@ -623,6 +651,26 @@ const EnemyManager = (() => {
           flags.killCount++;
           if (typeof Collection !== 'undefined') Collection.onEnemyKill(e.id);
           killed.push({ id: e.id, x: e.x, y: e.y, exp: e.xp, pollen: e.pollen || 1 });
+          var lifeStealVal = getBlessingBonus('lifeSteal');
+          if (lifeStealVal > 0 && typeof Game !== 'undefined') {
+            var p = Game.getPlayer();
+            if (p) p.hp = Math.min(p.maxHp, p.hp + lifeStealVal);
+          }
+          var explodeVal = getBlessingBonus('explode');
+          if (explodeVal > 0) {
+            for (var j = 0; j < _enemies.length; j++) {
+              var other = _enemies[j];
+              if (other.dead || other === e) continue;
+              var edx = other.x - e.x, edy = other.y - e.y;
+              var edist = Math.sqrt(edx*edx + edy*edy);
+              if (edist <= ts * 3) {
+                other.hp -= explodeVal;
+                other._flashTimer = 0.15;
+                if (typeof DamageNumbers !== 'undefined') DamageNumbers.spawn(other.x + ts/2, other.y - 20, explodeVal, 'normal');
+                if (other.hp <= 0) { other.dead = true; flags.killCount++; }
+              }
+            }
+          }
           if (typeof Loot !== 'undefined' && typeof Game !== 'undefined') {
             const aLv = Scaling.areaLevel(Game.getPlayerLevel(), MapManager.getCurrentMapName());
             const drops = Loot.rollDrop(e.id, aLv, e.isElite || false, false);
@@ -642,8 +690,9 @@ const EnemyManager = (() => {
   function needleBlast(originX, originY, damage, flags) {
     if (damage === undefined || damage === null) damage = Balance.PLAYER.NEEDLE_DMG;
     const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-    const critRate = skBonus.critRate || 0;
+    const critRate = (skBonus.critRate || 0) + getBlessingBonus('critRate');
     const critDmg = 1.5 + (skBonus.critDmg || 0);
+    damage = Math.floor(damage * (1 + getBlessingBonus('atkMul')));
     for (const e of _enemies) {
       if (e.dead || e.hidden) continue;
       const isCrit = Math.random() < (critRate || 0);

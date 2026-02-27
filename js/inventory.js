@@ -45,6 +45,10 @@ const Inventory = (() => {
       existing.count = Math.min(existing.count + count, def.maxStack);
       return true;
     }
+    if (_items.length > maxVisible) {
+      ctx.fillStyle = '#666';
+      ctx.fillText('...', bx + bw - PX(30), listBottom - PX(6));
+    }
     if (existing && !def.stackable) return false; // 既に所持
     if (_items.length >= MAX_SLOTS) return false; // 空きなし
     _items.push({ id: itemId, count: def.stackable ? Math.min(count, def.maxStack) : 1 });
@@ -214,18 +218,23 @@ const Inventory = (() => {
     // アイテムリスト
     ctx.textAlign = 'left'; ctx.font = `${CONFIG.FONT_SM}px monospace`;
     const startY = by + PX(50);
-    const lineH = PX(24);
+    const lineH = PX(32);
+    const listBottom = by + bh - PX(72);
+    const listHeight = listBottom - startY;
+    const maxVisible = Math.max(1, Math.floor(listHeight / lineH));
+    const scrollOffset = Math.max(0, _cursor - maxVisible + 1);
 
     if (_items.length === 0) {
       ctx.fillStyle = '#888';
       ctx.fillText('なにも もっていない', bx + PX(20), startY);
     }
 
-    for (let i = 0; i < _items.length; i++) {
-      const item = _items[i];
+    for (let i = 0; i < maxVisible && i + scrollOffset < _items.length; i++) {
+      const idx = i + scrollOffset;
+      const item = _items[idx];
       const def = ITEM_DEFS[item.id];
       const y = startY + i * lineH;
-      const selected = (i === _cursor);
+      const selected = (idx === _cursor);
 
       if (selected) {
         ctx.fillStyle = 'rgba(245,166,35,0.2)';
@@ -258,7 +267,7 @@ const Inventory = (() => {
       ctx.textAlign = 'left';
       const descLines = def.desc.match(/.{1,26}/g) || [def.desc];
       for (let i = 0; i < descLines.length && i < 2; i++) {
-        ctx.fillText(descLines[i], bx + PX(18), by + bh - PX(50) + i * PX(18));
+        ctx.fillText(descLines[i], bx + PX(18), by + bh - PX(50) + i * PX(26));
       }
     }
 

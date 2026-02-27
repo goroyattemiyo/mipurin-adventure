@@ -15,6 +15,12 @@ window.BlessingUI = (() => {
     lotus: 'Lotus',
     chrysanthemum: 'Chrysanthemum'
   };
+  const ENGINE_ACTIONS = {
+    left: 'left',
+    right: 'right',
+    confirm: 'interact',
+    confirmAlt: 'attack'
+  };
 
   function isActive() { return _active; }
 
@@ -35,15 +41,15 @@ window.BlessingUI = (() => {
   function handleInput() {
     if (!_active) return;
     if (typeof Engine === 'undefined') return;
-    if (Engine.consumePress('left')) {
+    if (Engine.consumePress(ENGINE_ACTIONS.left)) {
       _selectedIndex = (_selectedIndex - 1 + _choices.length) % _choices.length;
       if (typeof Audio !== 'undefined') Audio.playSe('menu_move');
     }
-    if (Engine.consumePress('right')) {
+    if (Engine.consumePress(ENGINE_ACTIONS.right)) {
       _selectedIndex = (_selectedIndex + 1) % _choices.length;
       if (typeof Audio !== 'undefined') Audio.playSe('menu_move');
     }
-    if (Engine.consumePress('interact') || Engine.consumePress('attack')) {
+    if (Engine.consumePress(ENGINE_ACTIONS.confirm) || Engine.consumePress(ENGINE_ACTIONS.confirmAlt)) {
       if (_onSelect && _choices[_selectedIndex]) {
         _onSelect(_choices[_selectedIndex]);
         if (typeof Audio !== 'undefined') Audio.playSe('menu_select');

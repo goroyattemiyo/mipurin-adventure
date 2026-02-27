@@ -126,7 +126,7 @@ const EquipmentUI = (() => {
     const leftX = PX(16);
     const rightX = W / 2 + PX(8);
     const startY = PX(40);
-    const lineH = PX(20);
+    const lineH = PX(28);
 
     ctx.textAlign = 'left';
     ctx.font = `${CONFIG.FONT_SM}px monospace`;

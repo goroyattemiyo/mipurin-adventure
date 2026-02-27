@@ -606,6 +606,7 @@ const Game = (() => {
     _currentMapName = mapName;
     _blessingShownThisRoom = false;
     _enemiesSpawnedThisRoom = false;
+    if (typeof BlessingUI !== 'undefined') BlessingUI.hide();
     const map = MapManager.loadMap(mapName);
     if (!map) return;
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
@@ -1722,6 +1723,7 @@ const Game = (() => {
   function _changeScene(scene){
     Analytics.logSceneChange(_currentScene, scene);
     Analytics.onSceneChange();
+    if (typeof BlessingUI !== 'undefined' && BlessingUI.isActive()) BlessingUI.hide();
     if ((scene === SCENE.TITLE || scene === SCENE.GAMEOVER) && typeof Blessings !== 'undefined') Blessings.resetBlessings();
     if (scene === SCENE.MENU) {
       const from = _currentScene;

@@ -113,35 +113,67 @@ const PlayerController = (() => {
 
     const moveWithCollision = (dx, dy, speed) => {
       if (dx === 0 && dy === 0) return;
-      const margin = 2;
+      const pad = ts * 0.2; // 当たり判定を片側20%縮小（有効幅: 60%）
 
-      // X軸の移動を試行
+      // X軸試行
       if (dx !== 0) {
         const newPx = player.x + dx * speed;
-        const tL = Math.floor((newPx + margin) / ts);
-        const tR = Math.floor((newPx + ts - margin - 1) / ts);
-        const rT = Math.floor((player.y + margin) / ts);
-        const rB = Math.floor((player.y + ts - margin - 1) / ts);
+        const tL = Math.floor((newPx + pad) / ts);
+        const tR = Math.floor((newPx + ts - pad - 1) / ts);
+        const rT = Math.floor((player.y + pad) / ts);
+        const rB = Math.floor((player.y + ts - pad - 1) / ts);
         if (!MapManager.isSolid(tL,rT) && !MapManager.isSolid(tR,rT) &&
             !MapManager.isSolid(tL,rB) && !MapManager.isSolid(tR,rB) &&
             !MapManager.getNpcAt(tL,rT) && !MapManager.getNpcAt(tR,rT) &&
             !MapManager.getNpcAt(tL,rB) && !MapManager.getNpcAt(tR,rB)) {
           player.x = newPx;
+        } else if (dy === 0) {
+          // 横移動ブロック時: 上下にずらして通れるか試す（コーナー補正）
+          const nudge = ts * 0.3;
+          for (const offset of [-nudge, nudge]) {
+            const adjY = player.y + offset;
+            const arT = Math.floor((adjY + pad) / ts);
+            const arB = Math.floor((adjY + ts - pad - 1) / ts);
+            if (!MapManager.isSolid(tL,arT) && !MapManager.isSolid(tR,arT) &&
+                !MapManager.isSolid(tL,arB) && !MapManager.isSolid(tR,arB) &&
+                !MapManager.getNpcAt(tL,arT) && !MapManager.getNpcAt(tR,arT) &&
+                !MapManager.getNpcAt(tL,arB) && !MapManager.getNpcAt(tR,arB)) {
+              player.y += offset * 0.15;
+              player.x = newPx;
+              break;
+            }
+          }
         }
       }
 
-      // Y軸の移動を試行（X軸移動後の位置で判定）
+      // Y軸試行
       if (dy !== 0) {
         const newPy = player.y + dy * speed;
-        const cL = Math.floor((player.x + margin) / ts);
-        const cR = Math.floor((player.x + ts - margin - 1) / ts);
-        const tT = Math.floor((newPy + margin) / ts);
-        const tB = Math.floor((newPy + ts - margin - 1) / ts);
+        const cL = Math.floor((player.x + pad) / ts);
+        const cR = Math.floor((player.x + ts - pad - 1) / ts);
+        const tT = Math.floor((newPy + pad) / ts);
+        const tB = Math.floor((newPy + ts - pad - 1) / ts);
         if (!MapManager.isSolid(cL,tT) && !MapManager.isSolid(cR,tT) &&
             !MapManager.isSolid(cL,tB) && !MapManager.isSolid(cR,tB) &&
             !MapManager.getNpcAt(cL,tT) && !MapManager.getNpcAt(cR,tT) &&
             !MapManager.getNpcAt(cL,tB) && !MapManager.getNpcAt(cR,tB)) {
           player.y = newPy;
+        } else if (dx === 0) {
+          // 縦移動ブロック時: 左右にずらして通れるか試す（コーナー補正）
+          const nudge = ts * 0.3;
+          for (const offset of [-nudge, nudge]) {
+            const adjX = player.x + offset;
+            const acL = Math.floor((adjX + pad) / ts);
+            const acR = Math.floor((adjX + ts - pad - 1) / ts);
+            if (!MapManager.isSolid(acL,tT) && !MapManager.isSolid(acR,tT) &&
+                !MapManager.isSolid(acL,tB) && !MapManager.isSolid(acR,tB) &&
+                !MapManager.getNpcAt(acL,tT) && !MapManager.getNpcAt(acR,tT) &&
+                !MapManager.getNpcAt(acL,tB) && !MapManager.getNpcAt(acR,tB)) {
+              player.x += offset * 0.15;
+              player.y = newPy;
+              break;
+            }
+          }
         }
       }
     };

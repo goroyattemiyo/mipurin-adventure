@@ -568,6 +568,26 @@ const MapManager = (() => {
     return map;
   }
 
+  function setCurrentMap(mapData) {
+    if (!mapData) return false;
+    if (!mapData.data && mapData.tiles) mapData.data = mapData.tiles;
+    if (!Array.isArray(mapData.data) || !mapData.cols || !mapData.rows) return false;
+    if (!mapData.playerStart) mapData.playerStart = { x: 1, y: 1 };
+    if (!mapData.exits) mapData.exits = [];
+    if (!mapData.npcs) mapData.npcs = [];
+    if (!mapData.enemies) mapData.enemies = [];
+
+    _currentMap = mapData;
+    _currentMapName = mapData.name || 'dungeon';
+    _ensureBgCanvas(_currentMap);
+    _renderBackground();
+    _bgDirty = false;
+    if (_currentMap.npcs) {
+      for (const npc of _currentMap.npcs) { _prepareNpcCanvas(npc); }
+    }
+    return true;
+  }
+
   function getTile(col, row) {
     if (!_currentMap) return -1;
     if (col<0||col>=_currentMap.cols||row<0||row>=_currentMap.rows) return -1;
@@ -619,6 +639,7 @@ const MapManager = (() => {
     draw,
     drawNpcs,
     generateRandomMap,
+    setCurrentMap,
     getThemeForArea: _getThemeForArea,
     getCurrentMap:()=>_currentMap,
     getCurrentMapName:()=>_currentMapName

@@ -113,25 +113,36 @@ const PlayerController = (() => {
 
     const moveWithCollision = (dx, dy, speed) => {
       if (dx === 0 && dy === 0) return;
+      const margin = 2;
 
-      const margin = 4;
-      const newPx = player.x + dx * speed;
-      const newPy = player.y + dy * speed;
-
-      /* X軸 */
-      const tL = Math.floor((newPx + margin) / ts), tR = Math.floor((newPx + ts - margin - 1) / ts);
-      const cR1 = Math.floor((player.y + margin) / ts), cR2 = Math.floor((player.y + ts - margin - 1) / ts);
-      if (!MapManager.isSolid(tL,cR1)&&!MapManager.isSolid(tR,cR1)&&!MapManager.isSolid(tL,cR2)&&!MapManager.isSolid(tR,cR2)
-        &&!MapManager.getNpcAt(tL,cR1)&&!MapManager.getNpcAt(tR,cR1)&&!MapManager.getNpcAt(tL,cR2)&&!MapManager.getNpcAt(tR,cR2)) {
-        player.x = newPx;
+      // X軸の移動を試行
+      if (dx !== 0) {
+        const newPx = player.x + dx * speed;
+        const tL = Math.floor((newPx + margin) / ts);
+        const tR = Math.floor((newPx + ts - margin - 1) / ts);
+        const rT = Math.floor((player.y + margin) / ts);
+        const rB = Math.floor((player.y + ts - margin - 1) / ts);
+        if (!MapManager.isSolid(tL,rT) && !MapManager.isSolid(tR,rT) &&
+            !MapManager.isSolid(tL,rB) && !MapManager.isSolid(tR,rB) &&
+            !MapManager.getNpcAt(tL,rT) && !MapManager.getNpcAt(tR,rT) &&
+            !MapManager.getNpcAt(tL,rB) && !MapManager.getNpcAt(tR,rB)) {
+          player.x = newPx;
+        }
       }
 
-      /* Y軸 */
-      const cC1 = Math.floor((player.x + margin) / ts), cC2 = Math.floor((player.x + ts - margin - 1) / ts);
-      const tT = Math.floor((newPy + margin) / ts), tB = Math.floor((newPy + ts - margin - 1) / ts);
-      if (!MapManager.isSolid(cC1,tT)&&!MapManager.isSolid(cC2,tT)&&!MapManager.isSolid(cC1,tB)&&!MapManager.isSolid(cC2,tB)
-        &&!MapManager.getNpcAt(cC1,tT)&&!MapManager.getNpcAt(cC2,tT)&&!MapManager.getNpcAt(cC1,tB)&&!MapManager.getNpcAt(cC2,tB)) {
-        player.y = newPy;
+      // Y軸の移動を試行（X軸移動後の位置で判定）
+      if (dy !== 0) {
+        const newPy = player.y + dy * speed;
+        const cL = Math.floor((player.x + margin) / ts);
+        const cR = Math.floor((player.x + ts - margin - 1) / ts);
+        const tT = Math.floor((newPy + margin) / ts);
+        const tB = Math.floor((newPy + ts - margin - 1) / ts);
+        if (!MapManager.isSolid(cL,tT) && !MapManager.isSolid(cR,tT) &&
+            !MapManager.isSolid(cL,tB) && !MapManager.isSolid(cR,tB) &&
+            !MapManager.getNpcAt(cL,tT) && !MapManager.getNpcAt(cR,tT) &&
+            !MapManager.getNpcAt(cL,tB) && !MapManager.getNpcAt(cR,tB)) {
+          player.y = newPy;
+        }
       }
     };
 

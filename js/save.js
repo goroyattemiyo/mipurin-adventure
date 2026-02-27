@@ -53,6 +53,9 @@ const SaveManager = (() => {
         atk: gameState.player.atk,
         speed: gameState.player.speed,
         needleDmg: gameState.player.needleDmg,
+        needles: gameState.player.needles,
+        needleMax: gameState.player.needleMax,
+        needleRegenTimer: gameState.player.needleRegenTimer,
         level: gameState.player.level,
         exp: gameState.player.exp,
         totalExp: gameState.player.totalExp,
@@ -63,6 +66,8 @@ const SaveManager = (() => {
       },
       flags: { ...gameState.flags },
       inventory: gameState.inventory || [],
+      equipment: gameState.equipment || null,
+      skills: gameState.skills || null,
       mapName: gameState.mapName || 'village',
       playtime: gameState.playtime || 0
     };

@@ -612,11 +612,17 @@ const Game = (() => {
     player.x = map.playerStart.x * CONFIG.TILE_SIZE;
     player.y = map.playerStart.y * CONFIG.TILE_SIZE;
     player.dir = 'down';
-    // _pendingPlayerPosition はセーブ復元専用、固定マップのみ適用
-    if (_pendingPlayerPosition && mapName === 'village') {
+    // _pendingPlayerPosition はセーブ復元専用、全マップで適用
+    if (_pendingPlayerPosition) {
       player.x = _pendingPlayerPosition.x;
       player.y = _pendingPlayerPosition.y;
       player.dir = _pendingPlayerPosition.dir || player.dir;
+      const checkCol = Math.floor(player.x / CONFIG.TILE_SIZE);
+      const checkRow = Math.floor(player.y / CONFIG.TILE_SIZE);
+      if (MapManager.isSolid(checkCol, checkRow)) {
+        player.x = map.playerStart.x * CONFIG.TILE_SIZE;
+        player.y = map.playerStart.y * CONFIG.TILE_SIZE;
+      }
     }
     _pendingPlayerPosition = null;
     _dialogActive = false; _dialogQueue = [];
@@ -1400,6 +1406,9 @@ const Game = (() => {
     const map = Dungeon.getMapForRenderer();
     if(map){
       _currentMapName = 'dungeon';
+      if (typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
+        MapManager.setCurrentMap(map);
+      }
       // MapManager互換でロード
       player.x = map.playerStart.x * CONFIG.TILE_SIZE;
       player.y = map.playerStart.y * CONFIG.TILE_SIZE;

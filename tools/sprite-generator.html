@@ -80,6 +80,7 @@
     button:active { transform: translateY(1px); }
     button.secondary { background: #2d2d5a; color: var(--text); }
     button.danger { background: #ff6b6b; color: #2b0b0b; }
+    .disabled { opacity: 0.45; pointer-events: none; }
     .hint { color: var(--muted); font-size: 12px; }
     .status { font-size: 13px; color: var(--muted); }
     .badge { padding: 3px 8px; border-radius: 999px; background: #2d2d5a; font-size: 11px; }
@@ -148,8 +149,13 @@
     <div class="status" id="globalStatus">待機中...</div>
     <div class="error" id="errorBox"></div>
 
+    <div class="row" style="margin: 8px 0 16px;">
+      <label class="chip">アップロードから開始<input id="fileUploadTop" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" /></label>
+      <span class="hint">PNG/JPG/WebP を選択すると即プレビュー表示します。</span>
+    </div>
+
     <details open>
-      <summary>① API 設定</summary>
+      <summary>① API 設定（オプション）</summary>
       <div class="panel grid grid-2">
         <div>
           <label>Gemini API キー</label>
@@ -160,6 +166,7 @@
             <span class="badge" id="apiStatus">未設定</span>
           </div>
           <div class="hint">API キーは localStorage に保存されます。</div>
+          <div class="hint">API キーがなくても画像アップロードから全機能が使えます。</div>
         </div>
         <div>
           <label>ステータス</label>
@@ -170,8 +177,8 @@
       </div>
     </details>
 
-    <details open>
-      <summary>② キャラクター生成</summary>
+    <details id="aiSection">
+      <summary>② AI キャラクター生成（オプション）</summary>
       <div class="panel grid grid-2">
         <div class="grid">
           <label>キャラ名</label>
@@ -206,7 +213,7 @@
           <div class="row">
             <button id="btnGenerate">AI 生成</button>
             <button id="btnLocalMode" class="secondary">ローカルモード</button>
-            <label class="chip">画像アップロード<input id="fileUpload" type="file" accept="image/*" style="display:none" /></label>
+            <span class="hint">APIキー未設定時は無効</span>
           </div>
         </div>
         <div>
@@ -266,8 +273,12 @@
       <summary>⑤ 4方向スプライト生成</summary>
       <div class="panel grid">
         <div class="row">
-          <button id="btnGenDirAI">AI で4方向生成</button>
-          <button id="btnGenDirProg" class="secondary">プログラム生成</button>
+          <label>モード</label>
+          <select id="dirMode">
+            <option value="program" selected>プログラマティック</option>
+            <option value="ai">AI</option>
+          </select>
+          <button id="btnGenDir">4方向生成</button>
           <span class="hint">AI は正面画像から左/右/後ろを生成します。</span>
         </div>
         <div class="preview-grid" id="dirGrid"></div>
@@ -309,6 +320,7 @@
         <div class="row">
           <button id="btnBatch">一括生成</button>
           <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
+          <label class="chip">フォルダアップロード<input id="folderUpload" type="file" webkitdirectory multiple style="display:none" /></label>
           <span class="hint">チェックしたプリセットのみ生成します。</span>
         </div>
         <div class="hint" id="batchLimit">無料枠目安: 1日5体まで推奨</div>
@@ -585,6 +597,7 @@
     const errorBox = document.getElementById('errorBox');
     const rateRemaining = document.getElementById('rateRemaining');
     const rateRetry = document.getElementById('rateRetry');
+    const aiSection = document.getElementById('aiSection');
     const charName = document.getElementById('charName');
     const style = document.getElementById('style');
     const size = document.getElementById('size');
@@ -597,6 +610,8 @@
     const bgProgressText = document.getElementById('bgProgressText');
     const pixelPreview = document.getElementById('pixelPreview');
     const dirGrid = document.getElementById('dirGrid');
+    const dirMode = document.getElementById('dirMode');
+    const btnGenDir = document.getElementById('btnGenDir');
     const animPreview = document.getElementById('animPreview');
     const sheetPreview = document.getElementById('sheetPreview');
     const importCode = document.getElementById('importCode');
@@ -605,6 +620,8 @@
     const batchLimitWarn = document.getElementById('batchLimitWarn');
     const pixelSize = document.getElementById('pixelSize');
     const btnLocalMode = document.getElementById('btnLocalMode');
+    const fileUploadTop = document.getElementById('fileUploadTop');
+    const folderUpload = document.getElementById('folderUpload');
 
     const rateState = {
       lastFetchAt: 0,
@@ -622,6 +639,17 @@
 
     function setStatus(msg) {
       globalStatus.textContent = msg || '';
+    }
+
+    function updateApiAvailability() {
+      const hasKey = !!apiKeyInput.value.trim();
+      if (aiSection) aiSection.classList.toggle('disabled', !hasKey);
+      document.getElementById('btnGenerate').disabled = !hasKey;
+      if (dirMode) {
+        const aiOption = dirMode.querySelector('option[value=\"ai\"]');
+        if (aiOption) aiOption.disabled = !hasKey;
+        if (!hasKey && dirMode.value === 'ai') dirMode.value = 'program';
+      }
     }
 
     function updateRateUI() {
@@ -1012,7 +1040,7 @@
       await runLocalMode();
     });
 
-    document.getElementById('fileUpload').addEventListener('change', async (e) => {
+    fileUploadTop.addEventListener('change', async (e) => {
       setError('');
       const file = e.target.files?.[0];
       if (!file) return;
@@ -1051,29 +1079,26 @@
       refreshImportCode();
     });
 
-    document.getElementById('btnGenDirAI').addEventListener('click', async () => {
+    btnGenDir.addEventListener('click', async () => {
       setError('');
-      const key = apiKeyInput.value.trim();
-      if (!key) return showError('API キーが必要です');
       if (!state.pixelCanvas) return showError('先にピクセル化してください');
-      const api = new GeminiAPI(key);
       const dirGen = new DirectionGenerator();
-      setStatus('4方向生成中...');
-      try {
-        state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+      if (dirMode.value === 'ai') {
+        const key = apiKeyInput.value.trim();
+        if (!key) return showError('API キーが必要です');
+        const api = new GeminiAPI(key);
+        setStatus('4方向生成中...');
+        try {
+          state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+          renderDirections(state.directions);
+          setStatus('完了');
+        } catch (e) {
+          showError(e.message);
+        }
+      } else {
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
         renderDirections(state.directions);
-        setStatus('完了');
-      } catch (e) {
-        showError(e.message);
       }
-    });
-
-    document.getElementById('btnGenDirProg').addEventListener('click', () => {
-      setError('');
-      if (!state.pixelCanvas) return showError('先にピクセル化してください');
-      const dirGen = new DirectionGenerator();
-      state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
-      renderDirections(state.directions);
     });
 
     document.getElementById('btnGenFrames').addEventListener('click', () => {

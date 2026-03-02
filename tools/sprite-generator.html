@@ -80,6 +80,7 @@
     button:active { transform: translateY(1px); }
     button.secondary { background: #2d2d5a; color: var(--text); }
     button.danger { background: #ff6b6b; color: #2b0b0b; }
+    .disabled { opacity: 0.45; pointer-events: none; }
     .hint { color: var(--muted); font-size: 12px; }
     .status { font-size: 13px; color: var(--muted); }
     .badge { padding: 3px 8px; border-radius: 999px; background: #2d2d5a; font-size: 11px; }
@@ -148,8 +149,13 @@
     <div class="status" id="globalStatus">待機中...</div>
     <div class="error" id="errorBox"></div>
 
+    <div class="row" style="margin: 8px 0 16px;">
+      <label class="chip">アップロードから開始<input id="fileUploadTop" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" /></label>
+      <span class="hint">PNG/JPG/WebP を選択すると即プレビュー表示します。</span>
+    </div>
+
     <details open>
-      <summary>① API 設定</summary>
+      <summary>① API 設定（オプション）</summary>
       <div class="panel grid grid-2">
         <div>
           <label>Gemini API キー</label>
@@ -160,16 +166,19 @@
             <span class="badge" id="apiStatus">未設定</span>
           </div>
           <div class="hint">API キーは localStorage に保存されます。</div>
+          <div class="hint">API キーがなくても画像アップロードから全機能が使えます。</div>
         </div>
         <div>
           <label>ステータス</label>
           <div class="status" id="quotaStatus">待機中</div>
+          <div class="status">残りリクエスト推定: <span id="rateRemaining">-</span></div>
+          <div class="status">次回リトライ: <span id="rateRetry">-</span></div>
         </div>
       </div>
     </details>
 
-    <details open>
-      <summary>② キャラクター生成</summary>
+    <details id="aiSection">
+      <summary>② AI キャラクター生成（オプション）</summary>
       <div class="panel grid grid-2">
         <div class="grid">
           <label>キャラ名</label>
@@ -203,7 +212,8 @@
           <textarea id="extraPrompt" placeholder="例: warm lighting, simple silhouette"></textarea>
           <div class="row">
             <button id="btnGenerate">AI 生成</button>
-            <label class="chip">画像アップロード<input id="fileUpload" type="file" accept="image/*" style="display:none" /></label>
+            <button id="btnLocalMode" class="secondary">ローカルモード</button>
+            <span class="hint">APIキー未設定時は無効</span>
           </div>
         </div>
         <div>
@@ -263,8 +273,12 @@
       <summary>⑤ 4方向スプライト生成</summary>
       <div class="panel grid">
         <div class="row">
-          <button id="btnGenDirAI">AI で4方向生成</button>
-          <button id="btnGenDirProg" class="secondary">プログラム生成</button>
+          <label>モード</label>
+          <select id="dirMode">
+            <option value="program" selected>プログラマティック</option>
+            <option value="ai">AI</option>
+          </select>
+          <button id="btnGenDir">4方向生成</button>
           <span class="hint">AI は正面画像から左/右/後ろを生成します。</span>
         </div>
         <div class="preview-grid" id="dirGrid"></div>
@@ -306,8 +320,11 @@
         <div class="row">
           <button id="btnBatch">一括生成</button>
           <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
+          <label class="chip">フォルダアップロード<input id="folderUpload" type="file" webkitdirectory multiple style="display:none" /></label>
           <span class="hint">チェックしたプリセットのみ生成します。</span>
         </div>
+        <div class="hint" id="batchLimit">無料枠目安: 1日5体まで推奨</div>
+        <div class="status" id="batchLimitWarn"></div>
         <div class="status" id="batchStatus">未実行</div>
         <div class="grid grid-3" id="presetList"></div>
       </div>
@@ -337,7 +354,7 @@
       async generateImage(prompt) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
         const parts = [{ text: prompt }];
-        const res = await fetch(url, {
+        const res = await throttledFetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts }] })
@@ -346,6 +363,8 @@
         const data = await res.json();
         const b64 = findInlineBase64(data);
         if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
         return base64ToBlob(b64, 'image/png');
       }
 
@@ -355,7 +374,7 @@
           { text: prompt },
           { inline_data: { mime_type: 'image/png', data: imageBase64 } }
         ];
-        const res = await fetch(url, {
+        const res = await throttledFetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts }] })
@@ -364,6 +383,8 @@
         const data = await res.json();
         const b64 = findInlineBase64(data);
         if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
         return base64ToBlob(b64, 'image/png');
       }
     }
@@ -515,7 +536,7 @@
         for (let i = 0; i < presets.length; i++) {
           const preset = presets[i];
           options.onProgress?.(`生成中: ${preset.name} (${i+1}/${presets.length})`);
-          await sleep(2000);
+          await sleep(8000);
           const blob = await this.api.generateImage(preset.prompt);
           const fg = await this.remover.remove(blob);
           const fgCanvas = await blobToCanvas(fg);
@@ -574,6 +595,9 @@
     const quotaStatus = document.getElementById('quotaStatus');
     const globalStatus = document.getElementById('globalStatus');
     const errorBox = document.getElementById('errorBox');
+    const rateRemaining = document.getElementById('rateRemaining');
+    const rateRetry = document.getElementById('rateRetry');
+    const aiSection = document.getElementById('aiSection');
     const charName = document.getElementById('charName');
     const style = document.getElementById('style');
     const size = document.getElementById('size');
@@ -586,12 +610,28 @@
     const bgProgressText = document.getElementById('bgProgressText');
     const pixelPreview = document.getElementById('pixelPreview');
     const dirGrid = document.getElementById('dirGrid');
+    const dirMode = document.getElementById('dirMode');
+    const btnGenDir = document.getElementById('btnGenDir');
     const animPreview = document.getElementById('animPreview');
     const sheetPreview = document.getElementById('sheetPreview');
     const importCode = document.getElementById('importCode');
     const presetList = document.getElementById('presetList');
     const batchStatus = document.getElementById('batchStatus');
+    const batchLimitWarn = document.getElementById('batchLimitWarn');
     const pixelSize = document.getElementById('pixelSize');
+    const btnLocalMode = document.getElementById('btnLocalMode');
+    const fileUploadTop = document.getElementById('fileUploadTop');
+    const folderUpload = document.getElementById('folderUpload');
+
+    const rateState = {
+      lastFetchAt: 0,
+      retryUntil: 0,
+      requestsMade: 0
+    };
+    const RATE_LIMIT_ESTIMATE = 500;
+    const MIN_FETCH_INTERVAL = 6000;
+    const RETRY_BACKOFFS = [10000, 20000, 40000];
+    const BATCH_SOFT_LIMIT = 5;
 
     function setError(msg) {
       errorBox.textContent = msg || '';
@@ -599,6 +639,47 @@
 
     function setStatus(msg) {
       globalStatus.textContent = msg || '';
+    }
+
+    function updateApiAvailability() {
+      const hasKey = !!apiKeyInput.value.trim();
+      if (aiSection) aiSection.classList.toggle('disabled', !hasKey);
+      document.getElementById('btnGenerate').disabled = !hasKey;
+      if (dirMode) {
+        const aiOption = dirMode.querySelector('option[value=\"ai\"]');
+        if (aiOption) aiOption.disabled = !hasKey;
+        if (!hasKey && dirMode.value === 'ai') dirMode.value = 'program';
+      }
+    }
+
+    function updateRateUI() {
+      const remaining = Math.max(0, RATE_LIMIT_ESTIMATE - rateState.requestsMade);
+      rateRemaining.textContent = `${remaining}`;
+      const now = Date.now();
+      if (rateState.retryUntil > now) {
+        const sec = Math.ceil((rateState.retryUntil - now) / 1000);
+        rateRetry.textContent = `${sec}s`;
+      } else {
+        rateRetry.textContent = '-';
+      }
+    }
+
+    async function throttledFetch(url, options, attempt = 0) {
+      const now = Date.now();
+      const waitForInterval = Math.max(0, MIN_FETCH_INTERVAL - (now - rateState.lastFetchAt));
+      if (waitForInterval > 0) {
+        await sleep(waitForInterval);
+      }
+      const res = await fetch(url, options);
+      rateState.lastFetchAt = Date.now();
+      if (res.status === 429 && attempt < RETRY_BACKOFFS.length) {
+        const backoff = RETRY_BACKOFFS[attempt];
+        rateState.retryUntil = Date.now() + backoff;
+        updateRateUI();
+        await sleep(backoff);
+        return throttledFetch(url, options, attempt + 1);
+      }
+      return res;
     }
 
     function findInlineBase64(data) {
@@ -898,6 +979,32 @@
       if (msg) setStatus('エラー');
     }
 
+    async function runLocalMode() {
+      if (!state.rawBlob) return showError('ローカルモード: 先に画像をアップロードしてください');
+      setStatus('ローカルモード実行中...');
+      try {
+        await removeBackground();
+        pixelize();
+        const dirGen = new DirectionGenerator();
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
+        renderDirections(state.directions);
+        generateFrames();
+        assembleSheet();
+        setStatus('ローカルモード完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function updateBatchLimitWarn() {
+      const selected = Array.from(document.querySelectorAll('.preset-check')).filter(i => i.checked).length;
+      if (selected > BATCH_SOFT_LIMIT) {
+        batchLimitWarn.textContent = `警告: 無料枠ユーザーは1日${BATCH_SOFT_LIMIT}体まで推奨（現在 ${selected} 体）`;
+      } else {
+        batchLimitWarn.textContent = '';
+      }
+    }
+
     // UI Bindings
     document.getElementById('saveKey').addEventListener('click', () => {
       const key = apiKeyInput.value.trim();
@@ -928,8 +1035,12 @@
         showError(e.message);
       }
     });
+    btnLocalMode.addEventListener('click', async () => {
+      setError('');
+      await runLocalMode();
+    });
 
-    document.getElementById('fileUpload').addEventListener('change', async (e) => {
+    fileUploadTop.addEventListener('change', async (e) => {
       setError('');
       const file = e.target.files?.[0];
       if (!file) return;
@@ -968,29 +1079,26 @@
       refreshImportCode();
     });
 
-    document.getElementById('btnGenDirAI').addEventListener('click', async () => {
+    btnGenDir.addEventListener('click', async () => {
       setError('');
-      const key = apiKeyInput.value.trim();
-      if (!key) return showError('API キーが必要です');
       if (!state.pixelCanvas) return showError('先にピクセル化してください');
-      const api = new GeminiAPI(key);
       const dirGen = new DirectionGenerator();
-      setStatus('4方向生成中...');
-      try {
-        state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+      if (dirMode.value === 'ai') {
+        const key = apiKeyInput.value.trim();
+        if (!key) return showError('API キーが必要です');
+        const api = new GeminiAPI(key);
+        setStatus('4方向生成中...');
+        try {
+          state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+          renderDirections(state.directions);
+          setStatus('完了');
+        } catch (e) {
+          showError(e.message);
+        }
+      } else {
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
         renderDirections(state.directions);
-        setStatus('完了');
-      } catch (e) {
-        showError(e.message);
       }
-    });
-
-    document.getElementById('btnGenDirProg').addEventListener('click', () => {
-      setError('');
-      if (!state.pixelCanvas) return showError('先にピクセル化してください');
-      const dirGen = new DirectionGenerator();
-      state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
-      renderDirections(state.directions);
     });
 
     document.getElementById('btnGenFrames').addEventListener('click', () => {
@@ -1071,6 +1179,12 @@
         card.innerHTML = `<input class="preset-check" type="checkbox" value="${p.id}" checked /> ${p.name} (${p.id})`;
         presetList.appendChild(card);
       });
+      document.querySelectorAll('.preset-check').forEach((el) => {
+        el.addEventListener('change', updateBatchLimitWarn);
+      });
+      updateBatchLimitWarn();
+      updateRateUI();
+      setInterval(updateRateUI, 1000);
     }
 
     init();

@@ -106,12 +106,12 @@ const Balance = (() => {
   };
 
   /** 巣窟の敵HP計算 */
-  function dungeonEnemyHp(baseHp, floor) {
-    return Math.ceil(baseHp * (1 + floor * DUNGEON.HP_SCALE_PER_FLOOR));
+  function dungeonEnemyHp(baseHp, floor) { /* 改善版: 対数ハイブリッド */
+    var logFactor = Math.log2(floor + 1); var linearFactor = floor * 0.05; return Math.ceil(baseHp * (1 + logFactor * 0.5 + linearFactor));
   }
   /** 巣窟の敵ATK計算 */
-  function dungeonEnemyAtk(baseAtk, floor) {
-    return Math.ceil(baseAtk * (1 + floor * DUNGEON.ATK_SCALE_PER_FLOOR));
+  function dungeonEnemyAtk(baseAtk, floor) { /* 改善版: 平方根ベース */
+    var sqrtFactor = Math.sqrt(floor); return Math.ceil(baseAtk * (1 + sqrtFactor * 0.3));
   }
   /** 巣窟のポーレン量計算 */
   function dungeonPollen(basePollen, floor) {

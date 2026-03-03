@@ -5,7 +5,7 @@
    ============================================================ */
 
 /* ===== CONSTANTS ===== */
-const CW=960,CH=540,TILE=48,COLS=20,ROWS=11,FPS=60;
+const CW=1280,CH=960,TILE=64,COLS=20,ROWS=15,FPS=60;
 const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
 
 /* ===== INPUT ===== */
@@ -81,7 +81,7 @@ function pickPattern(fl){
   const pool=fl<=2?['open','cross','scatter']:fl<=4?['cross','lwall','scatter','pillar']:['lwall','pillar','scatter'];
   return pool[rndInt(0,pool.length-1)];
 }
-function isSafe(c,r){return Math.abs(c-10)<=2&&Math.abs(r-5)<=2}
+function isSafe(c,r){return Math.abs(c-10)<=2&&Math.abs(r-7)<=2}
 function setWall(map,c,r){if(c>0&&c<COLS-1&&r>0&&r<ROWS-1&&!isSafe(c,r))map[r*COLS+c]=1}
 
 function generateRoom(fl){
@@ -103,7 +103,7 @@ function generateRoom(fl){
       if(t<30){setWall(map,pc,pr);if(pRnd()>0.5)setWall(map,pc+1,pr)}
     }
   }else if(pat==='cross'){
-    const cx=10,cy=5;
+    const cx=10,cy=7;
     const gapV=pRndInt(3,5),gapH=pRndInt(7,13);
     for(let r=2;r<=ROWS-3;r++){if(Math.abs(r-cy)!==0&&r!==gapV)setWall(map,cx,r)}
     for(let c=3;c<=COLS-4;c++){if(Math.abs(c-cx)!==0&&c!==gapH)setWall(map,c,cy)}
@@ -123,7 +123,7 @@ function generateRoom(fl){
       if(ok)for(const s of sh)setWall(map,ox+s.c,oy+s.r);
     }
   }else if(pat==='pillar'){
-    const positions=[[5,3],[15,3],[5,7],[15,7],[10,5]];
+    const positions=[[5,4],[15,4],[5,10],[15,10],[10,7]];
     const count=fl>=5?4:3;
     const chosen=[];while(chosen.length<count&&positions.length>0){chosen.push(positions.splice(pRndInt(0,positions.length-1),1)[0])}
     for(const[px,py]of chosen){
@@ -308,7 +308,7 @@ let prologueSeen=false;
 
 /* ===== PLAYER ===== */
 let player={
-  x:TILE*10,y:TILE*5,w:36,h:36,speed:200,hp:5,maxHp:5,atk:1,
+  x:TILE*10,y:TILE*7,w:48,h:48,speed:200,hp:5,maxHp:5,atk:1,
   dir:'down',attacking:false,atkTimer:0,atkCd:0,
   dashing:false,dashTimer:0,dashCd:0,dashSpeed:550,
   iframes:0,face:'normal',
@@ -431,7 +431,7 @@ function moveWithCollision(ent,dx,dy){
 function randEnemyPos(){
   let c,r,tries=0;
   do{c=rndInt(2,COLS-3);r=rndInt(2,ROWS-3);tries++}
-  while(tries<30&&(tileAt(roomMap,c,r)===1||tileAt(roomMap,c-1,r)===1||tileAt(roomMap,c+1,r)===1||tileAt(roomMap,c,r-1)===1||tileAt(roomMap,c,r+1)===1||(Math.abs(c-10)<3&&Math.abs(r-5)<3)));
+  while(tries<30&&(tileAt(roomMap,c,r)===1||tileAt(roomMap,c-1,r)===1||tileAt(roomMap,c+1,r)===1||tileAt(roomMap,c,r-1)===1||tileAt(roomMap,c,r+1)===1||(Math.abs(c-10)<3&&Math.abs(r-7)<3)));
   return{x:c*TILE+TILE/2,y:r*TILE+TILE/2};
 }
 function spawnWave(){
@@ -441,7 +441,7 @@ function spawnWave(){
     const def=ENEMY_DEFS[g.type];const sc=1+floor*0.12;
     for(let i=0;i<g.count;i++){
       const pos=randEnemyPos();
-      enemies.push({...pos,w:32,h:32,hp:Math.ceil(def.hp*sc),maxHp:Math.ceil(def.hp*sc),
+      enemies.push({...pos,w:42,h:42,hp:Math.ceil(def.hp*sc),maxHp:Math.ceil(def.hp*sc),
         speed:def.speed,dmg:def.dmg,score:def.score,type:def.type,defKey:g.type,
         color:def.color,bodyColor:def.bodyColor,dropChance:def.dropChance||0.15,
         dir:rnd(0,Math.PI*2),wanderTimer:rnd(0.5,2),
@@ -475,7 +475,7 @@ function dropFromEnemy(x,y,defKey,dropChance){
 /* ===== RESET ===== */
 function resetGame(){
   floor=1;wave=0;score=0;
-  player.x=TILE*10;player.y=TILE*5;player.maxHp=5;player.hp=5;player.atk=1;
+  player.x=TILE*10;player.y=TILE*7;player.maxHp=5;player.hp=5;player.atk=1;
   player.speed=200;player.blessings=[];player.magnetRange=60;player.pollen=0;
   player.attacking=false;player.atkTimer=0;player.atkCd=0;
   player.dashing=false;player.dashTimer=0;player.dashCd=0;
@@ -493,7 +493,7 @@ function resetGame(){
   gameState='playing';
 }
 function startFloor(){
-  wave=0;player.x=TILE*10;player.y=TILE*5;
+  wave=0;player.x=TILE*10;player.y=TILE*7;
   enemies=[];items=[];projectiles=[];particles=[];
   roomMap=generateRoom(floor);WAVES=buildWaves(floor);spawnWave();
   collectionDiscover('place_floor'+floor);
@@ -524,7 +524,7 @@ function drawPlayer(){
   ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.squashX,p.squashY);
   const bob=Math.sin(p.bobTimer*10)*2;ctx.translate(0,bob);
   if(spriteLoaded){
-    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=44;
+    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=58;
     ctx.drawImage(spriteImg,frame.sx,frame.sy,frame.sw,frame.sh,-ds/2,-ds/2,ds,ds);
     // Wing flutter
     ctx.globalAlpha=0.3;ctx.fillStyle='#bbdefb';
@@ -534,10 +534,10 @@ function drawPlayer(){
     ctx.globalAlpha=1;
     if(p.iframes>0){ctx.globalAlpha=0.4;ctx.fillStyle=`hsla(${Date.now()%360},80%,70%,0.3)`;ctx.fillRect(-ds/2,-ds/2,ds,ds);ctx.globalAlpha=1}
   }else{
-    ctx.fillStyle='#ffd54f';ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffd54f';ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#5d4037';ctx.beginPath();ctx.arc(-5,-3,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5,-3,3,0,Math.PI*2);ctx.fill();
   }
-  if(p.dashing){ctx.globalAlpha=0.2;ctx.fillStyle='#bbdefb';ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
+  if(p.dashing){ctx.globalAlpha=0.2;ctx.fillStyle='#bbdefb';ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
   ctx.restore();
   if(p.attacking){
     const dirs={down:{x:0,y:1},up:{x:0,y:-1},left:{x:-1,y:0},right:{x:1,y:0}};
@@ -972,6 +972,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 
 

@@ -308,7 +308,7 @@ let prologueSeen=false;
 
 /* ===== PLAYER ===== */
 let player={
-  x:TILE*10,y:TILE*7,w:48,h:48,speed:200,hp:5,maxHp:5,atk:1,
+  x:TILE*10,y:TILE*7,w:56,h:56,speed:200,hp:5,maxHp:5,atk:1,
   dir:'down',attacking:false,atkTimer:0,atkCd:0,
   dashing:false,dashTimer:0,dashCd:0,dashSpeed:550,
   iframes:0,face:'normal',
@@ -441,7 +441,7 @@ function spawnWave(){
     const def=ENEMY_DEFS[g.type];const sc=1+floor*0.12;
     for(let i=0;i<g.count;i++){
       const pos=randEnemyPos();
-      enemies.push({...pos,w:42,h:42,hp:Math.ceil(def.hp*sc),maxHp:Math.ceil(def.hp*sc),
+      enemies.push({...pos,w:52,h:52,hp:Math.ceil(def.hp*sc),maxHp:Math.ceil(def.hp*sc),
         speed:def.speed,dmg:def.dmg,score:def.score,type:def.type,defKey:g.type,
         color:def.color,bodyColor:def.bodyColor,dropChance:def.dropChance||0.15,
         dir:rnd(0,Math.PI*2),wanderTimer:rnd(0.5,2),
@@ -524,7 +524,7 @@ function drawPlayer(){
   ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.squashX,p.squashY);
   const bob=Math.sin(p.bobTimer*10)*2;ctx.translate(0,bob);
   if(spriteLoaded){
-    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=58;
+    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=64;
     ctx.drawImage(spriteImg,frame.sx,frame.sy,frame.sw,frame.sh,-ds/2,-ds/2,ds,ds);
     // Wing flutter
     ctx.globalAlpha=0.3;ctx.fillStyle='#bbdefb';
@@ -972,6 +972,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 
 

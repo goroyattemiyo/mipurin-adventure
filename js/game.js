@@ -1,1942 +1,837 @@
-/**
- * game.js - ゲーム初期化・状態管理・シーン遷移・全モジュール統合
- * ミプリンの冒険 v1.0.0
- */
-const Game = (() => {
-  const S = CONFIG.SCALE;
-  const PX = (v) => v * S;
+'use strict';
+/*============================================================
+  ミプリンの冒険 v2.0 — Phase C/D Complete
+  Real-time top-down action roguelike
+  960x540 base, 48px tiles, Canvas 2D
+============================================================*/
 
-  /* ============ シーン定数 ============ */
-  const SCENE = {
-    LOADING:'loading', TITLE:'title', PROLOGUE:'prologue', MENU:'menu',
-    VILLAGE:'village', FOREST_SOUTH:'forest_south', FOREST_NORTH:'forest_north',
-    CAVE:'cave', FLOWER_FIELD:'flower_field', BOSS:'boss',
-    ENDING:'ending', DUNGEON:'dungeon', SETTINGS:'settings',
-    GAMEOVER:'gameover', COLLECTION:'collection', CREDITS:'credits'
-  };
-
-  const PANEL = {
-    MAP_W: CONFIG.MAP_PX_W, MAP_H: CONFIG.MAP_PX_H,
-    RIGHT_X: CONFIG.PANEL_RIGHT_X, RIGHT_Y: 0, RIGHT_W: CONFIG.PANEL_RIGHT_W, RIGHT_H: CONFIG.MAP_PX_H,
-    BOTTOM_X: 0, BOTTOM_Y: CONFIG.PANEL_BOTTOM_Y, BOTTOM_W: CONFIG.CANVAS_WIDTH, BOTTOM_H: CONFIG.PANEL_BOTTOM_H
-  };
-
-  let _currentScene = SCENE.LOADING;
-  let _prevScene = null;
-  let _prologueSeen = false;
-  let _playtime = 0; // 秒
-
-  /* ============ プレイヤー ============ */
-  const player = {
-    x:0, y:0,
-    hp: Balance.PLAYER.BASE_HP, maxHp: Balance.PLAYER.BASE_HP,
-    atk: Balance.PLAYER.BASE_ATK, speed: Balance.PLAYER.BASE_SPEED,
-    needleDmg: Balance.PLAYER.NEEDLE_DMG,
-    dir:'down', lastInputDir:'down',
-    animFrame:0, animTimer:0,
-    attackCooldown:0, needleCooldown:0,
-    inputBuffer:0, inputBufferAction:null,
-    knockback:{x:0,y:0,timer:0}, hitStopFrames:0,
-    invincibleTimer:0, poisoned:false,
-    _buffDef:null, _buffSpeed:null, _buffAtk:null, _buffVision:null,
-    level: 1, exp: 0, totalExp: 0, skillPoints: 0,
-    needles: Balance.NEEDLE.INITIAL, needleMax: Balance.NEEDLE.MAX, needleRegenTimer: 0,
-    _regenTimer: 0
-  };
-
-  /* ============ フラグ ============ */
-  const flags = {
-    quest_started:false, stump_hint:false, has_green_key:false,
-    father_truth:false, seal_hint:false, queen_truth:false, queen_truth_granpa:false,
-    seal_opened:false, has_queens_tear:false, has_hana_pot:false,
-    honey_rule_known:false, collapse_seen:false,
-    piece_a:false, piece_b:false, piece_c:false,
-    ending_a_seen:false, ending_b_seen:false, ending_c_seen:false,
-    dungeon_unlocked:false,
-    killCount:0, needleUseCount:0, pacifist_interactions:0,
-    granpa_met:false, miel_vision:false, miel_reveal:false,
-    marche_event:false, pore_honey_rule:false, navi_father_event:false,
-    has_minimap:false,
-    _hatch_mid_said:false
-  };
-
-  let meta = {};
-
-  /* ============ エフェクト ============ */
-  let _attackEffectTimer = 0;
-  let _needleEffectTimer = 0;
-  let _levelUpEffectTimer = 0;
-  let _vignetteGradient = null;
-  let _vignetteIntensityLast = null;
-  let _rightPanelBg = null;
-  let _bottomPanelBg = null;
-  let _miniMapCanvas = null;
-  let _miniMapCtx = null;
-  let _miniMapDirty = true;
-  let _miniMapKey = '';
-  let _areaBannerText = '';
-  let _areaBannerTimer = 0;
-  const _areaBannerDuration = 2.0;
-  let _pendingPlayerPosition = null;
-  let _logEntries = [];
-  let _dropLogs = [];
-  let _autoSaveCooldown = 0;
-  let _blessingShownThisRoom = false;
-  let _enemiesSpawnedThisRoom = false;
-
-  /* ============ ダイアログ ============ */
-  let _dialogText = '';
-  let _dialogActive = false;
-  let _dialogTimer = 0;
-  let _dialogChars = 0;
-  let _dialogQueue = []; // 連続会話用
-  let _dialogLinesCached = null;
-  let _dialogLineEndsRaw = null;
-  let _dialogTextLast = null;
-  const DIALOG_SPEED = 0.04;
-
-  function _showDialog(text) {
-    _dialogText = text; _dialogActive = true;
-    _dialogTimer = 0; _dialogChars = 0;
-    _dialogLinesCached = null;
-    _dialogLineEndsRaw = null;
-    _dialogTextLast = null;
-    Audio.playSe('dialog_open');
+// ===== SPRITE LOADER (Sprite Processor JSON compatible) =====
+const SpriteLoader = {
+  cache: {},
+  async load(jsonPath) {
+    const res = await fetch(jsonPath);
+    const data = await res.json();
+    const img = new Image();
+    const dir = jsonPath.substring(0, jsonPath.lastIndexOf('/') + 1);
+    await new Promise((ok, ng) => { img.onload = ok; img.onerror = ng; img.src = dir + data.image; });
+    data._img = img;
+    this.cache[data.name] = data;
+    return data;
+  },
+  getAnim(name, animName) {
+    const d = this.cache[name];
+    if (!d || !d.animations[animName]) return null;
+    return d.animations[animName];
+  },
+  drawFrame(ctx, name, frameIdx, x, y, w, h) {
+    const d = this.cache[name];
+    if (!d) return false;
+    const f = d.frames[frameIdx];
+    if (!f) return false;
+    ctx.drawImage(d._img, f.sx, f.sy, f.sw, f.sh, x, y, w, h);
+    return true;
   }
+};
 
-  function _getMapDisplayName(mapName) {
-    const names = {
-      village: 'ミプリンの村',
-      forest_south: '南の森',
-      forest_north: '北の森',
-      cave: '洞窟',
-      flower_field: '花畑',
-      dungeon: '巣窟'
-    };
-    return names[mapName] || mapName;
+// ===== CONSTANTS =====
+const CW = 960, CH = 540, TILE = 48, COLS = 20, ROWS = 11;
+
+// ===== CANVAS =====
+const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
+
+// ===== INPUT =====
+const keys = {}, pressed = {};
+window.addEventListener('keydown', e => { if (!keys[e.code]) pressed[e.code] = true; keys[e.code] = true; e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+function isDown(c) { return !!keys[c] }
+function wasPressed(c) { const v = !!pressed[c]; pressed[c] = false; return v }
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v }
+function rectOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y }
+
+// ===== AUDIO (Chip-tune via Web Audio) =====
+const Audio = (() => {
+  let actx = null;
+  function init() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+  function play(freq, dur, type, vol) {
+    init();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.1, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
   }
-
-  function _getAreaBannerText(mapName) {
-    const name = _getMapDisplayName(mapName);
-    if (mapName === 'village') return name;
-    if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
-      return name + '  B' + Dungeon.getFloor() + 'F';
-    }
-    const aLv = Scaling.areaLevel(player.level, mapName);
-    return name + '  エリア Lv.' + aLv;
-  }
-
-  function _addLog(text) {
-    if (!text) return;
-    _logEntries.unshift({ text, time: Date.now() });
-    if (_logEntries.length > 5) _logEntries.length = 5;
-  }
-
-  function _addDropLog(text, color) {
-    if (!text) return;
-    _dropLogs.unshift({ text, color: color || '#fff', timer: 3.0 });
-    if (_dropLogs.length > 5) _dropLogs.length = 5;
-  }
-
-  function _gainExp(amount) {
-    if (!amount || amount <= 0) return;
-    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-    const expMult = 1 + (skBonus.expMult || 0);
-    amount = Math.ceil(amount * expMult);
-    player.exp += amount;
-    player.totalExp += amount;
-    while (player.exp >= Scaling.expForLevel(player.level)) {
-      player.exp -= Scaling.expForLevel(player.level);
-      player.level++;
-      Skills.addPoint(1);
-      player.skillPoints = Skills.getPoints();
-      EquipmentUI.applyStats();
-      player.hp = player.maxHp;
-      _addLog('レベル ' + player.level + ' に上がった！');
-      Audio.playSe('level_up');
-      _levelUpEffectTimer = 1.0;
-    }
-  }
-
-  function _queueDialogs(lines) {
-    if (!lines || lines.length === 0) return;
-    _showDialog(lines[0]);
-    _dialogQueue = lines.slice(1);
-  }
-
-  function _updateDialog(dt) {
-    if (!_dialogActive) return;
-    _dialogTimer += dt;
-    _dialogChars = Math.min(_dialogText.length, Math.floor(_dialogTimer / DIALOG_SPEED));
-    if (Engine.consumePress('interact') || Engine.consumePress('attack') || Engine.consumeClick()) {
-      if (_dialogChars < _dialogText.length) {
-        _dialogChars = _dialogText.length;
-        _dialogTimer = _dialogText.length * DIALOG_SPEED;
-      } else {
-        if (_dialogQueue.length > 0) {
-          _showDialog(_dialogQueue.shift());
-        } else {
-          _dialogActive = false;
-          _dialogText = '';
-          _dialogQueue = [];
-          _dialogLinesCached = null;
-          _dialogLineEndsRaw = null;
-          _dialogTextLast = null;
-          Shop.closeShop();
-          Audio.playSe('dialog_close');
-        }
-      }
-    }
-  }
-
-  function _wrapDialogLines(ctx, text, maxWidth) {
-    const rawLines = text.split('\n');
-    const lines = [];
-    const endsRaw = [];
-    for (let r = 0; r < rawLines.length; r++) {
-      const raw = rawLines[r];
-      if (!raw) {
-        lines.push('');
-        endsRaw.push(r < rawLines.length - 1);
-        continue;
-      }
-      let rest = raw;
-      while (rest.length > 0) {
-        let cut = Math.min(Math.floor(28 * S), rest.length);
-        while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
-        lines.push(rest.slice(0, cut));
-        rest = rest.slice(cut);
-        endsRaw.push(rest.length === 0 && r < rawLines.length - 1);
-      }
-    }
-    return { lines, endsRaw };
-  }
-
-  function _drawDialog(ctx) {
-    if (!_dialogActive) return;
-    const W = PANEL.BOTTOM_W, H = PANEL.BOTTOM_H;
-    const lineH = PX(22);
-    const padding = PX(16);
-    const minH = PX(100);
-
-    // 横幅に収まるよう折り返し
-    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
-    const maxWidth = W - PX(32) - padding * 2;
-    if (_dialogText !== _dialogTextLast) {
-      const wrapped = _wrapDialogLines(ctx, _dialogText, maxWidth);
-      _dialogLinesCached = wrapped.lines;
-      _dialogLineEndsRaw = wrapped.endsRaw;
-      _dialogTextLast = _dialogText;
-    }
-
-    const lines = [];
-    const cached = _dialogLinesCached || [];
-    const endsRaw = _dialogLineEndsRaw || [];
-    let remaining = _dialogChars;
-    for (let i = 0; i < cached.length; i++) {
-      if (remaining <= 0) break;
-      const line = cached[i];
-      if (remaining < line.length) {
-        lines.push(line.slice(0, remaining));
-        remaining = 0;
-        break;
-      }
-      lines.push(line);
-      remaining -= line.length;
-      if (endsRaw[i]) {
-        if (remaining <= 0) break;
-        remaining -= 1;
-        if (remaining === 0) { lines.push(''); break; }
-      }
-    }
-
-    const neededH = padding * 2 + lines.length * lineH + PX(10);
-    const bh = Math.max(minH, Math.min(neededH, H - PX(20)));
-    const bx = PANEL.BOTTOM_X + PX(16), by = PANEL.BOTTOM_Y + PX(10), bw = W - PX(32);
-
-    ctx.fillStyle = 'rgba(0,0,0,0.88)';
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = '#F5A623';
-    ctx.lineWidth = PX(2);
-    ctx.strokeRect(bx, by, bw, bh);
-
-    ctx.fillStyle = '#fff';
-    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    const maxLines = Math.floor((bh - padding * 2) / lineH);
-    for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
-      ctx.fillText(lines[i], bx + padding, by + padding + i * lineH);
-    }
-
-    if (_dialogChars >= _dialogText.length && Math.sin(Date.now() / 300) > 0) {
-      ctx.fillStyle = '#F5A623';
-      ctx.fillText('▼', bx + bw - PX(28), by + bh - PX(26));
-    }
-  }
-
-  /* ============ プロローグ ============ */
-  const PROLOGUE_TOTAL = 10;
-  const _prologueImages = [];
-  let _prologueImagesLoaded = false;
-  let _prologueIndex=0, _prologueAlpha=0, _prologueTextAlpha=0;
-  let _prologuePhase='fadein', _prologueTimer=0;
-  const P_FADE_IN=1.0, P_HOLD=3.0, P_FADE_OUT=0.7, P_TEXT_DELAY=0.4;
-
-  function _loadPrologueImages() {
-    let loaded=0;
-    for (let i=1; i<=PROLOGUE_TOTAL; i++) {
-      const img=new Image(); const idx=i<10?'0'+i:''+i;
-      img.src='assets/prologue/prologue_'+idx+'.webp';
-      img.onload=()=>{loaded++;if(loaded>=PROLOGUE_TOTAL)_prologueImagesLoaded=true;};
-      img.onerror=()=>{loaded++;if(loaded>=PROLOGUE_TOTAL)_prologueImagesLoaded=true;};
-      _prologueImages.push(img);
-    }
-  }
-
-  function _resetPrologue(){_prologueIndex=0;_prologueAlpha=0;_prologueTextAlpha=0;_prologuePhase='fadein';_prologueTimer=0;}
-
-  function _updatePrologue(dt) {
-    if(Engine.consumePress('menu')){_prologuePhase='done';return;}
-    const adv=Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick();
-    _prologueTimer+=dt;
-    switch(_prologuePhase){
-      case'fadein':
-        _prologueAlpha=Math.min(1,_prologueTimer/P_FADE_IN);
-        _prologueTextAlpha=Math.max(0,Math.min(1,(_prologueTimer-P_TEXT_DELAY)/(P_FADE_IN-P_TEXT_DELAY)));
-        if(_prologueTimer>=P_FADE_IN){_prologuePhase='hold';_prologueTimer=0;}
-        if(adv){_prologuePhase='fadeout';_prologueTimer=0;}break;
-      case'hold':
-        if(_prologueTimer>=P_HOLD||adv){_prologuePhase='fadeout';_prologueTimer=0;}break;
-      case'fadeout':
-        _prologueAlpha=Math.max(0,1-_prologueTimer/P_FADE_OUT);_prologueTextAlpha=_prologueAlpha;
-        if(_prologueTimer>=P_FADE_OUT){_prologueIndex++;
-          if(_prologueIndex>=PROLOGUE_TOTAL)_prologuePhase='done';
-          else{_prologuePhase='fadein';_prologueTimer=0;_prologueAlpha=0;_prologueTextAlpha=0;}}break;
-    }
-    if(_prologuePhase==='done') _changeScene(SCENE.MENU);
-  }
-
-  function _drawPrologue(ctx) {
-    ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    if(_prologueIndex>=PROLOGUE_TOTAL)return;
-    const img=_prologueImages[_prologueIndex];
-    if(!img||!img.complete||!img.naturalWidth)return;
-    const sc=Math.min(CONFIG.CANVAS_WIDTH/img.naturalWidth,CONFIG.CANVAS_HEIGHT/img.naturalHeight);
-    const w=img.naturalWidth*sc,h=img.naturalHeight*sc;
-    const x=(CONFIG.CANVAS_WIDTH-w)/2,y=(CONFIG.CANVAS_HEIGHT-h)/2;
-    ctx.save();ctx.globalAlpha=_prologueAlpha;ctx.drawImage(img,x,y,w,h);ctx.restore();
-    const idx2=_prologueIndex+1;const key='prologue_'+(idx2<10?'0'+idx2:''+idx2);
-    const cap=Lang.t(key);
-    if(cap&&cap!==key&&_prologueTextAlpha>0) _drawCaptionText(ctx,cap,CONFIG.CANVAS_HEIGHT-PX(80),_prologueTextAlpha);
-    ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
-    ctx.fillText('Enter / タップ で次へ　　Esc でスキップ',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(16));ctx.restore();
-  }
-
-  function _drawCaptionText(ctx,text,baseY,alpha){
-    const captionFont = CONFIG.FONT_SM * S * (20 / 24);
-    const lh = CONFIG.FONT_SM * S * (30 / 24);
-    const lines=text.split('\n'),startY=baseY-(lines.length-1)*lh/2;
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${captionFont}px monospace`;
-    for(let i=0;i<lines.length;i++){const ly=startY+i*lh;
-      ctx.globalAlpha=alpha*0.6;ctx.fillStyle='#000';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2+PX(2),ly+PX(2));
-      ctx.globalAlpha=alpha;ctx.fillStyle='#FFFFFF';ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,ly);}
-    ctx.restore();
-  }
-
-  /* ============ タイトル ============ */
-  let _titleAlpha=0,_titleReady=false,_titleTimer=0;
-  function _resetTitle(){_titleAlpha=0;_titleReady=false;_titleTimer=0;}
-  function _updateTitle(dt){
-    _titleTimer+=dt;
-    if(_titleAlpha<1)_titleAlpha=Math.min(1,_titleAlpha+dt*0.8);else _titleReady=true;
-    if(_titleReady&&(Engine.consumePress('attack')||Engine.consumePress('interact')||Engine.consumeClick())){
-      Audio.resume();
-      if(!_prologueSeen){_prologueSeen=true;_changeScene(SCENE.PROLOGUE);}
-      else{_changeScene(SCENE.MENU);}
-    }
-  }
-  function _drawTitle(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.save();ctx.globalAlpha=_titleAlpha;
-    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_XL}px monospace`;ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,PX(280));
-    if(_titleReady&&Math.sin(_titleTimer*4)>0){ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.fillText(Lang.t('press_start'),CONFIG.CANVAS_WIDTH/2,PX(400));}
-    if(meta.golden_title){ctx.fillStyle='rgba(245,166,35,0.15)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);}
-    ctx.restore();
-  }
-
-  /* ============ メニュー ============ */
-  const _menuItemsBase=['menu_story','menu_dungeon','menu_collection','menu_settings','menu_credits'];
-  let _menuCursor=0,_menuAlpha=0;
-  let _menuStorySub=false,_menuStoryCursor=0;
-  let _menuFromGame=false;
-  function _getMenuItems(){ return _menuFromGame ? ['menu_return_village', ..._menuItemsBase] : _menuItemsBase; }
-  function _resetMenu(){_menuCursor=0;_menuAlpha=0;_menuStorySub=false;_menuStoryCursor=0;}
-  function _updateMenu(dt){
-    _menuAlpha=Math.min(1,_menuAlpha+dt*2);
-    if(_menuStorySub){
-      if(Engine.consumePress('up')||Engine.consumePress('down')){_menuStoryCursor=(_menuStoryCursor+1)%2;Audio.playSe('menu_move');}
-      if(Engine.consumePress('menu')){_menuStorySub=false;return;}
-      if(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick()){
-        Audio.playSe('menu_select');
-        if(_menuStoryCursor===0){
-          _changeScene(SCENE.VILLAGE);
-        }else{
-          const data = SaveManager.loadGame(0);
-          if (data) {
-            _restoreFromSave(data);
-          } else {
-            _changeScene(SCENE.VILLAGE);
-          }
-        }
-      }
-      return;
-    }
-    const items=_getMenuItems();
-    if(Engine.consumePress('up')){_menuCursor=(_menuCursor-1+items.length)%items.length;Audio.playSe('menu_move');}
-    if(Engine.consumePress('down')){_menuCursor=(_menuCursor+1)%items.length;Audio.playSe('menu_move');}
-    if(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick()){
-      Audio.playSe('menu_select');
-      switch(items[_menuCursor]){
-        case'menu_return_village':
-          _pendingSpawn = { x: 9, y: 6 };
-          _changeScene(SCENE.VILLAGE);
-          break;
-        case'menu_story':
-          if (SaveManager.getSaveInfo(0)) { _menuStorySub=true; _menuStoryCursor=0; }
-          else { _changeScene(SCENE.VILLAGE); }
-          break;
-        case'menu_dungeon':
-          if(flags.dungeon_unlocked||meta.ending_a||meta.ending_b||meta.ending_c){_changeScene(SCENE.DUNGEON);}
-          else{_showDialog('ストーリーモードをクリアすると\n解放されます');}
-          break;
-        case'menu_collection': _changeScene(SCENE.COLLECTION); break;
-        case'menu_settings': _changeScene(SCENE.SETTINGS); break;
-        case'menu_credits': _changeScene(SCENE.CREDITS); break;
-      }
-    }
-    if(Engine.consumePress('menu'))_changeScene(SCENE.TITLE);
-  }
-  function _drawMenu(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.save();ctx.globalAlpha=_menuAlpha;
-    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
-    ctx.fillText(Lang.t('title'),CONFIG.CANVAS_WIDTH/2,PX(100));
-    const items=_getMenuItems();
-    for(let i=0;i<items.length;i++){const y=PX(220)+i*PX(50);const cur=(i===_menuCursor);
-      if(cur){ctx.fillStyle='#F5A623';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='right';ctx.fillText('▶ ',CONFIG.CANVAS_WIDTH/2-PX(100),y);}
-      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='left';
-      const key=items[i];
-      let label=Lang.t(key);
-      if (label === key && key === 'menu_return_village') label = 'むらに もどる';
-      // 巣窟ロック表示
-      if(key==='menu_dungeon'&&!flags.dungeon_unlocked&&!meta.ending_a&&!meta.ending_b&&!meta.ending_c){
-        ctx.fillStyle=cur?'#666':'#444';ctx.fillText(label+' 🔒',CONFIG.CANVAS_WIDTH/2-PX(90),y);
-      } else { ctx.fillText(label,CONFIG.CANVAS_WIDTH/2-PX(90),y); }
-    }
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　Z / Enter: けってい　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
-    if(_menuStorySub){
-      const bx=CONFIG.CANVAS_WIDTH/2-PX(140), by=PX(360), bw=PX(280), bh=PX(120);
-      ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(bx,by,bw,bh);
-      ctx.strokeStyle='#F5A623';ctx.lineWidth=PX(2);ctx.strokeRect(bx,by,bw,bh);
-      const opts=['はじめから','つづきから'];
-      for(let i=0;i<opts.length;i++){
-        const y=by+PX(40)+i*PX(36);
-        const cur=(i===_menuStoryCursor);
-        if(cur){ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.font=`${CONFIG.FONT_BASE}px monospace`;ctx.fillText('▶',bx+PX(36),y);}
-        ctx.fillStyle=cur?'#fff':'#aaa';ctx.textAlign='left';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;
-        ctx.fillText(opts[i],bx+PX(50),y);
-      }
-      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
-      ctx.fillText('Esc: もどる',bx+bw/2,by+bh-PX(12));
-    }
-    ctx.restore();
-  }
-
-  /* ============ 設定画面 ============ */
-  let _settingsCursor=0;
-  const _settingsItems=['bgm','se','speed','invincible','shake','flash','colorblind','back'];
-  let _settings = {};
-
-  function _resetSettings(){_settingsCursor=0;_settings=SaveManager.loadSettings();}
-  function _updateSettings(dt){
-    if(Engine.consumePress('up')){_settingsCursor=(_settingsCursor-1+_settingsItems.length)%_settingsItems.length;Audio.playSe('menu_move');}
-    if(Engine.consumePress('down')){_settingsCursor=(_settingsCursor+1)%_settingsItems.length;Audio.playSe('menu_move');}
-    if(Engine.consumePress('menu')){_changeScene(SCENE.MENU);return;}
-
-    const item=_settingsItems[_settingsCursor];
-    const lr=Engine.consumePress('right')?1:Engine.consumePress('left')?-1:0;
-    const confirm=Engine.consumePress('interact')||Engine.consumePress('attack');
-
-    if(lr||confirm){
-      switch(item){
-        case'bgm':_settings.bgmVolume=Math.max(0,Math.min(1,(_settings.bgmVolume||0.5)+lr*0.1));Audio.setBgmVolume(_settings.bgmVolume);break;
-        case'se':_settings.seVolume=Math.max(0,Math.min(1,(_settings.seVolume||0.7)+lr*0.1));Audio.setSeVolume(_settings.seVolume);break;
-        case'speed':
-          if(lr||confirm){const sp=['slow','normal','fast'];let si=sp.indexOf(_settings.gameSpeed||'normal');si=(si+1)%3;_settings.gameSpeed=sp[si];}break;
-        case'invincible':if(lr||confirm)_settings.invincible=!_settings.invincible;break;
-        case'shake':if(lr||confirm){_settings.screenShake=!_settings.screenShake;Engine.setShakeEnabled(_settings.screenShake);}break;
-        case'flash':if(lr||confirm)_settings.flash=!_settings.flash;break;
-        case'colorblind':if(lr||confirm){_settings.colorblind=!_settings.colorblind;document.body.classList.toggle('colorblind',_settings.colorblind);}break;
-        case'back':if(confirm)_changeScene(SCENE.MENU);break;
-      }
-      SaveManager.saveSettings(_settings);
-    }
-  }
-  function _drawSettings(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
-    ctx.fillText('せってい',CONFIG.CANVAS_WIDTH/2,PX(60));
-    const labels={bgm:'BGM おんりょう',se:'SE おんりょう',speed:'ゲームスピード',invincible:'むてきモード',shake:'がめんゆれ',flash:'フラッシュ',colorblind:'いろよわモード',back:'← もどる'};
-    for(let i=0;i<_settingsItems.length;i++){
-      const y=PX(120)+i*PX(44); const cur=(i===_settingsCursor);
-      ctx.fillStyle=cur?'#F5A623':'#aaa';ctx.font=cur?`bold ${CONFIG.FONT_BASE}px monospace`:`${CONFIG.FONT_BASE}px monospace`;ctx.textAlign='left';
-      if(cur){ctx.fillText('▶',PX(160),y);}
-      ctx.fillText(labels[_settingsItems[i]],PX(190),y);
-      // 値
-      ctx.textAlign='right';ctx.fillStyle=cur?'#fff':'#888';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
-      const item=_settingsItems[i];
-      if(item==='bgm') ctx.fillText(Math.round((_settings.bgmVolume||0.5)*100)+'%',CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='se') ctx.fillText(Math.round((_settings.seVolume||0.7)*100)+'%',CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='speed') ctx.fillText({slow:'ゆっくり',normal:'ふつう',fast:'はやい'}[_settings.gameSpeed||'normal'],CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='invincible') ctx.fillText(_settings.invincible?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='shake') ctx.fillText(_settings.screenShake!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='flash') ctx.fillText(_settings.flash!==false?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
-      else if(item==='colorblind') ctx.fillText(_settings.colorblind?'ON':'OFF',CONFIG.CANVAS_WIDTH-PX(180),y);
-    }
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;ctx.textAlign='center';
-    ctx.fillText('↑↓: えらぶ　←→/Z: へんこう　Esc: もどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
-  }
-
-  /* ============ クレジット ============ */
-  let _creditsTimer=0;
-  function _updateCredits(dt){
-    _creditsTimer+=dt;
-    if(Engine.consumePress('menu')||Engine.consumePress('interact')||Engine.consumeClick())_changeScene(SCENE.MENU);
-  }
-  function _drawCredits(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#F5A623';ctx.font=`bold ${CONFIG.FONT_LG}px monospace`;ctx.textAlign='center';
-    ctx.fillText('クレジット',CONFIG.CANVAS_WIDTH/2,PX(80));
-    ctx.fillStyle='#ccc';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
-    const lines=['ミプリンの冒険','','企画・プログラム: goroyattemiyo','キャラクターデザイン: （クレジット）','音楽: Suno AI','',''+Lang.t('credits_thanks')];
-    for(let i=0;i<lines.length;i++) ctx.fillText(lines[i],CONFIG.CANVAS_WIDTH/2,PX(160)+i*PX(32));
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`${CONFIG.FONT_SM}px monospace`;
-    ctx.fillText('Esc / Enter でもどる',CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT-PX(20));
-  }
-
-  /* ============ 図鑑シーン ============ */
-  function _updateCollection(dt){
-    Collection.updateUI();
-    if(!Collection.isOpen()) _changeScene(SCENE.MENU);
-  }
-  function _drawCollection(ctx){
-    ctx.fillStyle='#1a1a2a';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    Collection.drawUI(ctx);
-  }
-
-  /* ============ 共通マップシーン ============ */
-  let _pendingSpawn = null;
-  let _currentMapName = '';
-  let _pendingBossId = null;
-  let _pendingBossReturnScene = null;
-  let _pendingBossDialog = null;
-  let _bossLastAction = null;
-  let _bossStartTime = 0;
-  let _endingType = null;
-  let _endingTimer = 0;
-  let _endingReady = false;
-
-  function _sceneFromMapName(mapName) {
-    const sceneMap = {
-      'village':SCENE.VILLAGE, 'forest_south':SCENE.FOREST_SOUTH,
-      'forest_north':SCENE.FOREST_NORTH, 'cave':SCENE.CAVE,
-      'flower_field':SCENE.FLOWER_FIELD
-    };
-    return sceneMap[mapName] || SCENE.VILLAGE;
-  }
-
-  function _buildSaveState() {
-    return {
-      scene: _currentScene,
-      player,
-      flags,
-      inventory: Inventory.serialize(),
-      equipment: Equipment.serialize(),
-      skills: Skills.serialize(),
-      mapName: _currentMapName,
-      playtime: _playtime
-    };
-  }
-
-  function _restoreFromSave(data) {
-    if (!data) { _changeScene(SCENE.VILLAGE); return; }
-    const pd = data.player || {};
-    player.hp = pd.hp ?? player.hp;
-    player.maxHp = pd.maxHp ?? player.maxHp;
-    player.atk = pd.atk ?? player.atk;
-    player.speed = pd.speed ?? player.speed;
-    player.needleDmg = pd.needleDmg ?? player.needleDmg;
-    player.needles = pd.needles ?? player.needles;
-    player.needleMax = pd.needleMax ?? player.needleMax;
-    player.needleRegenTimer = pd.needleRegenTimer ?? player.needleRegenTimer;
-    player.level = pd.level ?? player.level;
-    player.exp = pd.exp ?? player.exp;
-    player.totalExp = pd.totalExp ?? player.totalExp;
-    player.skillPoints = pd.skillPoints ?? player.skillPoints;
-    player.dir = pd.dir || player.dir;
-    _pendingPlayerPosition = { x: pd.x ?? player.x, y: pd.y ?? player.y, dir: player.dir };
-    Object.assign(flags, data.flags || {});
-    Inventory.deserialize(data.inventory || []);
-    Equipment.deserialize(data.equipment);
-    if (data.skills) {
-      Skills.deserialize(data.skills);
-    } else {
-      Skills.init();
-      if (pd.skillPoints) Skills.addPoint(pd.skillPoints);
-    }
-    player.skillPoints = Skills.getPoints();
-    EquipmentUI.applyStats();
-    _playtime = data.playtime || 0;
-    const mapName = data.mapName || 'village';
-    const targetScene = _sceneFromMapName(mapName);
-    _changeScene(targetScene);
-  }
-
-  function _initMapScene(mapName) {
-    _currentMapName = mapName;
-    _blessingShownThisRoom = false;
-    _enemiesSpawnedThisRoom = false;
-    if (typeof BlessingUI !== 'undefined') BlessingUI.hide();
-    const map = MapManager.loadMap(mapName);
-    if (!map) return;
-    player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-    player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-    player.dir = 'down';
-    // _pendingPlayerPosition はセーブ復元専用、全マップで適用
-    if (_pendingPlayerPosition) {
-      player.x = _pendingPlayerPosition.x;
-      player.y = _pendingPlayerPosition.y;
-      player.dir = _pendingPlayerPosition.dir || player.dir;
-      const checkCol = Math.floor(player.x / CONFIG.TILE_SIZE);
-      const checkRow = Math.floor(player.y / CONFIG.TILE_SIZE);
-      if (MapManager.isSolid(checkCol, checkRow)) {
-        player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-        player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-      }
-    }
-    _pendingPlayerPosition = null;
-    _dialogActive = false; _dialogQueue = [];
-    Shop.closeShop();
-    _attackEffectTimer = 0; _needleEffectTimer = 0;
-    if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
-    if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
-    Collection.onAreaVisit(mapName);
-    Analytics.logAreaVisit(mapName, true);
-    Audio.playSceneBgm(mapName);
-    _areaBannerText = _getAreaBannerText(mapName);
-    _areaBannerTimer = _areaBannerDuration;
-    _miniMapDirty = true;
-    _autoSaveCooldown = 0;
-    _addLog('エリア到達: ' + _getMapDisplayName(mapName));
-    if (_pendingBossDialog) {
-      const msg = _pendingBossDialog;
-      _pendingBossDialog = null;
-      setTimeout(() => { _showDialog(msg); }, 300);
-    }
-  }
-
-  function _updateMapScene(dt) {
-    _playtime += dt;
-    if (_areaBannerTimer > 0) _areaBannerTimer = Math.max(0, _areaBannerTimer - dt);
-
-    if (Engine.consumePress('menu')) { _changeScene(SCENE.MENU); return; }
-
-    // 装備UI
-    if (Engine.consumePress('equipment') && !Inventory.isOpen() && !SkillUI.isOpen()) {
-      if (EquipmentUI.isOpen()) EquipmentUI.close();
-      else EquipmentUI.open();
-      return;
-    }
-    if (EquipmentUI.isOpen()) { EquipmentUI.update(); return; }
-
-    // スキルUI
-    if (Engine.consumePress('skill') && !Inventory.isOpen() && !EquipmentUI.isOpen()) {
-      if (SkillUI.isOpen()) SkillUI.close();
-      else SkillUI.open();
-      return;
-    }
-    if (SkillUI.isOpen()) { SkillUI.update(); return; }
-
-    // インベントリ
-    if (Engine.consumePress('inventory') && !_dialogActive) {
-      if (Inventory.isOpen()) {
-        Inventory.close();
-        _dialogActive = false;
-        _dialogText = '';
-        _dialogQueue = [];
-        _dialogLinesCached = null;
-        _dialogLineEndsRaw = null;
-        _dialogTextLast = null;
-      }
-      else { Inventory.open(); return; }
-    }
-    if (Inventory.isOpen()) {
-      const result = Inventory.updateUI();
-      if (result && result.action === 'use') {
-        Inventory.useItem(result.itemId, player, flags);
-        Analytics.logItemUse(result.itemId, _currentMapName);
-      }
-      if (!Inventory.isOpen()) {
-        _dialogActive = false;
-        _dialogText = '';
-        _dialogQueue = [];
-        _dialogLinesCached = null;
-        _dialogLineEndsRaw = null;
-        _dialogTextLast = null;
-      }
-      return;
-    }
-
-    // ショップ
-    if (Shop.isShopOpen()) {
-      const result = Shop.updateShopUI(Inventory.getCount('pollen'));
-      if (result) {
-        if (result.action === 'buy_item') {
-          Inventory.removeItem('pollen', result.cost);
-          if (result.itemId === 'needle_bundle') {
-            const before = player.needles;
-            player.needles = Math.min(player.needleMax, player.needles + Balance.NEEDLE.SHOP_BUNDLE);
-            if (player.needles > before) _addLog('針を補充した');
-          } else {
-            Inventory.addItem(result.itemId);
-          }
-          Analytics.logShopBuy(result.itemId, result.cost);
-          Audio.playSe('item_get');
-          const def = Inventory.ITEM_DEFS[result.itemId];
-          _addLog((def ? def.name : result.itemId) + ' を購入');
-        }
-      }
-      if (!Shop.isShopOpen()) {
-        _dialogActive = false;
-        _dialogText = '';
-        _dialogQueue = [];
-        _dialogLinesCached = null;
-        _dialogLineEndsRaw = null;
-        _dialogTextLast = null;
-      }
-      return;
-    }
-
-    // ダイアログ中
-    if (_dialogActive) { _updateDialog(dt); return; }
-
-    // バフ更新
-    Inventory.updateBuffs(player, dt);
-
-    // 無敵タイマー
-    if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
-
-    // エフェクトタイマー
-    if (_attackEffectTimer > 0) _attackEffectTimer -= dt;
-    if (_needleEffectTimer > 0) _needleEffectTimer -= dt;
-    if (_levelUpEffectTimer > 0) _levelUpEffectTimer = Math.max(0, _levelUpEffectTimer - dt);
-
-    // プレイヤー移動
-    PlayerController.update(player, dt);
-    PlayerController.updateAnimation(player, dt);
-
-    // 攻撃（Zキー）
-    if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
-      const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-      const atkSpeedMult = 1 + (skBonus.atkSpeed || 0);
-      player.attackCooldown = (Balance.PLAYER.ATTACK_COOLDOWN_SEC || 0.5) / atkSpeedMult;
-      _attackEffectTimer = 0.2;
-      const box = PlayerController.getAttackBox(player);
-      const hitResult = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
-      if (hitResult.hitAny) {
-        player.hitStopFrames = Balance.PLAYER.HITSTOP_FRAMES_GIVE;
-        Engine.triggerShake(2, 3);
-        Audio.playSe('hit');
-      } else {
-        Audio.playSe('attack');
-      }
-      if (hitResult.killed && hitResult.killed.length > 0) {
-        const aLv = Scaling.areaLevel(player.level, _currentMapName);
-        for (const k of hitResult.killed) {
-          const baseEnemy = Balance.ENEMIES[k.id];
-          if (!baseEnemy) continue;
-          const expGain = Scaling.enemyExp(baseEnemy.xp, aLv);
-          _gainExp(expGain);
-        }
-      }
-    }
-
-    // 針の一撃（Cキー）
-    if (Engine.consumePress('needle')) {
-      if (player.needles > 0) {
-        player.needles--;
-        flags.needleUseCount++;
-        _needleEffectTimer = 0.5;
-        const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-        const needleDmg = player.needleDmg + (skBonus.needleDmg || 0);
-        EnemyManager.needleBlast(player.x, player.y, needleDmg, flags);
-        Engine.triggerShake(6, 10);
-        Audio.playSe('needle');
-        Analytics.logNeedleUse(_currentMapName, flags.needleUseCount);
-      } else {
-        Audio.playSe('empty');
-      }
-    }
-
-    // 敵更新
-    EnemyManager.update(dt, player);
-    if (typeof Particles !== 'undefined') Particles.update(dt);
-    if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
-    if (typeof Loot !== 'undefined') Loot.update(dt, player.x, player.y);
-
-    // スキル: HP回復
-    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-    if (skBonus.regen && skBonus.regen > 0) {
-      if (!player._regenTimer) player._regenTimer = 0;
-      player._regenTimer += dt;
-      if (player._regenTimer >= 10) {
-        player._regenTimer -= 10;
-        player.hp = Math.min(player.maxHp, player.hp + Math.floor(skBonus.regen));
-      }
-    }
-
-    player.needleRegenTimer += dt;
-    const needleInterval = Math.max(10, Balance.NEEDLE.REGEN_INTERVAL + (skBonus.needleCD || 0));
-    if (player.needleRegenTimer >= needleInterval) {
-      player.needleRegenTimer -= needleInterval;
-      if (player.needles < player.needleMax) player.needles++;
-    }
-    for (let i = _dropLogs.length - 1; i >= 0; i--) {
-      _dropLogs[i].timer -= dt;
-      if (_dropLogs[i].timer <= 0) _dropLogs.splice(i, 1);
-    }
-
-    // 祝福UI表示中はゲーム停止
-    if (typeof BlessingUI !== 'undefined' && BlessingUI.isActive()) {
-      BlessingUI.handleInput();
-      return;
-    }
-
-    // ボス突入判定（該当地域で全滅時）
-    if (!Dungeon.isActive() && typeof BossManager !== 'undefined') {
-      const remaining = EnemyManager.getAliveCount();
-      if (remaining === 0) {
-        // 祝福選択（まだ表示していなければ）
-        if (_enemiesSpawnedThisRoom && typeof BlessingUI !== 'undefined' && typeof Blessings !== 'undefined' && !BlessingUI.isActive() && !_blessingShownThisRoom) {
-          _blessingShownThisRoom = true;
-          var owned = Blessings.getOwnedBlessings();
-          var count = 3;
-          owned.forEach(function(b){ if(b.effect.type === 'extraChoice') count += b.effect.value; });
-          var choices = Blessings.getRandomBlessings(count, owned.map(function(b){return b.id;}));
-          if (choices.length > 0) {
-            BlessingUI.show(choices, function(selected){
-              Blessings.applyBlessing(selected, player);
-            });
-            return;
-          }
-        }
-        if (_currentMapName === 'forest_north' && !flags.piece_a) {
-          _pendingBossId = 'mushroom_king';
-          _pendingBossReturnScene = SCENE.FOREST_NORTH;
-          _changeScene(SCENE.BOSS);
-          return;
-        }
-        if (_currentMapName === 'cave' && !flags.piece_b) {
-          _pendingBossId = 'ice_beetle';
-          _pendingBossReturnScene = SCENE.CAVE;
-          _changeScene(SCENE.BOSS);
-          return;
-        }
-        if (_currentMapName === 'flower_field' && !flags.piece_c) {
-          _pendingBossId = 'dark_queen';
-          _pendingBossReturnScene = SCENE.FLOWER_FIELD;
-          _changeScene(SCENE.BOSS);
-          return;
-        }
-      }
-    }
-
-    // 設定の無敵モード
-    if (_settings.invincible) player.hp = player.maxHp;
-
-    // Auto-save when stepping on save point
-    if (_autoSaveCooldown > 0) _autoSaveCooldown -= dt;
-    const ts = CONFIG.TILE_SIZE;
-    const playerCol = Math.floor((player.x + ts/2) / ts);
-    const playerRow = Math.floor((player.y + ts/2) / ts);
-    const currentTile = MapManager.getTile(playerCol, playerRow);
-    if (currentTile === MapManager.TILE.SAVE_POINT && _autoSaveCooldown <= 0) {
-      _autoSaveCooldown = 3.0; // 3 second cooldown to avoid repeated saves
-      player.hp = player.maxHp;
-      if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
-        SaveManager.saveGame(0, _buildSaveState());
-      }
-      _showDialog(Lang.t('save_success'));
-      _addLog('セーブしました');
-      Audio.playSe('save');
-    }
-
-    // インタラクション
-    if (Engine.consumePress('interact')) {
-      const interact = PlayerController.checkInteract(player);
-      if (interact) {
-        switch (interact.type) {
-          case 'npc':
-            const talk = NpcManager.getTalk(interact.npc.id, flags, Inventory);
-            if (talk) {
-              if (talk.chain) { _queueDialogs([talk.lines, ...talk.chain]); }
-              else { _showDialog(talk.lines); }
-              if (talk.event) Analytics.logNpcTalk(interact.npc.id, talk.event);
-              if (talk.event === 'open_shop') { setTimeout(() => Shop.openShop(), 100); }
-              flags.pacifist_interactions++;
-            }
-            break;
-          case 'save':
-            if (_autoSaveCooldown <= 0) {
-              _autoSaveCooldown = 3.0;
-              player.hp = player.maxHp;
-              if (typeof SaveManager !== 'undefined' && SaveManager.saveGame) {
-                SaveManager.saveGame(0, _buildSaveState());
-              }
-              _showDialog(Lang.t('save_success'));
-              _addLog('セーブしました');
-              Audio.playSe('save');
-            }
-            break;
-          case 'sign':
-            const signKey = 'sign_' + _currentMapName;
-            const signText = Lang.t(signKey);
-            _showDialog(signText !== signKey ? signText : '…なにも書かれていない');
-            break;
-          case 'chest':
-            _showDialog(Lang.t('chest_empty'));
-            Audio.playSe('item_get');
-            _addLog('宝箱を開けた');
-            break;
-          case 'stump':
-            if (!flags.has_green_key) {
-              flags.has_green_key = true;
-              Inventory.addItem('green_key');
-              Collection.onItemGet('green_key');
-              Collection.onSpecialDiscover('env_stump');
-              _showDialog('切株の中から\n【秘密の鍵】を見つけた！');
-              _addLog('秘密の鍵を入手');
-              Audio.playSe('item_get');
-              Analytics.logItemGet('green_key', _currentMapName);
-            } else {
-              _showDialog('空っぽの切株だ。');
-            }
-            break;
-          case 'seal_wall':
-            if (flags.has_green_key && !flags.seal_opened) {
-              flags.seal_opened = true;
-              Collection.onSpecialDiscover('env_seal_wall');
-              _showDialog('秘密の鍵が光り、封印壁が消えた！\n奥にロイヤルゼリーがある！');
-              Inventory.addItem('royal_jelly');
-              Collection.onItemGet('royal_jelly');
-              _addLog('ロイヤルゼリーを入手');
-              Audio.playSe('door_open');
-              if (interact.col !== undefined && interact.row !== undefined) {
-                MapManager.setTile(interact.col, interact.row, MapManager.TILE.CAVE_FLOOR);
-                _miniMapDirty = true;
-              }
-            } else if (!flags.has_green_key) {
-              _showDialog('緑の水晶で封印されている。\n何か鍵が必要みたいだ…');
-            }
-            break;
-        }
-      }
-    }
-
-    // 出口判定
-    const exit = PlayerController.checkExit(player);
-    if (exit) {
-      if (exit.type === 'random_exit') {
-        if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
-          Dungeon.nextFloor();
-          const map = Dungeon.getMapForRenderer();
-          if (map && typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
-            MapManager.setCurrentMap(map);
-          }
-          if (map) {
-            player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-            player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-            player.dir = 'down';
-            if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
-            _blessingShownThisRoom = false;
-            _enemiesSpawnedThisRoom = false;
-            if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
-          }
-        } else {
-          const aLv = Scaling.areaLevel(player.level, _currentMapName);
-          const theme = MapManager.getThemeForArea ? MapManager.getThemeForArea(_currentMapName, aLv) : 'forest';
-          const seed = _currentMapName.length * 1000 + aLv * 7 + 42;
-          const map = MapManager.generateRandomMap(aLv, theme, seed);
-          if (typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
-            MapManager.setCurrentMap(map);
-          }
-          if (map) {
-            player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-            player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-            player.dir = 'down';
-            if (typeof EnemyManager !== 'undefined') EnemyManager.spawnFromMap(map.enemies);
-            _blessingShownThisRoom = false;
-            _enemiesSpawnedThisRoom = false;
-            if (EnemyManager.getAliveCount() > 0) _enemiesSpawnedThisRoom = true;
-          }
-        }
-        _dialogActive = false; _dialogQueue = [];
-        Shop.closeShop();
-        _attackEffectTimer = 0; _needleEffectTimer = 0;
-        _areaBannerText = _getAreaBannerText(_currentMapName);
-        _areaBannerTimer = _areaBannerDuration;
-        _miniMapDirty = true;
-        _autoSaveCooldown = 0;
-        return;
-      }
-      const sceneMap = {
-        'village':SCENE.VILLAGE, 'forest_south':SCENE.FOREST_SOUTH,
-        'forest_north':SCENE.FOREST_NORTH, 'cave':SCENE.CAVE,
-        'flower_field':SCENE.FLOWER_FIELD
-      };
-      const nextScene = sceneMap[exit.to];
-      if (nextScene) {
-        _pendingSpawn = { x:exit.spawnX, y:exit.spawnY };
-        _changeScene(nextScene);
-      } else {
-        _showDialog(Lang.t('area_locked'));
-        player.y += (exit.spawnY > 7 ? -1 : 1) * CONFIG.TILE_SIZE;
-      }
-    }
-
-    // 死亡判定
-    if (player.hp <= 0) {
-      Analytics.logPlayerDeath(_currentMapName, 'enemy', player.hp);
-      Audio.playSe('game_over');
-      if (typeof Blessings !== 'undefined') Blessings.resetBlessings();
-      _changeScene(SCENE.GAMEOVER);
-    }
-  }
-
-  function _drawMapScene(ctx) {
-    ctx.save();
-    if (typeof GameFeel !== 'undefined') GameFeel.applyShake(ctx);
-
-    // killCount世界演出
-    const worldFx = NpcManager.getWorldEffects(flags);
-    const saturationShift = worldFx.saturationShift;
-
-    MapManager.draw(ctx);
-    EnemyManager.draw(ctx);
-    MapManager.drawNpcs(ctx);
-    PlayerController.draw(ctx, player);
-    PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
-    PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
-    if (_levelUpEffectTimer > 0) {
-      const ts = CONFIG.TILE_SIZE;
-      const cx = player.x + ts / 2;
-      const cy = player.y + ts / 2;
-      const t = Math.max(0, Math.min(1, _levelUpEffectTimer));
-      const r = (1 - t) * ts * 3;
-      ctx.save();
-      ctx.globalAlpha = t;
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-    if (typeof Particles !== 'undefined') Particles.draw(ctx);
-    if (typeof Loot !== 'undefined') Loot.draw(ctx);
-
-    ctx.restore(); // filterを完全にリセット
-
-    // 簡易彩度低下（CSS filterを使わない）
-    if (saturationShift < 0) {
-      const intensity = Math.min(0.6, Math.abs(saturationShift) / 150);
-      if (intensity > 0) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, PANEL.MAP_W, PANEL.MAP_H);
-        ctx.clip();
-        ctx.fillStyle = `rgba(128,128,128,${intensity})`;
-        ctx.globalCompositeOperation = 'saturation';
-        if (ctx.globalCompositeOperation !== 'saturation') {
-          ctx.globalCompositeOperation = 'source-atop';
-        }
-        ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-        ctx.restore();
-      }
-    }
-
-    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
-    if (typeof GameFeel !== 'undefined') GameFeel.drawFlash(ctx, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-    _drawPanelBorders(ctx);
-    _drawHud(ctx);
-    EquipmentUI.draw(ctx);
-    SkillUI.draw(ctx);
-    Inventory.drawUI(ctx);
-    Shop.drawShopUI(ctx, Inventory.getCount('pollen'));
-    if (typeof BlessingUI !== 'undefined') BlessingUI.draw(ctx, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-    if (typeof Dungeon !== 'undefined' && Dungeon.isActive()) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(PX(8), PX(8), PX(160), PX(36));
-      ctx.fillStyle = '#F5A623';
-      ctx.font = 'bold ' + CONFIG.FONT_BASE + 'px monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('B' + Dungeon.getFloor() + 'F  ' + Dungeon.getTheme(), PX(16), PX(26));
-      ctx.restore();
-    }
-    _drawBottomPanel(ctx);
-    if (CONFIG.DEBUG || location.search.includes('debug=1')) {
-    ctx.save();
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.textAlign = 'right';
-    ctx.fillText('v' + CONFIG.VERSION, CONFIG.CANVAS_WIDTH - PX(8), CONFIG.CANVAS_HEIGHT - PX(8));
-    ctx.restore();
-    }
-  }
-
-  function _drawVignette(ctx, intensity) {
-    const W=CONFIG.CANVAS_WIDTH, H=CONFIG.CANVAS_HEIGHT;
-    if (_vignetteGradient === null || _vignetteIntensityLast === null || Math.abs(intensity - _vignetteIntensityLast) > 0.05) {
-      const grd = ctx.createRadialGradient(W/2,H/2,W*0.3, W/2,H/2,W*0.7);
-      grd.addColorStop(0, 'rgba(0,0,0,0)');
-      grd.addColorStop(1, `rgba(0,0,0,${intensity})`);
-      _vignetteGradient = grd;
-      _vignetteIntensityLast = intensity;
-    }
-    ctx.fillStyle = _vignetteGradient;
-    ctx.fillRect(0,0,W,H);
-  }
-
-  /* ============ ボスシーン ============ */
-  function _initBossScene() {
-    _dialogActive = false; _dialogQueue = [];
-    _attackEffectTimer = 0; _needleEffectTimer = 0;
-    _bossLastAction = null;
-    _bossStartTime = Date.now();
-    _areaBannerTimer = 0;
-    EnemyManager.clear();
-
-    let bossId = _pendingBossId;
-    if (!bossId) {
-      if (_currentMapName === 'forest_north') bossId = 'mushroom_king';
-      else if (_currentMapName === 'cave') bossId = 'ice_beetle';
-      else if (_currentMapName === 'flower_field') bossId = 'dark_queen';
-    }
-    if (bossId) {
-      BossManager.spawn(bossId);
-    }
-    _pendingBossId = null;
-
-    Audio.playSceneBgm('boss');
-    Audio.playSe('boss_appear');
-  }
-
-  function _updateBossScene(dt) {
-    _playtime += dt;
-
-    if (Engine.consumePress('inventory') && !_dialogActive) {
-      if (Inventory.isOpen()) { Inventory.close(); }
-      else { Inventory.open(); return; }
-    }
-    if (Inventory.isOpen()) {
-      const result = Inventory.updateUI();
-      if (result && result.action === 'use') {
-        Inventory.useItem(result.itemId, player, flags);
-        Analytics.logItemUse(result.itemId, 'boss');
-      }
-      if (!Inventory.isOpen()) {
-        _dialogActive = false;
-        _dialogText = '';
-        _dialogQueue = [];
-        _dialogLinesCached = null;
-        _dialogLineEndsRaw = null;
-        _dialogTextLast = null;
-      }
-      return;
-    }
-
-    if (_dialogActive) { _updateDialog(dt); return; }
-
-    Inventory.updateBuffs(player, dt);
-    if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
-    if (_attackEffectTimer > 0) _attackEffectTimer -= dt;
-    if (_needleEffectTimer > 0) _needleEffectTimer -= dt;
-    if (_levelUpEffectTimer > 0) _levelUpEffectTimer = Math.max(0, _levelUpEffectTimer - dt);
-
-    PlayerController.update(player, dt);
-    PlayerController.updateAnimation(player, dt);
-
-    if (Engine.consumePress('attack') && player.attackCooldown <= 0) {
-      const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-      const atkSpeedMult = 1 + (skBonus.atkSpeed || 0);
-      player.attackCooldown = (Balance.PLAYER.ATTACK_COOLDOWN_SEC || 0.5) / atkSpeedMult;
-      _attackEffectTimer = 0.2;
-      const box = PlayerController.getAttackBox(player);
-      const hitBoss = BossManager.checkHit(box, Inventory.getEffectiveAtk(player), flags);
-      const hitMinion = EnemyManager.checkAttackHit(box, Inventory.getEffectiveAtk(player), flags);
-      if (hitBoss || hitMinion.hitAny) {
-        player.hitStopFrames = Balance.PLAYER.HITSTOP_FRAMES_GIVE;
-        Engine.triggerShake(2, 3);
-        Audio.playSe('hit');
-      } else {
-        Audio.playSe('attack');
-      }
-      const boss = BossManager.getCurrentBoss();
-      if (boss && boss.hp <= 0 && !_bossLastAction) _bossLastAction = 'attack_finish';
-      if (hitMinion.killed && hitMinion.killed.length > 0) {
-        const aLv = Scaling.areaLevel(player.level, _currentMapName);
-        for (const k of hitMinion.killed) {
-          const baseEnemy = Balance.ENEMIES[k.id];
-          if (!baseEnemy) continue;
-          const expGain = Scaling.enemyExp(baseEnemy.xp, aLv);
-          _gainExp(expGain);
-        }
-      }
-    }
-
-    if (Engine.consumePress('needle')) {
-      if (player.needles > 0) {
-        player.needles--;
-        flags.needleUseCount++;
-        _needleEffectTimer = 0.5;
-        const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-        const needleDmg = player.needleDmg + (skBonus.needleDmg || 0);
-        const ts = CONFIG.TILE_SIZE;
-        const cx = player.x + ts/2, cy = player.y + ts/2;
-        const r = ts * 2;
-        const box = { x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
-        BossManager.checkHit(box, needleDmg, flags);
-        EnemyManager.needleBlast(player.x, player.y, needleDmg, flags);
-        Engine.triggerShake(6, 10);
-        Audio.playSe('needle');
-        Analytics.logNeedleUse('boss', flags.needleUseCount);
-        const boss = BossManager.getCurrentBoss();
-        if (boss && boss.hp <= 0) _bossLastAction = 'needle_finish';
-      } else {
-        Audio.playSe('empty');
-      }
-    }
-
-    EnemyManager.update(dt, player);
-    BossManager.update(dt, player);
-    if (typeof Particles !== 'undefined') Particles.update(dt);
-    if (typeof DamageNumbers !== 'undefined') DamageNumbers.update(dt);
-
-    // スキル: HP回復
-    const skBonus = (typeof Skills !== 'undefined') ? Skills.getBonus() : {};
-    if (skBonus.regen && skBonus.regen > 0) {
-      if (!player._regenTimer) player._regenTimer = 0;
-      player._regenTimer += dt;
-      if (player._regenTimer >= 10) {
-        player._regenTimer -= 10;
-        player.hp = Math.min(player.maxHp, player.hp + Math.floor(skBonus.regen));
-      }
-    }
-
-    player.needleRegenTimer += dt;
-    const needleInterval = Math.max(10, Balance.NEEDLE.REGEN_INTERVAL + (skBonus.needleCD || 0));
-    if (player.needleRegenTimer >= needleInterval) {
-      player.needleRegenTimer -= needleInterval;
-      if (player.needles < player.needleMax) player.needles++;
-    }
-
-    if (_settings.invincible) player.hp = player.maxHp;
-
-    const boss = BossManager.getCurrentBoss();
-    if (boss && boss.dead) {
-      const timeMs = Date.now() - _bossStartTime;
-      Analytics.logBossKill(boss.id, timeMs, player.hp);
-      Collection.onEnemyKill(boss.id);
-
-      if (boss.id === 'mushroom_king' && !flags.piece_a) {
-        flags.piece_a = true;
-        Inventory.addItem('piece_a');
-        Collection.onItemGet('piece_a');
-        _pendingBossDialog = '黄金蜂蜜のかけらAを手に入れた！';
-      }
-      if (boss.id === 'ice_beetle' && !flags.piece_b) {
-        flags.piece_b = true;
-        Inventory.addItem('piece_b');
-        Collection.onItemGet('piece_b');
-        _pendingBossDialog = '黄金蜂蜜のかけらBを手に入れた！';
-      }
-      if (boss.id === 'dark_queen' && !flags.piece_c) {
-        flags.piece_c = true;
-        Inventory.addItem('piece_c');
-        Collection.onItemGet('piece_c');
-      }
-
-      if (boss.endingTrigger) {
-        _endingType = NpcManager.getEndingType(flags, _bossLastAction);
-        _pendingBossReturnScene = null;
-        _changeScene(SCENE.ENDING);
-        return;
-      }
-
-      const ts = CONFIG.TILE_SIZE;
-      _pendingSpawn = { x: Math.floor(player.x / ts), y: Math.floor(player.y / ts) };
-      const returnScene = _pendingBossReturnScene || SCENE.VILLAGE;
-      _pendingBossReturnScene = null;
-      _changeScene(returnScene);
-      return;
-    }
-
-    if (player.hp <= 0) {
-      Analytics.logPlayerDeath('boss', 'boss', player.hp);
-      Audio.playSe('game_over');
-      if (typeof Blessings !== 'undefined') Blessings.resetBlessings();
-      _changeScene(SCENE.GAMEOVER);
-    }
-  }
-
-  function _drawBossScene(ctx) {
-    ctx.save();
-    MapManager.draw(ctx);
-    EnemyManager.draw(ctx);
-    BossManager.draw(ctx);
-    PlayerController.draw(ctx, player);
-    PlayerController.drawAttackEffect(ctx, player, _attackEffectTimer);
-    PlayerController.drawNeedleEffect(ctx, player, _needleEffectTimer);
-    if (_levelUpEffectTimer > 0) {
-      const ts = CONFIG.TILE_SIZE;
-      const cx = player.x + ts / 2;
-      const cy = player.y + ts / 2;
-      const t = Math.max(0, Math.min(1, _levelUpEffectTimer));
-      const r = (1 - t) * ts * 3;
-      ctx.save();
-      ctx.globalAlpha = t;
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-    if (typeof Particles !== 'undefined') Particles.draw(ctx);
-    if (typeof DamageNumbers !== 'undefined') DamageNumbers.draw(ctx);
-    ctx.restore();
-
-    _drawPanelBorders(ctx);
-    _drawHud(ctx);
-    Inventory.drawUI(ctx);
-    _drawBottomPanel(ctx);
-  }
-
-  /* ============ エンディング ============ */
-  function _initEndingScene() {
-    _endingTimer = 0;
-    _endingReady = false;
-    if (!_endingType) _endingType = NpcManager.getEndingType(flags, _bossLastAction);
-    if (_endingType === 'ending_a') Audio.playSceneBgm('ending_a');
-    if (_endingType === 'ending_b') Audio.playSceneBgm('ending_b');
-    if (_endingType === 'ending_c') Audio.playSceneBgm('ending_c');
-  }
-
-  function _finalizeEnding() {
-    if (_endingType === 'ending_a') flags.ending_a_seen = true;
-    if (_endingType === 'ending_b') flags.ending_b_seen = true;
-    if (_endingType === 'ending_c') flags.ending_c_seen = true;
-    flags.dungeon_unlocked = true;
-
-    meta = SaveManager.loadMeta();
-    if (_endingType === 'ending_a') meta.ending_a = true;
-    if (_endingType === 'ending_b') meta.ending_b = true;
-    if (_endingType === 'ending_c') meta.ending_c = true;
-    if (!meta.first_clear_date) meta.first_clear_date = new Date().toISOString();
-    SaveManager.saveMeta(meta);
-
-    Analytics.logEnding(_endingType, flags.killCount, flags.needleUseCount, _playtime);
-    _endingType = null;
-    _bossLastAction = null;
-    _changeScene(SCENE.TITLE);
-  }
-
-  function _updateEnding(dt) {
-    _endingTimer += dt;
-    if (_endingTimer > 2.0) _endingReady = true;
-    if (_endingReady && (Engine.consumePress('interact') || Engine.consumePress('attack') || Engine.consumeClick())) {
-      _finalizeEnding();
-    }
-  }
-
-  function _drawEnding(ctx) {
-    const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
-    const titleKey = _endingType + '_title';
-    const bodyKey = _endingType;
-    const title = Lang.t(titleKey);
-    const body = Lang.t(bodyKey);
-
-    if (_endingType === 'ending_a') {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, W, H);
-    } else if (_endingType === 'ending_b') {
-      const grd = ctx.createLinearGradient(0, 0, 0, H);
-      grd.addColorStop(0, '#2d3d6b');
-      grd.addColorStop(1, '#f2c27b');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, W, H);
-    } else {
-      const grd = ctx.createLinearGradient(0, 0, 0, H);
-      grd.addColorStop(0, '#f5e1a4');
-      grd.addColorStop(1, '#f0b84a');
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, W, H);
-    }
-
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
-    ctx.fillText(title, W / 2, PX(140));
-
-    ctx.font = `${CONFIG.FONT_BASE}px monospace`;
-    const lines = (body || '').split('\n');
-    const startY = PX(240);
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], W / 2, startY + i * PX(28));
-    }
-
-    if (_endingReady && Math.sin(_endingTimer * 3) > 0) {
-      ctx.font = `${CONFIG.FONT_SM}px monospace`;
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText('Enter / クリックでタイトルへ', W / 2, H - PX(40));
-    }
-  }
-
-  /* ============ ゲームオーバー ============ */
-  let _goTimer=0;
-  function _resetGameover(){_goTimer=0;}
-  function _updateGameover(dt){
-    _goTimer+=dt;
-    if(_goTimer>1.5&&(Engine.consumePress('interact')||Engine.consumePress('attack')||Engine.consumeClick())){
-      player.hp=player.maxHp; player.knockback.timer=0; player.hitStopFrames=0;
-      player.attackCooldown=0; player.needleCooldown=0; player.invincibleTimer=0;
-      _changeScene(SCENE.VILLAGE);
-    }
-  }
-  function _drawGameover(ctx){
-    ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);
-    ctx.fillStyle='#e74c3c';ctx.font=`bold ${CONFIG.FONT_XL}px monospace`;ctx.textAlign='center';
-    ctx.fillText(Lang.t('game_over'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2-PX(30));
-    if(_goTimer>1.5&&Math.sin(_goTimer*4)>0){
-      ctx.fillStyle='#fff';ctx.font=`${CONFIG.FONT_BASE}px monospace`;
-      ctx.fillText(Lang.t('continue_prompt'),CONFIG.CANVAS_WIDTH/2,CONFIG.CANVAS_HEIGHT/2+PX(30));
-    }
-  }
-
-  /* ============ 巣窟シーン ============ */
-  function _initDungeon(){
-    Dungeon.start(flags.has_green_key);
-    const map = Dungeon.getMapForRenderer();
-    if(map){
-      _currentMapName = 'dungeon';
-      if (typeof MapManager !== 'undefined' && MapManager.setCurrentMap) {
-        MapManager.setCurrentMap(map);
-      }
-      // MapManager互換でロード
-      player.x = map.playerStart.x * CONFIG.TILE_SIZE;
-      player.y = map.playerStart.y * CONFIG.TILE_SIZE;
-      player.dir='down';
-      _dialogActive=false; _dialogQueue=[];
-      _attackEffectTimer=0; _needleEffectTimer=0;
-      if(typeof EnemyManager!=='undefined') EnemyManager.spawnFromMap(map.enemies);
-    }
-    Audio.playSceneBgm('dungeon');
-    _areaBannerText = _getMapDisplayName('dungeon');
-    _areaBannerTimer = _areaBannerDuration;
-    _miniMapDirty = true;
-  }
-
-  /* ============ HUD ============ */
-  function _drawPanelBorders(ctx) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(245,166,35,0.6)';
-    ctx.lineWidth = PX(2);
-    ctx.beginPath();
-    ctx.moveTo(PANEL.RIGHT_X - PX(2), 0);
-    ctx.lineTo(PANEL.RIGHT_X - PX(2), PANEL.MAP_H);
-    ctx.moveTo(0, PANEL.BOTTOM_Y - PX(2));
-    ctx.lineTo(CONFIG.CANVAS_WIDTH, PANEL.BOTTOM_Y - PX(2));
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function _getPanelBg(type) {
-    const w = type === 'right' ? PANEL.RIGHT_W : PANEL.BOTTOM_W;
-    const h = type === 'right' ? PANEL.RIGHT_H : PANEL.BOTTOM_H;
-    let canvas = type === 'right' ? _rightPanelBg : _bottomPanelBg;
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const c = canvas.getContext('2d');
-      const grd = c.createLinearGradient(0, 0, 0, h);
-      grd.addColorStop(0, '#0f1428');
-      grd.addColorStop(1, '#0a0f1e');
-      c.fillStyle = grd;
-      c.fillRect(0, 0, w, h);
-      c.fillStyle = 'rgba(255,255,255,0.03)';
-      for (let i = 0; i < h; i += PX(24)) {
-        c.fillRect(0, i, w, 1);
-      }
-      if (type === 'right') _rightPanelBg = canvas;
-      else _bottomPanelBg = canvas;
-    }
-    return canvas;
-  }
-
-  function _drawHud(ctx){
-    const rightBg = _getPanelBg('right');
-    ctx.drawImage(rightBg, PANEL.RIGHT_X, PANEL.RIGHT_Y);
-
-    // Section dividers
-    ctx.save();
-    ctx.strokeStyle = 'rgba(245,166,35,0.25)';
-    ctx.lineWidth = PX(1);
-    ctx.beginPath();
-    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(140));
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(140));
-    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(320));
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(320));
-    ctx.moveTo(PANEL.RIGHT_X + PX(12), PX(420));
-    ctx.lineTo(PANEL.RIGHT_X + PANEL.RIGHT_W - PX(12), PX(420));
-    ctx.stroke();
-    ctx.restore();
-
-    _drawStatusSection(ctx);
-    _drawMiniMapSection(ctx);
-    _drawLogSection(ctx);
-    _drawControlsSection(ctx);
-  }
-
-  function _drawDropFeed(ctx) {
-    if (_dropLogs.length === 0) return;
-    const feedW = 640;
-    const x = CONFIG.CANVAS_WIDTH - feedW + PX(12);
-    const y = PANEL.BOTTOM_Y + PX(12);
-    const lineH = PX(18);
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    for (let i = 0; i < _dropLogs.length; i++) {
-      const entry = _dropLogs[i];
-      const alpha = Math.max(0, Math.min(1, entry.timer / 3));
-      ctx.fillStyle = `rgba(0,0,0,${0.6 * alpha})`;
-      ctx.fillText(entry.text, x + PX(1), y + i * lineH + PX(1));
-      ctx.fillStyle = entry.color || '#fff';
-      ctx.globalAlpha = alpha;
-      ctx.fillText(entry.text, x, y + i * lineH);
-      ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-  }
-
-  function _drawStatusSection(ctx) {
-    const x = PANEL.RIGHT_X + PX(16);
-    const y = PANEL.RIGHT_Y + PX(12);
-    const w = PANEL.RIGHT_W - PX(32);
-
-    ctx.fillStyle = 'rgba(15,15,30,0.95)';
-    ctx.fillRect(PANEL.RIGHT_X + PX(8), PANEL.RIGHT_Y + PX(6), PANEL.RIGHT_W - PX(16), PX(128));
-    ctx.strokeStyle = '#F5A623';
-    ctx.lineWidth = PX(2);
-    ctx.strokeRect(PANEL.RIGHT_X + PX(8), PANEL.RIGHT_Y + PX(6), PANEL.RIGHT_W - PX(16), PX(128));
-
-    ctx.fillStyle = '#F5A623';
-    ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('Lv.' + player.level, x, y);
-
-    // EXP bar
-    const barX = x;
-    const barY = y + PX(40);
-    const barW = w - PX(10);
-    const barH = PX(12);
-    const expNeed = Scaling.expForLevel(player.level);
-    const expRate = Math.max(0, Math.min(1, player.exp / expNeed));
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(barX, barY, barW, barH);
-    ctx.fillStyle = '#F5A623';
-    ctx.fillRect(barX, barY, barW * expRate, barH);
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.strokeRect(barX, barY, barW, barH);
-
-    // Stats
-    ctx.fillStyle = '#fff';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    const infoY = barY + PX(18);
-    const sp = Skills.getPoints();
-    ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, x, infoY);
-    ctx.fillText('ATK: ' + Math.floor(player.atk), x, infoY + PX(18));
-    ctx.fillStyle = sp > 0 ? '#ff0' : '#fff';
-    ctx.fillText('SP: ' + sp, x, infoY + PX(36));
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`針: ${player.needles}/${player.needleMax}`, x, infoY + PX(54));
-  }
-
-  function _getMiniMapData() {
-    if (Dungeon.isActive()) return Dungeon.getMapForRenderer();
-    return MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
-  }
-
-  function _renderMiniMapBase(map, key) {
-    if (!map) return;
-    const size = PX(4);
-    if (!_miniMapCanvas) {
-      _miniMapCanvas = document.createElement('canvas');
-      _miniMapCtx = _miniMapCanvas.getContext('2d');
-    }
-    _miniMapCanvas.width = map.cols * size;
-    _miniMapCanvas.height = map.rows * size;
-    const c = _miniMapCtx;
-    c.clearRect(0, 0, _miniMapCanvas.width, _miniMapCanvas.height);
-    for (let r = 0; r < map.rows; r++) {
-      for (let col = 0; col < map.cols; col++) {
-        const tile = map.data[r * map.cols + col];
-        const solid = tile === MapManager.TILE.WALL || tile === MapManager.TILE.WATER ||
-          tile === MapManager.TILE.TREE || tile === MapManager.TILE.HOUSE ||
-          tile === MapManager.TILE.FENCE || tile === MapManager.TILE.WELL ||
-          tile === MapManager.TILE.CHEST || tile === MapManager.TILE.STUMP ||
-          tile === MapManager.TILE.BUSH || tile === MapManager.TILE.ANCHOR ||
-          tile === MapManager.TILE.SEAL_WALL;
-        c.fillStyle = solid ? '#141a2a' : '#2b3a55';
-        c.fillRect(col * size, r * size, size, size);
-      }
-    }
-    _miniMapDirty = false;
-    _miniMapKey = key;
-  }
-
-  function _drawMiniMapSection(ctx) {
-    const map = _getMiniMapData();
-    if (!map) return;
-    const key = `${_currentMapName}:${map.cols}x${map.rows}:${map.data.length}`;
-    if (_miniMapDirty || _miniMapKey !== key) {
-      _renderMiniMapBase(map, key);
-    }
-
-    const sectionX = PANEL.RIGHT_X;
-    const sectionY = PX(140);
-    const sectionW = PANEL.RIGHT_W;
-    const sectionH = PX(180);
-    const title = _getMapDisplayName(_currentMapName);
-    ctx.fillStyle = '#fff';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(title, sectionX + sectionW / 2, sectionY + PX(6));
-
-    const mmW = _miniMapCanvas.width;
-    const mmH = _miniMapCanvas.height;
-    const mmX = sectionX + (sectionW - mmW) / 2;
-    const mmY = sectionY + PX(28);
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(mmX - PX(4), mmY - PX(4), mmW + PX(8), mmH + PX(8));
-    ctx.strokeStyle = 'rgba(245,166,35,0.6)';
-    ctx.strokeRect(mmX - PX(4), mmY - PX(4), mmW + PX(8), mmH + PX(8));
-    ctx.drawImage(_miniMapCanvas, mmX, mmY);
-
-    // Dots
-    const size = PX(4);
-    const pCol = Math.floor((player.x + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
-    const pRow = Math.floor((player.y + CONFIG.TILE_SIZE / 2) / CONFIG.TILE_SIZE);
-    if (Math.sin(Date.now() / 200) > 0) {
-      ctx.fillStyle = '#F5D142';
-      ctx.fillRect(mmX + pCol * size, mmY + pRow * size, size, size);
-    }
-    if (map.npcs) {
-      ctx.fillStyle = '#4aa3ff';
-      for (const npc of map.npcs) {
-        ctx.fillRect(mmX + npc.x * size, mmY + npc.y * size, size, size);
-      }
-    }
-    if (map.exits) {
-      ctx.fillStyle = '#2ecc71';
-      for (const ex of map.exits) {
-        ctx.fillRect(mmX + ex.x * size, mmY + ex.y * size, size, size);
-      }
-    }
-    if (map.enemies) {
-      ctx.fillStyle = '#e74c3c';
-      for (const e of map.enemies) {
-        ctx.fillRect(mmX + e.x * size, mmY + e.y * size, size, size);
-      }
-    }
-  }
-
-  function _drawLogSection(ctx) {
-    const x = PANEL.RIGHT_X + PX(16);
-    const y = PX(320);
-    ctx.fillStyle = '#F5A623';
-    ctx.font = `bold ${CONFIG.FONT_SM}px monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('ログ', x, y + PX(6));
-    const now = Date.now();
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    for (let i = 0; i < _logEntries.length; i++) {
-      const entry = _logEntries[i];
-      const age = (now - entry.time) / 1000;
-      const fade = Math.max(0.2, 1 - i * 0.18 - age * 0.08);
-      ctx.fillStyle = `rgba(255,255,255,${fade})`;
-      ctx.fillText(entry.text, x, y + PX(26) + i * PX(16));
-    }
-  }
-
-  function _drawControlsSection(ctx) {
-    ctx.fillStyle = 'rgba(245,166,35,0.7)';
-    ctx.font = `${CONFIG.FONT_SM}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Z=こうげき  C=はり  X=ダッシュ  I=もちもの  ←→↑↓=いどう', PANEL.RIGHT_X + PANEL.RIGHT_W / 2, PX(450));
-  }
-
-  function _getBottomHintText() {
-    const map = MapManager.getCurrentMap ? MapManager.getCurrentMap() : null;
-    if (map && map.npcs) {
-      const ts = CONFIG.TILE_SIZE;
-      const pc = Math.floor((player.x + ts / 2) / ts);
-      const pr = Math.floor((player.y + ts / 2) / ts);
-      let nearest = null;
-      let best = 999;
-      for (const npc of map.npcs) {
-        const d = Math.abs(npc.x - pc) + Math.abs(npc.y - pr);
-        if (d < best) { best = d; nearest = npc; }
-      }
-      if (nearest && best <= 2) return `${nearest.name}が近くにいる`;
-    }
-    if (_currentMapName) return `${_getMapDisplayName(_currentMapName)}を探索中`;
-    return '';
-  }
-
-  function _drawBottomPanel(ctx) {
-    const bottomBg = _getPanelBg('bottom');
-    ctx.drawImage(bottomBg, PANEL.BOTTOM_X, PANEL.BOTTOM_Y);
-
-    if (_dialogActive) {
-      _drawDialog(ctx);
-      return;
-    }
-
-    if (_areaBannerTimer > 0 && _areaBannerText) {
-      const t = _areaBannerTimer;
-      const fadeIn = 0.3;
-      const fadeOut = 0.4;
-      let alpha = 1;
-      if (t < fadeOut) alpha = t / fadeOut;
-      if (t > _areaBannerDuration - fadeIn) alpha = Math.min(alpha, (_areaBannerDuration - t) / fadeIn);
-      alpha = Math.max(0, Math.min(1, alpha));
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#F5A623';
-      ctx.font = `bold ${CONFIG.FONT_LG}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(_areaBannerText, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
-      ctx.restore();
-      return;
-    }
-
-    const hint = _getBottomHintText();
-    if (hint) {
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = `${CONFIG.FONT_BASE}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(hint, PANEL.BOTTOM_W / 2, PANEL.BOTTOM_Y + PANEL.BOTTOM_H / 2);
-    }
-
-    _drawDropFeed(ctx);
-  }
-
-  /* ============ シーン管理 ============ */
-  function _changeScene(scene){
-    Analytics.logSceneChange(_currentScene, scene);
-    Analytics.onSceneChange();
-    if (typeof BlessingUI !== 'undefined' && BlessingUI.isActive()) BlessingUI.hide();
-    if ((scene === SCENE.TITLE || scene === SCENE.GAMEOVER) && typeof Blessings !== 'undefined') Blessings.resetBlessings();
-    if (scene === SCENE.MENU) {
-      const from = _currentScene;
-      _menuFromGame = ![SCENE.TITLE, SCENE.PROLOGUE, SCENE.CREDITS, SCENE.SETTINGS, SCENE.COLLECTION, SCENE.MENU].includes(from);
-    }
-    _prevScene=_currentScene; _currentScene=scene; _onSceneEnter(scene);
-  }
-
-  function _onSceneEnter(scene){
-    switch(scene){
-      case SCENE.TITLE: _resetTitle(); Audio.playSceneBgm('title'); break;
-      case SCENE.PROLOGUE: _resetPrologue(); break;
-      case SCENE.MENU: _resetMenu(); break;
-      case SCENE.VILLAGE:
-        _initMapScene('village');
-        if(_pendingSpawn){player.x=_pendingSpawn.x*CONFIG.TILE_SIZE;player.y=_pendingSpawn.y*CONFIG.TILE_SIZE;_pendingSpawn=null;}
-        Shop.closeShop();
-        if(!flags.quest_started) setTimeout(()=>_showDialog(Lang.t('mipurin_home')),500);
-        break;
-      case SCENE.FOREST_SOUTH:
-        _initMapScene('forest_south');
-        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
-        break;
-      case SCENE.FOREST_NORTH:
-        _initMapScene('forest_north');
-        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
-        break;
-      case SCENE.CAVE:
-        _initMapScene('cave');
-        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
-        break;
-      case SCENE.FLOWER_FIELD:
-        _initMapScene('flower_field');
-        _pendingSpawn=null;  // ランダムマップではplayerStartを使うため破棄
-        break;
-      case SCENE.BOSS: _initBossScene(); break;
-      case SCENE.ENDING: _initEndingScene(); break;
-      case SCENE.DUNGEON: _initDungeon(); break;
-      case SCENE.GAMEOVER:
-        Audio.stopBgm();
-        Audio.playSe('game_over');
-        _resetGameover();
-        break;
-      case SCENE.SETTINGS: _resetSettings(); break;
-      case SCENE.COLLECTION: Collection.open(); break;
-      case SCENE.CREDITS: _creditsTimer=0; break;
-    }
-  }
-
-  /* ============ メインループ ============ */
-  function _update(dt){
-    switch(_currentScene){
-      case SCENE.TITLE: _updateTitle(dt);break;
-      case SCENE.PROLOGUE: _updatePrologue(dt);break;
-      case SCENE.MENU: _updateMenu(dt);break;
-      case SCENE.SETTINGS: _updateSettings(dt);break;
-      case SCENE.CREDITS: _updateCredits(dt);break;
-      case SCENE.COLLECTION: _updateCollection(dt);break;
-      case SCENE.VILLAGE: case SCENE.FOREST_SOUTH: case SCENE.FOREST_NORTH:
-      case SCENE.CAVE: case SCENE.FLOWER_FIELD:
-        _updateMapScene(dt);break;
-      case SCENE.BOSS: _updateBossScene(dt);break;
-      case SCENE.ENDING: _updateEnding(dt);break;
-      case SCENE.DUNGEON: _updateMapScene(dt);break;
-      case SCENE.GAMEOVER: _updateGameover(dt);break;
-    }
-  }
-
-  function _draw(ctx){
-    switch(_currentScene){
-      case SCENE.TITLE: _drawTitle(ctx);break;
-      case SCENE.PROLOGUE: _drawPrologue(ctx);break;
-      case SCENE.MENU: _drawMenu(ctx);break;
-      case SCENE.SETTINGS: _drawSettings(ctx);break;
-      case SCENE.CREDITS: _drawCredits(ctx);break;
-      case SCENE.COLLECTION: _drawCollection(ctx);break;
-      case SCENE.VILLAGE: case SCENE.FOREST_SOUTH: case SCENE.FOREST_NORTH:
-      case SCENE.CAVE: case SCENE.FLOWER_FIELD:
-      case SCENE.DUNGEON:
-        _drawMapScene(ctx);break;
-      case SCENE.BOSS: _drawBossScene(ctx);break;
-      case SCENE.ENDING: _drawEnding(ctx);break;
-      case SCENE.GAMEOVER: _drawGameover(ctx);break;
-      default: ctx.fillStyle='#000';ctx.fillRect(0,0,CONFIG.CANVAS_WIDTH,CONFIG.CANVAS_HEIGHT);break;
-    }
-    if(CONFIG.DEBUG){
-      const txt = `v${CONFIG.VERSION}`;
-      ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(CONFIG.CANVAS_WIDTH - PX(92), PX(6), PX(86), PX(18));
-      ctx.fillStyle='#0f0';
-      ctx.font=`${CONFIG.FONT_SM}px monospace`;
-      ctx.textAlign='right';
-      ctx.textBaseline='middle';
-      ctx.fillText(txt, CONFIG.CANVAS_WIDTH - PX(10), PX(15));
-    }
-  }
-
-  /* ============ 永続化 ============ */
-  function _setLoadingProgress(p){const b=document.getElementById('loading-bar-inner');if(b)b.style.width=p+'%';}
-
-  /* ============ 起動 ============ */
-  async function boot(){
-    Engine.init();
-    _setLoadingProgress(5);
-
-  /* スプライトシート読み込み */
-    if (typeof SpriteManager !== 'undefined') {
-      SpriteManager.loadAll().then(() => { console.log('Sprites loaded'); });
-    }
-
-    // 設定復元
-    _settings = SaveManager.loadSettings();
-    if(_settings.colorblind) document.body.classList.add('colorblind');
-    if(_settings.screenShake===false) Engine.setShakeEnabled(false);
-
-    _setLoadingProgress(10);
-    await Lang.load(CONFIG.LANG);
-    _setLoadingProgress(20);
-
-    _loadPrologueImages();
-    _setLoadingProgress(30);
-
-    // Audio初期化
-    Audio.init();
-    _setLoadingProgress(40);
-
-    // Collection初期化
-    Collection.init();
-    Skills.init();
-
-    // Shop初期化
-    Shop.init();
-    _setLoadingProgress(50);
-
-    // スプライトシート読込
-    if(typeof SHEET_LIST!=='undefined'&&SHEET_LIST.length>0){
-      await TileEngine.loadSheets(SHEET_LIST,(loaded,total)=>{
-        _setLoadingProgress(50+(loaded/total)*30);
-      });
-      TileEngine.init();
-    }
-    _setLoadingProgress(85);
-
-    // Meta復元
-    meta = SaveManager.loadMeta();
-    if(meta.ending_a||meta.ending_b||meta.ending_c) flags.dungeon_unlocked=true;
-
-    // Analytics開始
-    Analytics.startSession();
-
-    _setLoadingProgress(100);
-
-    setTimeout(()=>{
-      Engine.showCanvas();
-      _changeScene(SCENE.TITLE);
-      Engine.start(_update,_draw);
-    },300);
-  }
-
   return {
-    boot, SCENE, player, flags,
-    meta:()=>meta, getScene:()=>_currentScene, getPlayerLevel:()=>player.level,
-    addLog: _addLog, addDropLog: _addDropLog
+    hit() { play(200, 0.08, 'square', 0.12); play(150, 0.06, 'sawtooth', 0.08); },
+    hurt() { play(100, 0.15, 'sawtooth', 0.15); },
+    kill() { play(400, 0.1, 'square', 0.1); play(600, 0.15, 'square', 0.08); },
+    dash() { play(300, 0.06, 'triangle', 0.08); },
+    blessing() { play(523, 0.12, 'sine', 0.1); play(659, 0.12, 'sine', 0.1); setTimeout(() => play(784, 0.2, 'sine', 0.12), 120); },
+    clear() { play(523, 0.15, 'square', 0.1); play(659, 0.15, 'square', 0.1); setTimeout(() => play(784, 0.3, 'square', 0.12), 150); },
+    shop() { play(440, 0.1, 'sine', 0.08); },
+    buy() { play(600, 0.08, 'sine', 0.1); play(800, 0.12, 'sine', 0.1); },
+    drop() { play(500, 0.06, 'triangle', 0.06); }
   };
 })();
 
-window.addEventListener('DOMContentLoaded',()=>{ Game.boot(); });
+// ===== PALETTE =====
+const COL = { bg: '#2b2b3d', wall: '#5a5a78', floor: '#3d3d56', floorAlt: '#35354a',
+  player: '#ffd700', playerOutline: '#b8860b',
+  hp: '#27ae60', hpBg: '#555', hpLost: '#c0392b',
+  text: '#fff', clear: '#2ecc71', dmg: '#ff6b6b',
+  dash: 'rgba(255,215,0,0.3)', attack: 'rgba(255,255,255,0.5)',
+  telegraph: 'rgba(255,0,0,0.25)',
+  bless: '#ffd700', blessBox: 'rgba(30,30,50,0.92)',
+  pollen: '#f1c40f', pollenBg: 'rgba(0,0,0,0.5)' };
+
+// ===== SEEDED RNG =====
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+let rng = mulberry32(Date.now());
+
+// ===== PARTICLES =====
+const particles = [];
+function emitParticles(x, y, color, count, spd, life) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2, s = Math.random() * spd;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life || 0.4, maxLife: life || 0.4, color, size: 2 + Math.random() * 3 });
+  }
+}
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ===== ROOM GENERATION =====
+function generateRoom(floor) {
+  const map = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) { map.push(1); continue; }
+    map.push(0);
+  }
+  const pillarCount = 2 + Math.min(floor, 6);
+  const placed = [];
+  for (let i = 0; i < pillarCount; i++) {
+    let pc, pr, tries = 0;
+    do { pc = 2 + Math.floor(rng() * (COLS - 4)); pr = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
+    while (tries < 50 && (placed.some(p => Math.abs(p[0] - pc) < 3 && Math.abs(p[1] - pr) < 3) || (Math.abs(pc - 10) < 2 && Math.abs(pr - 5) < 2)));
+    if (tries < 50) {
+      placed.push([pc, pr]); map[pr * COLS + pc] = 1;
+      if (pc + 1 < COLS - 1) map[pr * COLS + pc + 1] = 1;
+      if (pr + 1 < ROWS - 1) map[(pr + 1) * COLS + pc] = 1;
+      if (pc + 1 < COLS - 1 && pr + 1 < ROWS - 1) map[(pr + 1) * COLS + pc + 1] = 1;
+    }
+  }
+  return map;
+}
+function tileAt(map, c, r) { if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 1; return map[r * COLS + c]; }
+
+// ===== THEMES =====
+const THEMES = [
+  { name: 'forest', bg: '#2b2b3d', wall: '#5a5a78', floor: '#3d3d56', floorAlt: '#35354a', wallTop: '#6e6e90' },
+  { name: 'cave', bg: '#1a1a2e', wall: '#4b4b5e', floor: '#2d2d44', floorAlt: '#252538', wallTop: '#5e5e72' },
+  { name: 'flower', bg: '#2e1a2e', wall: '#6e4878', floor: '#3d2d56', floorAlt: '#35254a', wallTop: '#8a5a94' },
+  { name: 'abyss', bg: '#0e0e1a', wall: '#3a3a50', floor: '#1e1e30', floorAlt: '#181828', wallTop: '#4e4e66' },
+  { name: 'ruins', bg: '#2b2218', wall: '#7a6848', floor: '#4a3d2e', floorAlt: '#3e3226', wallTop: '#8e7e58' }];
+function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
+
+// ===== WEAPONS =====
+const WEAPON_DEFS = [
+  { id: 'sword', name: 'Sword', dmgMul: 1, range: 44, speed: 0.3, dur: 0.15, desc: 'Balanced', color: '#aaa' },
+  { id: 'spear', name: 'Spear', dmgMul: 0.8, range: 64, speed: 0.35, dur: 0.12, desc: 'Long range', color: '#8ad' },
+  { id: 'axe', name: 'Axe', dmgMul: 1.8, range: 48, speed: 0.5, dur: 0.2, desc: 'Slow but strong', color: '#d88' },
+  { id: 'dagger', name: 'Dagger', dmgMul: 0.6, range: 32, speed: 0.15, dur: 0.08, desc: 'Very fast', color: '#ccc' },
+  { id: 'hammer', name: 'Hammer', dmgMul: 2.2, range: 52, speed: 0.6, dur: 0.25, desc: 'Massive hits', color: '#b97' },
+  { id: 'whip', name: 'Whip', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: 'Widest range', color: '#c6a' }];
+
+// ===== DROPS =====
+const drops = [];
+function spawnDrop(x, y, type) {
+  drops.push({ x, y, type, life: 8, bobTimer: 0 });
+}
+function updateDrops(dt) {
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i]; d.life -= dt; d.bobTimer += dt;
+    if (d.life <= 0) { drops.splice(i, 1); continue; }
+    const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+    const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
+    if (rectOverlap(pb, db)) {
+      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); Audio.drop(); }
+      if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); }
+      drops.splice(i, 1);
+    }
+  }
+}
+function drawDrops() {
+  for (const d of drops) {
+    const bob = Math.sin(d.bobTimer * 4) * 3;
+    ctx.globalAlpha = d.life < 2 ? d.life / 2 : 1;
+    if (d.type === 'pollen') {
+      ctx.fillStyle = COL.pollen; ctx.beginPath(); ctx.arc(d.x, d.y + bob, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d.x - 2, d.y + bob - 2, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    if (d.type === 'heal') {
+      ctx.fillStyle = '#2ecc71';
+      ctx.fillRect(d.x - 2, d.y + bob - 6, 4, 12); ctx.fillRect(d.x - 6, d.y + bob - 2, 12, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== STATE =====
+let roomMap = [], floor = 1, wave = 0, WAVES = [];
+let gameState = 'title', clearTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
+let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
+let titleBlink = 0;
+
+const player = { x: TILE * 10, y: TILE * 5, w: 36, h: 36, speed: 200, hp: 5, maxHp: 5, atk: 1,
+  attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
+  atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
+  dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
+  weapon: WEAPON_DEFS[0], atkRangeBonus: 0, spriteData: null };
+
+// ===== ENEMIES =====
+const enemies = [];
+const dmgNumbers = [];
+function spawnDmg(x, y, val, color) { dmgNumbers.push({ x, y, val: String(val), color: color || COL.dmg, life: 0.8 }); }
+
+const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#e67e22', '#3498db', '#1abc9c', '#e84393', '#d35400', '#2c3e50', '#c0392b', '#6c5ce7', '#00b894', '#fd79a8'];
+
+const ENEMY_DEFS = {
+  mushroom:  { hp: 3, speed: 55, w: 36, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom' },
+  slime:     { hp: 4, speed: 45, w: 34, h: 28, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob' },
+  spider:    { hp: 4, speed: 90, w: 36, h: 36, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider' },
+  bat:       { hp: 3, speed: 110, w: 32, h: 32, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat' },
+  beetle:    { hp: 6, speed: 50, w: 44, h: 44, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
+  wasp:      { hp: 5, speed: 100, w: 36, h: 36, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp' },
+  flower:    { hp: 7, speed: 0, w: 40, h: 40, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', shootInterval: 2.0 },
+  worm:      { hp: 8, speed: 35, w: 44, h: 32, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm' },
+  ghost:     { hp: 5, speed: 70, w: 36, h: 36, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost' },
+  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
+  vine:      { hp: 6, speed: 0, w: 36, h: 36, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', shootInterval: 1.5 },
+  darkbee:   { hp: 8, speed: 95, w: 40, h: 40, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee' }
+};
+
+const THEME_ENEMIES = {
+  forest: ['mushroom', 'slime', 'spider', 'bat'],
+  cave: ['bat', 'worm', 'beetle', 'golem'],
+  flower: ['flower', 'vine', 'wasp', 'slime'],
+  abyss: ['ghost', 'darkbee', 'golem', 'spider'],
+  ruins: ['beetle', 'worm', 'ghost', 'darkbee']
+};
+
+// ===== PROJECTILES =====
+const projectiles = [];
+function spawnProjectile(x, y, dx, dy, spd, dmg, friendly) {
+  const d = Math.hypot(dx, dy) || 1;
+  projectiles.push({ x, y, vx: (dx / d) * spd, vy: (dy / d) * spd, dmg, friendly: !!friendly, life: 3, size: 5 });
+}
+function updateProjectiles(dt) {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    const tc = Math.floor(p.x / TILE), tr = Math.floor(p.y / TILE);
+    if (p.life <= 0 || tileAt(roomMap, tc, tr) === 1) { projectiles.splice(i, 1); continue; }
+    if (!p.friendly) {
+      const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+      if (player.invTimer <= 0 && !player.dashing && rectOverlap(pb, { x: p.x - p.size, y: p.y - p.size, w: p.size * 2, h: p.size * 2 })) {
+        player.hp -= p.dmg; player.invTimer = player.invDuration;
+        shakeTimer = 0.1; shakeIntensity = 5; Audio.hurt();
+        spawnDmg(player.x + player.w / 2, player.y, p.dmg, '#fff');
+        emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
+        if (player.hp <= 0) gameState = 'dead';
+        projectiles.splice(i, 1);
+      }
+    }
+  }
+}
+function drawProjectiles() {
+  for (const p of projectiles) {
+    ctx.fillStyle = p.friendly ? '#ffd700' : '#e74c3c';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function spawnEnemy(type, col, row) {
+  const def = ENEMY_DEFS[type]; if (!def) return;
+  const sc = 1 + floor * 0.15;
+  enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
+    hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (1 + floor * 0.1)),
+    score: Math.ceil(def.score * (1 + floor * 0.05)),
+    vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
+    chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
+}
+
+function randEnemyPos() {
+  let c, r, tries = 0;
+  do { c = 2 + Math.floor(rng() * (COLS - 4)); r = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
+  while (tries < 30 && (tileAt(roomMap, c, r) === 1 || (Math.abs(c - 10) < 3 && Math.abs(r - 5) < 3)));
+  return [c, r];
+}
+
+function buildWaves() {
+  const th = getTheme(floor);
+  const pool = THEME_ENEMIES[th.name] || THEME_ENEMIES.forest;
+  const waveCount = Math.min(2 + Math.floor(floor / 2), 5);
+  const waves = [];
+  for (let w = 0; w < waveCount; w++) {
+    const count = Math.min(2 + w + Math.floor(floor / 3), 7);
+    const wv = [];
+    for (let i = 0; i < count; i++) {
+      const ti = Math.floor(rng() * Math.min(2 + w + Math.floor(floor / 2), pool.length));
+      const [c, r] = randEnemyPos();
+      wv.push({ type: pool[ti], col: c, row: r });
+    }
+    waves.push(wv);
+  }
+  return waves;
+}
+
+function spawnWave() {
+  enemies.length = 0; projectiles.length = 0;
+  if (wave < WAVES.length) { for (const e of WAVES[wave]) spawnEnemy(e.type, e.col, e.row); }
+}
+
+// ===== BOSS =====
+let boss = null;
+const BOSS_DEFS = [
+  { id: 'queen_hornet', name: 'Queen Hornet', hp: 30, speed: 70, w: 56, h: 56, dmg: 3, color: '#f39c12', pattern: 'boss_charge', score: 200, phases: 2 },
+  { id: 'fungus_king', name: 'Fungus King', hp: 45, speed: 40, w: 64, h: 64, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot', score: 300, phases: 2 },
+  { id: 'crystal_golem', name: 'Crystal Golem', hp: 60, speed: 30, w: 64, h: 64, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
+  { id: 'shadow_moth', name: 'Shadow Moth', hp: 50, speed: 90, w: 52, h: 52, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
+
+function isBossFloor() { return floor % 3 === 0; }
+
+function spawnBoss() {
+  const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
+  const def = BOSS_DEFS[bi];
+  const sc = 1 + floor * 0.12;
+  boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 2, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
+    dmg: Math.ceil(def.dmg * (1 + floor * 0.08)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
+    chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0 };
+}
+
+function updateBoss(dt) {
+  if (!boss || boss.hp <= 0) return;
+  boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+  boss.stateTimer += dt;
+  const dx = player.x - boss.x, dy = player.y - boss.y, d = Math.hypot(dx, dy) || 1;
+  boss.phase = boss.hp < boss.maxHp * 0.3 ? (boss.phases >= 3 ? 3 : 2) : boss.hp < boss.maxHp * 0.6 ? 2 : 1;
+  const spdMul = boss.phase >= 2 ? 1.3 : 1;
+
+  if (boss.pattern === 'boss_charge') {
+    if (boss.state === 'idle') { moveWithCollision(boss, (dx / d) * boss.speed * spdMul * 0.5 * dt, (dy / d) * boss.speed * spdMul * 0.5 * dt);
+      if (boss.stateTimer > (2.5 / spdMul)) { boss.state = 'telegraph'; boss.telegraphTimer = 0.5; boss.chargeDir = { x: dx / d, y: dy / d }; } }
+    if (boss.state === 'telegraph') { boss.telegraphTimer -= dt; if (boss.telegraphTimer <= 0) { boss.state = 'charging'; boss.stateTimer = 0; } }
+    if (boss.state === 'charging') { moveWithCollision(boss, boss.chargeDir.x * 350 * spdMul * dt, boss.chargeDir.y * 350 * spdMul * dt);
+      if (boss.stateTimer > 0.4) { boss.state = 'cooldown'; boss.stateTimer = 0; } }
+    if (boss.state === 'cooldown') { if (boss.stateTimer > 0.6) { boss.state = 'idle'; boss.stateTimer = 0; }
+      if (boss.phase >= 2 && boss.stateTimer > 0.3) { spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 150, boss.dmg - 1, false); boss.stateTimer = 0.6; } }
+  }
+  if (boss.pattern === 'boss_shoot') {
+    moveWithCollision(boss, (dx / d) * boss.speed * 0.3 * dt, (dy / d) * boss.speed * 0.3 * dt);
+    boss.shootTimer += dt;
+    const interval = boss.phase >= 2 ? 0.8 : 1.5;
+    if (boss.shootTimer >= interval) { boss.shootTimer = 0;
+      const angles = boss.phase >= 2 ? [-0.3, 0, 0.3] : [0];
+      for (const a of angles) { const bx = dx / d, by = dy / d; const ca = Math.cos(a), sa = Math.sin(a);
+        spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, bx * ca - by * sa, bx * sa + by * ca, 120, boss.dmg - 1, false); } }
+  }
+  if (boss.pattern === 'boss_slam') {
+    if (boss.state === 'idle') { moveWithCollision(boss, (dx / d) * boss.speed * spdMul * dt, (dy / d) * boss.speed * spdMul * dt);
+      if (d < 80 || boss.stateTimer > 3) { boss.state = 'telegraph'; boss.telegraphTimer = 0.6; } }
+    if (boss.state === 'telegraph') { boss.telegraphTimer -= dt; if (boss.telegraphTimer <= 0) { boss.state = 'slam'; boss.stateTimer = 0;
+      shakeTimer = 0.3; shakeIntensity = 8;
+      const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+      if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
+        player.hp -= boss.dmg; player.invTimer = player.invDuration; Audio.hurt();
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) gameState = 'dead'; }
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
+    if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
+  }
+  if (boss.pattern === 'boss_teleport') {
+    moveWithCollision(boss, (dx / d) * boss.speed * spdMul * 0.6 * dt, (dy / d) * boss.speed * spdMul * 0.6 * dt);
+    boss.teleTimer += dt; boss.shootTimer += dt;
+    if (boss.teleTimer > (boss.phase >= 2 ? 2 : 3)) { boss.teleTimer = 0;
+      boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4)));
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 8, 80, 0.3); }
+    if (boss.shootTimer > 1) { boss.shootTimer = 0; spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 140, boss.dmg - 1, false); }
+  }
+
+  // Boss contact damage
+  if (player.invTimer <= 0 && !player.dashing) {
+    if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: boss.x, y: boss.y, w: boss.w, h: boss.h })) {
+      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; Audio.hurt();
+      spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
+      const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+      player.x += Math.cos(angle) * 40; player.y += Math.sin(angle) * 40;
+      if (player.hp <= 0) gameState = 'dead';
+    }
+  }
+}
+
+// ===== BLESSINGS =====
+const BLESSING_POOL = [
+  { id: 'atk_up', name: 'ATK UP', desc: 'Attack +1', icon: '\u2694', apply: () => { player.atk += 1; } },
+  { id: 'hp_up', name: 'HP UP', desc: 'Max HP +1 & heal', icon: '\u2665', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
+  { id: 'speed_up', name: 'SPEED UP', desc: 'Move +15%', icon: '\u21E8', apply: () => { player.speed *= 1.15; } },
+  { id: 'heal', name: 'HEAL', desc: 'Full recovery', icon: '\u2728', apply: () => { player.hp = player.maxHp; } },
+  { id: 'dash_up', name: 'DASH UP', desc: 'Dash CD -30%', icon: '\u26A1', apply: () => { player.dashCooldown *= 0.7; } },
+  { id: 'crit', name: 'CRITICAL', desc: 'ATK +2', icon: '\uD83D\uDDE1', apply: () => { player.atk += 2; } },
+  { id: 'armor', name: 'ARMOR', desc: 'Inv time +40%', icon: '\uD83D\uDEE1', apply: () => { player.invDuration *= 1.4; } },
+  { id: 'range', name: 'RANGE', desc: 'Attack range +', icon: '\uD83C\uDFF9', apply: () => { player.atkRangeBonus = (player.atkRangeBonus || 0) + 10; } },
+  { id: 'vampiric', name: 'VAMPIRIC', desc: 'Kills heal 1HP', icon: '\uD83E\uDE78', apply: () => { player.vampiric = true; } },
+  { id: 'thorns', name: 'THORNS', desc: 'Reflect 1 dmg', icon: '\uD83C\uDF35', apply: () => { player.thorns = (player.thorns || 0) + 1; } }];
+let blessingChoices = [], activeBlessings = [];
+
+function pickBlessings() {
+  const pool = [...BLESSING_POOL]; const picks = [];
+  for (let i = 0; i < 3 && pool.length > 0; i++) { const idx = Math.floor(rng() * pool.length); picks.push(pool.splice(idx, 1)[0]); }
+  return picks;
+}
+
+// ===== SHOP =====
+let shopItems = [];
+function buildShop() {
+  shopItems = [];
+  // Heal
+  shopItems.push({ name: 'Heal +2', cost: 3 + floor, icon: '\u2665', action: () => { player.hp = Math.min(player.hp + 2, player.maxHp); } });
+  // Random weapon
+  const wep = WEAPON_DEFS[Math.floor(rng() * WEAPON_DEFS.length)];
+  shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '\u2694', desc: wep.desc, action: () => { player.weapon = wep; } });
+  // Max HP
+  shopItems.push({ name: 'Max HP +1', cost: 8 + floor * 2, icon: '\u2B06', action: () => { player.maxHp += 1; player.hp += 1; } });
+}
+
+// ===== FADE =====
+function startFade(dir, cb) { fadeDir = dir; fadeAlpha = dir === 1 ? 0 : 1; fadeCallback = cb; }
+function updateFade(dt) {
+  if (fadeDir === 0) return;
+  fadeAlpha += fadeDir * dt * 3;
+  if (fadeDir === 1 && fadeAlpha >= 1) { fadeAlpha = 1; fadeDir = 0; if (fadeCallback) { fadeCallback(); fadeCallback = null; } }
+  if (fadeDir === -1 && fadeAlpha <= 0) { fadeAlpha = 0; fadeDir = 0; }
+}
+
+// ===== GAME FLOW =====
+function startFloor() {
+  rng = mulberry32(Date.now() + floor);
+  roomMap = generateRoom(floor);
+  if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0; }
+  else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
+  player.x = TILE * 10; player.y = TILE * 5;
+  player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
+  player.dashing = false; player.dashCooldown = 0;
+  dmgNumbers.length = 0; particles.length = 0;
+  gameState = 'playing'; clearTimer = 0;
+  startFade(-1, null);
+}
+
+function nextFloor() { floor++; startFade(1, () => startFloor()); }
+
+function resetGame() {
+  floor = 1; wave = 0; score = 0; pollen = 0; boss = null;
+  player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
+  player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
+  player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0;
+  activeBlessings = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
+  startFade(1, () => startFloor());
+}
+
+// ===== COLLISION =====
+function moveWithCollision(ent, dx, dy) {
+  let nx = ent.x + dx, bl = false;
+  let c0 = Math.floor(nx / TILE), c1 = Math.floor((nx + ent.w - 1) / TILE);
+  let r0 = Math.floor(ent.y / TILE), r1 = Math.floor((ent.y + ent.h - 1) / TILE);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(roomMap, c, r) === 1) bl = true;
+  if (!bl) ent.x = nx;
+  let ny = ent.y + dy; bl = false;
+  let c2 = Math.floor(ent.x / TILE), c3 = Math.floor((ent.x + ent.w - 1) / TILE);
+  let r2 = Math.floor(ny / TILE), r3 = Math.floor((ny + ent.h - 1) / TILE);
+  for (let r = r2; r <= r3; r++) for (let c = c2; c <= c3; c++) if (tileAt(roomMap, c, r) === 1) bl = true;
+  if (!bl) ent.y = ny;
+}
+
+function getAttackBox() {
+  const range = (player.weapon.range || 44) + (player.atkRangeBonus || 0);
+  const ax = player.atkDir.x, ay = player.atkDir.y;
+  return { x: player.x + player.w / 2 + ax * 24 - range / 2, y: player.y + player.h / 2 + ay * 24 - range / 2, w: range, h: range };
+}
+
+// ===== UPDATE =====
+function update(dt) {
+  updateFade(dt);
+
+  if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { Audio.blessing(); resetGame(); } return; }
+  if (gameState === 'blessing') {
+    if (wasPressed('Digit1') && blessingChoices[0]) { blessingChoices[0].apply(); activeBlessings.push(blessingChoices[0]); Audio.blessing(); nextFloor(); }
+    if (wasPressed('Digit2') && blessingChoices[1]) { blessingChoices[1].apply(); activeBlessings.push(blessingChoices[1]); Audio.blessing(); nextFloor(); }
+    if (wasPressed('Digit3') && blessingChoices[2]) { blessingChoices[2].apply(); activeBlessings.push(blessingChoices[2]); Audio.blessing(); nextFloor(); }
+    return;
+  }
+  if (gameState === 'shop') {
+    for (let i = 0; i < shopItems.length; i++) {
+      if (wasPressed('Digit' + (i + 1)) && pollen >= shopItems[i].cost) { pollen -= shopItems[i].cost; shopItems[i].action(); Audio.buy(); shopItems.splice(i, 1); break; }
+    }
+    if (wasPressed('KeyZ') || wasPressed('Escape')) { gameState = 'blessing'; blessingChoices = pickBlessings(); }
+    return;
+  }
+  if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
+  if (gameState === 'floorClear') { clearTimer += dt; if (clearTimer > 1.5) {
+    if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
+  } return; }
+  if (gameState === 'dead') { if (wasPressed('KeyZ')) { gameState = 'title'; } return; }
+
+  // === Player movement ===
+  let mx = 0, my = 0;
+  if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
+  if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
+  if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
+  if (isDown('ArrowDown') || isDown('KeyS')) my += 1;
+  if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
+  if (mx !== 0 || my !== 0) {
+    player.atkDir.x = Math.sign(mx || 0); player.atkDir.y = Math.sign(my || 0);
+    if (mx !== 0) player.atkDir.y = 0; if (my !== 0 && mx === 0) player.atkDir.x = 0;
+  }
+
+  player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+  if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
+    else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
+  else {
+    if (wasPressed('KeyX') && player.dashCooldown <= 0 && (mx !== 0 || my !== 0)) {
+      player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
+      player.dashDir.x = mx; player.dashDir.y = my; player.invTimer = player.dashDuration; Audio.dash();
+      emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
+    }
+    if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
+  }
+
+  // === Attack ===
+  player.atkCooldown = Math.max(0, player.atkCooldown - dt);
+  if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
+    player.attacking = true; player.atkTimer = player.weapon.dur; player.atkCooldown = player.weapon.speed;
+    const box = getAttackBox();
+    const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
+    // Hit enemies
+    for (const en of enemies) { if (en.hp <= 0) continue;
+      if (rectOverlap(box, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
+        shakeTimer = 0.05; shakeIntensity = 3; Audio.hit();
+        emitParticles(en.x + en.w / 2, en.y + en.h / 2, '#fff', 3, 60, 0.2);
+        const angle = Math.atan2(en.y - player.y, en.x - player.x); en.x += Math.cos(angle) * 20; en.y += Math.sin(angle) * 20; } }
+    // Hit boss
+    if (boss && boss.hp > 0 && rectOverlap(box, boss)) {
+      boss.hp -= atkDmg; boss.hitFlash = 0.1; spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
+      shakeTimer = 0.06; shakeIntensity = 4; Audio.hit();
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, '#fff', 5, 80, 0.3);
+    }
+  }
+  if (player.attacking) { player.atkTimer -= dt; if (player.atkTimer <= 0) player.attacking = false; }
+  player.invTimer = Math.max(0, player.invTimer - dt);
+  player.animTimer += dt; if (player.animTimer > 0.15) { player.animTimer = 0; player.frame = (player.frame + 1) % 4; }
+
+  // === Enemy AI ===
+  for (const en of enemies) {
+    if (en.hp <= 0) continue;
+    en.hitFlash = Math.max(0, en.hitFlash - dt); en.stateTimer += dt;
+    const dx = player.x - en.x, dy = player.y - en.y, d = Math.hypot(dx, dy) || 1;
+
+    if (en.pattern === 'wander') {
+      en.wanderTimer -= dt; if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2;
+        en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1 + Math.random() * 2; }
+      moveWithCollision(en, en.wanderDir.x * en.speed * dt, en.wanderDir.y * en.speed * dt);
+    }
+    if (en.pattern === 'chase' && d > 0) moveWithCollision(en, (dx / d) * en.speed * dt, (dy / d) * en.speed * dt);
+    if (en.pattern === 'charge') {
+      if (en.state === 'idle') { en.wanderTimer -= dt;
+        if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2; en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1.5 + Math.random(); }
+        moveWithCollision(en, en.wanderDir.x * 30 * dt, en.wanderDir.y * 30 * dt);
+        if (d < 250) { en.state = 'telegraph'; en.telegraphTimer = en.telegraphTime || 0.6; en.chargeDir = { x: dx / d, y: dy / d }; } }
+      if (en.state === 'telegraph') { en.telegraphTimer -= dt; if (en.telegraphTimer <= 0) { en.state = 'charging'; en.stateTimer = 0; } }
+      if (en.state === 'charging') { moveWithCollision(en, en.chargeDir.x * (en.chargeSpeed || 300) * dt, en.chargeDir.y * (en.chargeSpeed || 300) * dt);
+        if (en.stateTimer > (en.chargeTime || 0.3)) { en.state = 'cooldown'; en.stateTimer = 0; } }
+      if (en.state === 'cooldown' && en.stateTimer > 0.8) { en.state = 'idle'; en.stateTimer = 0; en.wanderTimer = 0; }
+    }
+    if (en.pattern === 'shoot') {
+      en.shootTimer -= dt;
+      if (en.shootTimer <= 0) { en.shootTimer = en.shootInterval || 2; spawnProjectile(en.x + en.w / 2, en.y + en.h / 2, dx, dy, 100, en.dmg, false); }
+    }
+    if (en.pattern === 'teleport') {
+      en.wanderTimer -= dt;
+      if (en.wanderTimer <= 0) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4)));
+        emitParticles(en.x + en.w / 2, en.y + en.h / 2, en.color, 6, 60, 0.3); en.wanderTimer = 2 + Math.random() * 2; }
+      if (d < 200 && d > 0) moveWithCollision(en, (dx / d) * en.speed * 0.5 * dt, (dy / d) * en.speed * 0.5 * dt);
+    }
+
+    // Contact damage
+    if (player.invTimer <= 0 && !player.dashing) {
+      if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
+        player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
+        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.hurt();
+        emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
+        const angle = Math.atan2(player.y - en.y, player.x - en.x); player.x += Math.cos(angle) * 30; player.y += Math.sin(angle) * 30;
+        if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
+        if (player.hp <= 0) gameState = 'dead';
+      }
+    }
+  }
+
+  // Boss update
+  updateBoss(dt);
+
+  // Remove dead enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (enemies[i].hp <= 0) {
+      score += enemies[i].score;
+      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 8, 80, 0.4);
+      Audio.kill();
+      if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
+      // Drops
+      if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
+      if (Math.random() < 0.15) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+      enemies.splice(i, 1);
+    }
+  }
+
+  // Boss death
+  if (boss && boss.hp <= 0) {
+    score += boss.score || 200; Audio.clear();
+    emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
+    for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
+    boss = null; gameState = 'floorClear'; clearTimer = 0;
+  }
+
+  // Wave clear
+  if (!boss && enemies.length === 0 && gameState === 'playing') {
+    wave++;
+    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; Audio.clear(); }
+    else { gameState = 'waveWait'; clearTimer = 0; }
+  }
+
+  // Projectiles, drops, particles, dmg numbers
+  updateProjectiles(dt); updateDrops(dt); updateParticles(dt);
+  for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
+  shakeTimer = Math.max(0, shakeTimer - dt);
+}
+
+// ===== DRAWING =====
+function drawRoom() {
+  const th = getTheme(floor);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (tileAt(roomMap, c, r) === 1) {
+      ctx.fillStyle = th.wall; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.fillStyle = th.wallTop; ctx.fillRect(c * TILE, r * TILE, TILE, 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(c * TILE, r * TILE + TILE - 4, TILE, 4);
+    } else {
+      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      // subtle tile border
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+    }
+  }
+}
+
+function drawEntity(e, color, isP) {
+  const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+  if (isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) ctx.globalAlpha = 0.4;
+  // Body
+  const rr = 6; ctx.beginPath(); ctx.moveTo(e.x + rr, e.y); ctx.lineTo(e.x + e.w - rr, e.y);
+  ctx.quadraticCurveTo(e.x + e.w, e.y, e.x + e.w, e.y + rr); ctx.lineTo(e.x + e.w, e.y + e.h - rr);
+  ctx.quadraticCurveTo(e.x + e.w, e.y + e.h, e.x + e.w - rr, e.y + e.h); ctx.lineTo(e.x + rr, e.y + e.h);
+  ctx.quadraticCurveTo(e.x, e.y + e.h, e.x, e.y + e.h - rr); ctx.lineTo(e.x, e.y + rr);
+  ctx.quadraticCurveTo(e.x, e.y, e.x + rr, e.y); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = isP ? COL.playerOutline : '#333'; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
+  // Eyes
+  const eyeY = cy - 2, eyeOff = e.w * 0.18; ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222'; const lx = isP ? player.atkDir.x * 1.5 : 0, ly = isP ? player.atkDir.y * 1.5 : 0;
+  ctx.beginPath(); ctx.arc(cx - eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
+  // Player crown
+  if (isP) { ctx.fillStyle = COL.player; ctx.beginPath(); ctx.moveTo(cx - 6, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 6, e.y); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill(); }
+}
+
+function drawHPBar(e, yOff) {
+  const bW = e.w + 4, bH = 5, bx = e.x - 2, by = e.y + yOff;
+  ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bW, bH);
+  const ratio = Math.max(0, e.hp / e.maxHp);
+  ctx.fillStyle = ratio > 0.5 ? COL.hp : ratio > 0.25 ? '#f39c12' : COL.hpLost; ctx.fillRect(bx, by, bW * ratio, bH);
+}
+
+function drawAttackEffect() {
+  if (!player.attacking) return;
+  const box = getAttackBox();
+  ctx.fillStyle = COL.attack; ctx.fillRect(box.x, box.y, box.w, box.h);
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  ctx.strokeStyle = player.weapon.color || '#fff'; ctx.lineWidth = 3; ctx.beginPath();
+  const ba = Math.atan2(player.atkDir.y, player.atkDir.x); ctx.arc(cx, cy, 22, ba - 0.8, ba + 0.8); ctx.stroke();
+  emitParticles(cx, cy, player.weapon.color || '#fff', 1, 40, 0.15);
+}
+
+function drawDashTrail() {
+  if (!player.dashing) return;
+  ctx.fillStyle = COL.dash; ctx.beginPath(); ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 24, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawTelegraph(en) {
+  if (en.state !== 'telegraph' || !en.chargeDir) return;
+  const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
+  ctx.fillStyle = COL.telegraph; ctx.beginPath();
+  ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
+  ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
+  ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ff0'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+}
+
+function drawBoss() {
+  if (!boss || boss.hp <= 0) return;
+  // Telegraph
+  if (boss.state === 'telegraph' && boss.chargeDir) {
+    const cx = boss.x + boss.w / 2, cy = boss.y + boss.h / 2;
+    ctx.fillStyle = 'rgba(255,0,0,0.3)'; ctx.beginPath();
+    ctx.moveTo(cx - boss.chargeDir.y * 30, cy + boss.chargeDir.x * 30);
+    ctx.lineTo(cx + boss.chargeDir.x * 300, cy + boss.chargeDir.y * 300);
+    ctx.lineTo(cx + boss.chargeDir.y * 30, cy - boss.chargeDir.x * 30); ctx.closePath(); ctx.fill();
+  }
+  if (boss.pattern === 'boss_slam' && boss.state === 'telegraph') {
+    ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.beginPath(); ctx.arc(boss.x + boss.w / 2, boss.y + boss.h / 2, 100, 0, Math.PI * 2); ctx.fill();
+  }
+  drawEntity(boss, boss.hitFlash > 0 ? '#fff' : boss.color, false);
+  // Boss HP bar (top of screen)
+  const bw = 300, bh = 12, bx = CW / 2 - bw / 2, by = 8;
+  ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = COL.hpLost; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp / boss.maxHp), bh);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = COL.text; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(boss.name + ' P' + boss.phase, CW / 2, by + bh + 12); ctx.textAlign = 'left';
+}
+
+function drawHUD() {
+  // HP
+  const hs = 20;
+  for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
+  // Score & pollen
+  ctx.fillStyle = COL.text; ctx.font = '16px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('SCORE: ' + score, CW - 12, 28); ctx.textAlign = 'left';
+  ctx.fillStyle = COL.pollen; ctx.font = '14px sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 120, 48);
+  // Floor & wave
+  ctx.fillStyle = COL.bless; ctx.font = 'bold 14px sans-serif'; ctx.fillText('F' + floor, CW / 2 - 50, 28);
+  if (!isBossFloor() || !boss) { ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2 - 20, 28); }
+  else { ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('BOSS', CW / 2 - 20, 28); }
+  // Weapon
+  ctx.fillStyle = player.weapon.color; ctx.font = '12px sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
+  ctx.fillStyle = COL.text; ctx.font = '12px sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
+  // Blessings
+  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
+    for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 68); }
+  // Controls
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px sans-serif'; ctx.fillText('WASD:move Z:attack X:dash', CW / 2 - 80, CH - 6);
+}
+
+function drawBlessing() {
+  if (gameState !== 'blessing') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BLESSING', CW / 2, 70);
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('Choose (1, 2, 3)', CW / 2, 95);
+  for (let i = 0; i < blessingChoices.length; i++) {
+    const b = blessingChoices[i], bx = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
+    ctx.fillStyle = COL.blessBox; ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = COL.bless; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = COL.text; ctx.font = 'bold 36px sans-serif'; ctx.fillText(b.icon, bx + bw / 2, by + 60);
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 18px sans-serif'; ctx.fillText(b.name, bx + bw / 2, by + 100);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '13px sans-serif'; ctx.fillText(b.desc, bx + bw / 2, by + 130);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('[' + (i + 1) + ']', bx + bw / 2, by + 190);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawShop() {
+  if (gameState !== 'shop') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = COL.pollen; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SHOP', CW / 2, 70);
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('Pollen: ' + pollen + '  (Z or Esc to skip)', CW / 2, 95);
+  for (let i = 0; i < shopItems.length; i++) {
+    const s = shopItems[i], sx = CW / 2 - 250 + i * 200, sy = 120, sw = 180, sh = 200;
+    ctx.fillStyle = pollen >= s.cost ? COL.blessBox : 'rgba(60,30,30,0.9)'; ctx.fillRect(sx, sy, sw, sh);
+    ctx.strokeStyle = pollen >= s.cost ? COL.pollen : '#555'; ctx.lineWidth = 2; ctx.strokeRect(sx, sy, sw, sh);
+    ctx.fillStyle = COL.text; ctx.font = '28px sans-serif'; ctx.fillText(s.icon, sx + sw / 2, sy + 50);
+    ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px sans-serif'; ctx.fillText(s.name, sx + sw / 2, sy + 85);
+    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '12px sans-serif'; ctx.fillText(s.desc, sx + sw / 2, sy + 105); }
+    ctx.fillStyle = COL.pollen; ctx.font = 'bold 14px sans-serif'; ctx.fillText(s.cost + ' pollen', sx + sw / 2, sy + 140);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('[' + (i + 1) + ']', sx + sw / 2, sy + 180);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawTitle() {
+  const th = THEMES[0];
+  ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
+  // Simple bg decoration
+  for (let i = 0; i < 15; i++) { ctx.fillStyle = 'rgba(255,215,0,' + (0.03 + Math.sin(titleBlink + i) * 0.02) + ')';
+    ctx.beginPath(); ctx.arc(100 + i * 60, 200 + Math.sin(titleBlink * 0.5 + i * 0.7) * 40, 20 + i * 2, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = COL.player; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('MIPURIN ADVENTURE', CW / 2, CH / 2 - 40);
+  ctx.fillStyle = COL.text; ctx.font = '18px sans-serif';
+  ctx.fillText('v2.0', CW / 2, CH / 2);
+  ctx.globalAlpha = 0.5 + Math.sin(titleBlink * 3) * 0.5;
+  ctx.fillStyle = COL.text; ctx.font = '20px sans-serif';
+  ctx.fillText('Press Z to Start', CW / 2, CH / 2 + 60);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '12px sans-serif';
+  ctx.fillText('WASD: Move  Z: Attack  X: Dash', CW / 2, CH - 30);
+  ctx.textAlign = 'left';
+}
+
+function drawGameState() {
+  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = COL.clear; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', CW / 2, CH / 2 - 30);
+    ctx.fillStyle = COL.text; ctx.font = '20px sans-serif'; ctx.fillText('Floor ' + floor + '  Score: ' + score, CW / 2, CH / 2 + 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.fillText('Z: Title', CW / 2, CH / 2 + 50); ctx.textAlign = 'left'; }
+}
+
+function drawDmgNumbers() {
+  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+}
+
+function draw() {
+  if (gameState === 'title') { drawTitle(); return; }
+
+  ctx.save();
+  if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
+
+  const th = getTheme(floor); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
+  drawRoom(); drawDashTrail(); drawDrops();
+  for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
+  for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
+  drawBoss(); drawProjectiles(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
+
+  ctx.restore();
+  drawGameState(); drawBlessing(); drawShop();
+
+  // Fade overlay
+  if (fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+}
+
+// ===== MAIN LOOP =====
+let lastTime = 0;
+function loop(time) {
+  const rawDt = (time - lastTime) / 1000; lastTime = time;
+  const dt = Math.min(rawDt, 0.05);
+  update(dt); draw();
+  for (const k in pressed) pressed[k] = false;
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(loop); });

@@ -436,6 +436,7 @@ function randEnemyPos(){
 }
 function spawnWave(){
   if(wave>=WAVES.length)return;
+  roomMap=generateRoom(floor);
   for(const g of WAVES[wave]){
     const def=ENEMY_DEFS[g.type];const sc=1+floor*0.12;
     for(let i=0;i<g.count;i++){
@@ -971,6 +972,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 
 

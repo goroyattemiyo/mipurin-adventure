@@ -524,7 +524,7 @@ function drawPlayer(){
   ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.squashX,p.squashY);
   const bob=Math.sin(p.bobTimer*10)*2;ctx.translate(0,bob);
   if(spriteLoaded){
-    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=64;
+    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=96;
     ctx.drawImage(spriteImg,frame.sx,frame.sy,frame.sw,frame.sh,-ds/2,-ds/2,ds,ds);
     // Wing flutter
     ctx.globalAlpha=0.3;ctx.fillStyle='#bbdefb';
@@ -541,7 +541,7 @@ function drawPlayer(){
   ctx.restore();
   if(p.attacking){
     const dirs={down:{x:0,y:1},up:{x:0,y:-1},left:{x:-1,y:0},right:{x:1,y:0}};
-    const d=dirs[p.dir];const ax=p.x+d.x*30,ay=p.y+d.y*30;
+    const d=dirs[p.dir];const ax=p.x+d.x*45,ay=p.y+d.y*45;
     ctx.fillStyle='#ffeb3b';ctx.globalAlpha=0.7;drawStar(ax,ay,14,6,4);ctx.globalAlpha=1;
     ctx.fillStyle='#fff';drawStar(ax+rnd(-8,8),ay+rnd(-8,8),4,2,4);
   }
@@ -972,6 +972,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 
 

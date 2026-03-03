@@ -5,667 +5,242 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ミプリンの冒険 v2.0 — Phase A</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; background: #1a1a2e; overflow: hidden;
-  display: flex; justify-content: center; align-items: center; }
-canvas { image-rendering: pixelated; image-rendering: crisp-edges;
-  width: 2880px; height: 1620px; max-width: 100vw; max-height: 100vh;
-  object-fit: contain; background: #000; }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#1a1a2e;overflow:hidden;display:flex;justify-content:center;align-items:center}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;width:2880px;height:1620px;max-width:100vw;max-height:100vh;object-fit:contain;background:#000}
 </style>
 </head>
 <body>
 <canvas id="c" width="960" height="540"></canvas>
 <script>
 'use strict';
-// ============================================================
-// ミプリンの冒険 v2.0 — Phase A Core Prototype
-// 960×540 base, 48px tiles (20×11 grid), Canvas 2D
-// ============================================================
+const CW=960,CH=540,TILE=48,COLS=20,ROWS=11;
+const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+const keys={},pressed={};
+window.addEventListener('keydown',e=>{if(!keys[e.code])pressed[e.code]=true;keys[e.code]=true;e.preventDefault();});
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
+function isDown(c){return!!keys[c]}
+function wasPressed(c){const v=!!pressed[c];pressed[c]=false;return v}
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v}
+function rectOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 
-// --- Constants ---
-const CW = 960, CH = 540, TILE = 48;
-const COLS = 20, ROWS = 11; // visible room grid
-const FPS = 60, DT = 1 / FPS;
+const COL={bg:'#2b2b3d',wall:'#5a5a78',floor:'#3d3d56',floorAlt:'#35354a',
+player:'#ffd700',playerOutline:'#b8860b',
+enemyA:'#e74c3c',enemyB:'#8e44ad',enemyC:'#e67e22',
+hp:'#27ae60',hpBg:'#555',hpLost:'#c0392b',
+text:'#fff',clear:'#2ecc71',dmg:'#ff6b6b',
+dash:'rgba(255,215,0,0.3)',attack:'rgba(255,255,255,0.5)',
+telegraph:'rgba(255,0,0,0.25)'};
 
-// --- Canvas ---
-const cvs = document.getElementById('c');
-const ctx = cvs.getContext('2d');
+function generateRoom(){
+const map=[];
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+if(r===0||r===ROWS-1||c===0||c===COLS-1)map.push(1);
+else if(((c===5||c===6)&&(r===3||r===4))||((c===13||c===14)&&(r===3||r===4))||
+((c===5||c===6)&&(r===7||r===8))||((c===13||c===14)&&(r===7||r===8)))map.push(1);
+else map.push(0)}return map}
+function tileAt(map,c,r){if(c<0||c>=COLS||r<0||r>=ROWS)return 1;return map[r*COLS+c]}
+let roomMap=generateRoom();
 
-// --- Input ---
-const keys = {};
-const pressed = {}; // single-frame press
-window.addEventListener('keydown', e => {
-  if (!keys[e.code]) pressed[e.code] = true;
-  keys[e.code] = true;
-  e.preventDefault();
-});
-window.addEventListener('keyup', e => { keys[e.code] = false; });
-function isDown(code) { return !!keys[code]; }
-function wasPressed(code) { const v = !!pressed[code]; pressed[code] = false; return v; }
+const player={x:TILE*10,y:TILE*5,w:36,h:36,speed:200,hp:5,maxHp:5,
+attacking:false,atkTimer:0,atkDuration:0.15,atkCooldown:0,
+atkDir:{x:0,y:1},dashing:false,dashTimer:0,dashDuration:0.15,dashCooldown:0,
+dashSpeed:600,dashDir:{x:0,y:0},invTimer:0,invDuration:0.6,animTimer:0,frame:0};
 
-// --- Utility ---
-function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-function rectOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
+const dmgNumbers=[];
+function spawnDmg(x,y,val,color){dmgNumbers.push({x,y,val,color:color||COL.dmg,life:0.8})}
 
-// --- Colors (SNES-ish palette) ---
-const COL = {
-  bg: '#2b2b3d', wall: '#5a5a78', floor: '#3d3d56', floorAlt: '#35354a',
-  player: '#ffd700', playerOutline: '#b8860b',
-  enemyA: '#e74c3c', enemyB: '#8e44ad', enemyC: '#e67e22',
-  hp: '#27ae60', hpBg: '#555', hpLost: '#c0392b',
-  text: '#fff', textShadow: '#000', ui: '#222034',
-  clear: '#2ecc71', dmg: '#ff6b6b',
-  dash: 'rgba(255,215,0,0.3)', attack: 'rgba(255,255,255,0.5)',
-  telegraph: 'rgba(255,0,0,0.25)',
-};
+const enemies=[];
+const ENEMY_DEFS={
+wanderer:{hp:3,maxHp:3,speed:60,color:COL.enemyA,w:36,h:36,dmg:1,pattern:'wander',score:10,name:'dokikinoko'},
+chaser:{hp:4,maxHp:4,speed:90,color:COL.enemyB,w:40,h:40,dmg:1,pattern:'chase',score:20,name:'haetorigumo'},
+charger:{hp:6,maxHp:6,speed:50,color:COL.enemyC,w:44,h:44,dmg:2,pattern:'charge',score:30,name:'kabutosuzume',
+chargeSpeed:300,telegraphTime:0.6,chargeTime:0.3}};
 
-// --- Room Map (1=wall, 0=floor) ---
-// Simple arena: walls on border, pillars inside
-function generateRoom() {
-  const map = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) {
-        map.push(1); // wall
-      } else if (
-        // Random pillars (2×2 clusters)
-        ((c === 5 || c === 6) && (r === 3 || r === 4)) ||
-        ((c === 13 || c === 14) && (r === 3 || r === 4)) ||
-        ((c === 5 || c === 6) && (r === 7 || r === 8)) ||
-        ((c === 13 || c === 14) && (r === 7 || r === 8))
-      ) {
-        map.push(1);
-      } else {
-        map.push(0);
-      }
-    }
-  }
-  return map;
-}
-function tileAt(map, col, row) {
-  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return 1;
-  return map[row * COLS + col];
-}
+function spawnEnemy(type,col,row){const def=ENEMY_DEFS[type];
+enemies.push({...def,type,x:col*TILE+(TILE-def.w)/2,y:row*TILE+(TILE-def.h)/2,
+vx:0,vy:0,state:'idle',stateTimer:0,wanderDir:{x:1,y:0},wanderTimer:0,
+chargeDir:null,telegraphTimer:0,hitFlash:0})}
 
-let roomMap = generateRoom();
+let wave=0;
+const WAVES=[
+[{type:'wanderer',col:5,row:5},{type:'wanderer',col:14,row:5}],
+[{type:'wanderer',col:4,row:3},{type:'chaser',col:15,row:8}],
+[{type:'wanderer',col:3,row:2},{type:'chaser',col:16,row:2},{type:'chaser',col:10,row:8}],
+[{type:'chaser',col:4,row:5},{type:'chaser',col:15,row:5},{type:'charger',col:10,row:3}],
+[{type:'wanderer',col:3,row:2},{type:'wanderer',col:16,row:9},{type:'chaser',col:15,row:2},
+{type:'chaser',col:4,row:9},{type:'charger',col:10,row:5}]];
 
-// --- Player ---
-const player = {
-  x: TILE * 10, y: TILE * 5, w: 36, h: 36,
-  speed: 200, hp: 5, maxHp: 5,
-  // Attack
-  attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
-  atkDir: { x: 0, y: 1 }, // facing
-  // Dash
-  dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
-  dashSpeed: 600, dashDir: { x: 0, y: 0 },
-  // Invincibility
-  invTimer: 0, invDuration: 0.6,
-  // Animation
-  animTimer: 0, frame: 0,
-};
+function spawnWave(){enemies.length=0;const w=WAVES[Math.min(wave,WAVES.length-1)];
+for(const e of w)spawnEnemy(e.type,e.col,e.row)}
 
-// --- Damage Numbers ---
-const dmgNumbers = [];
-function spawnDmg(x, y, val, color) {
-  dmgNumbers.push({ x, y, val, color: color || COL.dmg, life: 0.8 });
-}
+let gameState='playing',clearTimer=0,shakeTimer=0,shakeIntensity=0,score=0;
 
-// --- Enemies ---
-const enemies = [];
-const ENEMY_DEFS = {
-  wanderer: {
-    hp: 3, maxHp: 3, speed: 60, color: COL.enemyA, w: 36, h: 36,
-    dmg: 1, pattern: 'wander', score: 10, name: 'ドクキノコ',
-  },
-  chaser: {
-    hp: 4, maxHp: 4, speed: 90, color: COL.enemyB, w: 40, h: 40,
-    dmg: 1, pattern: 'chase', score: 20, name: 'ハエトリグモ',
-  },
-  charger: {
-    hp: 6, maxHp: 6, speed: 50, color: COL.enemyC, w: 44, h: 44,
-    dmg: 2, pattern: 'charge', score: 30, name: 'カブトスズメ',
-    chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3,
-  },
-};
+function resetGame(){wave=0;player.x=TILE*10;player.y=TILE*5;player.hp=player.maxHp;
+player.invTimer=0;player.attacking=false;player.atkCooldown=0;player.dashing=false;
+player.dashCooldown=0;roomMap=generateRoom();score=0;dmgNumbers.length=0;spawnWave();
+gameState='playing';clearTimer=0}
 
-function spawnEnemy(type, col, row) {
-  const def = ENEMY_DEFS[type];
-  enemies.push({
-    ...def,
-    type,
-    x: col * TILE + (TILE - def.w) / 2,
-    y: row * TILE + (TILE - def.h) / 2,
-    vx: 0, vy: 0,
-    // AI state
-    state: 'idle', stateTimer: 0,
-    wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
-    // Charger specific
-    chargeDir: null, telegraphTimer: 0,
-    // Hit flash
-    hitFlash: 0,
-  });
-}
+function moveWithCollision(ent,dx,dy){
+let nx=ent.x+dx,bl=false;
+let c0=Math.floor(nx/TILE),c1=Math.floor((nx+ent.w-1)/TILE);
+let r0=Math.floor(ent.y/TILE),r1=Math.floor((ent.y+ent.h-1)/TILE);
+for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(tileAt(roomMap,c,r)===1)bl=true;
+if(!bl)ent.x=nx;
+let ny=ent.y+dy;bl=false;
+let c2=Math.floor(ent.x/TILE),c3=Math.floor((ent.x+ent.w-1)/TILE);
+let r2=Math.floor(ny/TILE),r3=Math.floor((ny+ent.h-1)/TILE);
+for(let r=r2;r<=r3;r++)for(let c=c2;c<=c3;c++)if(tileAt(roomMap,c,r)===1)bl=true;
+if(!bl)ent.y=ny}
 
-function spawnWave() {
-  enemies.length = 0;
-  spawnEnemy('wanderer', 3, 2);
-  spawnEnemy('wanderer', 16, 2);
-  spawnEnemy('wanderer', 3, 9);
-  spawnEnemy('chaser', 16, 9);
-  spawnEnemy('chaser', 10, 2);
-  spawnEnemy('charger', 10, 8);
-}
+function getAttackBox(){const range=44,ax=player.atkDir.x,ay=player.atkDir.y;
+return{x:player.x+player.w/2+ax*24-range/2,y:player.y+player.h/2+ay*24-range/2,w:range,h:range}}
 
-// --- Game State ---
-let gameState = 'playing'; // 'playing' | 'clear' | 'dead'
-let clearTimer = 0;
-let shakeTimer = 0, shakeIntensity = 0;
-let score = 0;
+function update(dt){
+if(gameState==='waveWait'){clearTimer+=dt;if(clearTimer>1.0){spawnWave();gameState='playing'}return}
+if(gameState==='clear'){clearTimer+=dt;if(clearTimer>2&&wasPressed('KeyZ'))resetGame();return}
+if(gameState==='dead'){if(wasPressed('KeyZ'))resetGame();return}
+let mx=0,my=0;
+if(isDown('ArrowLeft')||isDown('KeyA'))mx-=1;
+if(isDown('ArrowRight')||isDown('KeyD'))mx+=1;
+if(isDown('ArrowUp')||isDown('KeyW'))my-=1;
+if(isDown('ArrowDown')||isDown('KeyS'))my+=1;
+if(mx!==0&&my!==0){mx*=0.707;my*=0.707}
+if(mx!==0||my!==0){player.atkDir.x=Math.sign(mx||0);player.atkDir.y=Math.sign(my||0);
+if(mx!==0)player.atkDir.y=0;if(my!==0&&mx===0)player.atkDir.x=0}
+player.dashCooldown=Math.max(0,player.dashCooldown-dt);
+if(player.dashing){player.dashTimer-=dt;if(player.dashTimer<=0)player.dashing=false;
+else moveWithCollision(player,player.dashDir.x*player.dashSpeed*dt,player.dashDir.y*player.dashSpeed*dt)}
+else{if(wasPressed('KeyX')&&player.dashCooldown<=0&&(mx!==0||my!==0)){
+player.dashing=true;player.dashTimer=player.dashDuration;player.dashCooldown=0.5;
+player.dashDir.x=mx;player.dashDir.y=my;player.invTimer=player.dashDuration}
+if(!player.dashing&&!player.attacking)moveWithCollision(player,mx*player.speed*dt,my*player.speed*dt)}
+player.atkCooldown=Math.max(0,player.atkCooldown-dt);
+if(wasPressed('KeyZ')&&player.atkCooldown<=0&&!player.attacking&&!player.dashing){
+player.attacking=true;player.atkTimer=player.atkDuration;player.atkCooldown=0.3;
+const box=getAttackBox();for(const en of enemies){if(en.hp<=0)continue;
+if(rectOverlap(box,en)){en.hp-=1;en.hitFlash=0.1;spawnDmg(en.x+en.w/2,en.y,1,COL.dmg);
+shakeTimer=0.05;shakeIntensity=3;const angle=Math.atan2(en.y-player.y,en.x-player.x);
+en.x+=Math.cos(angle)*20;en.y+=Math.sin(angle)*20}}}
+if(player.attacking){player.atkTimer-=dt;if(player.atkTimer<=0)player.attacking=false}
+player.invTimer=Math.max(0,player.invTimer-dt);
+player.animTimer+=dt;if(player.animTimer>0.15){player.animTimer=0;player.frame=(player.frame+1)%4}
+for(const en of enemies){if(en.hp<=0)continue;en.hitFlash=Math.max(0,en.hitFlash-dt);
+en.stateTimer+=dt;const dx=player.x-en.x,dy=player.y-en.y,d=Math.hypot(dx,dy);
+if(en.pattern==='wander'){en.wanderTimer-=dt;if(en.wanderTimer<=0){const a=Math.random()*Math.PI*2;
+en.wanderDir={x:Math.cos(a),y:Math.sin(a)};en.wanderTimer=1+Math.random()*2}
+moveWithCollision(en,en.wanderDir.x*en.speed*dt,en.wanderDir.y*en.speed*dt)}
+if(en.pattern==='chase'&&d>0)moveWithCollision(en,(dx/d)*en.speed*dt,(dy/d)*en.speed*dt);
+if(en.pattern==='charge'){if(en.state==='idle'){en.wanderTimer-=dt;
+if(en.wanderTimer<=0){const a=Math.random()*Math.PI*2;en.wanderDir={x:Math.cos(a),y:Math.sin(a)};
+en.wanderTimer=1.5+Math.random()}moveWithCollision(en,en.wanderDir.x*30*dt,en.wanderDir.y*30*dt);
+if(d<250){en.state='telegraph';en.telegraphTimer=en.telegraphTime;en.chargeDir={x:dx/d,y:dy/d}}}
+if(en.state==='telegraph'){en.telegraphTimer-=dt;if(en.telegraphTimer<=0){en.state='charging';en.stateTimer=0}}
+if(en.state==='charging'){moveWithCollision(en,en.chargeDir.x*en.chargeSpeed*dt,en.chargeDir.y*en.chargeSpeed*dt);
+if(en.stateTimer>en.chargeTime){en.state='cooldown';en.stateTimer=0}}
+if(en.state==='cooldown'&&en.stateTimer>0.8){en.state='idle';en.stateTimer=0;en.wanderTimer=0}}
+if(player.invTimer<=0&&!player.dashing){const pB={x:player.x,y:player.y,w:player.w,h:player.h};
+const eB={x:en.x,y:en.y,w:en.w,h:en.h};if(rectOverlap(pB,eB)){player.hp-=en.dmg;
+player.invTimer=player.invDuration;shakeTimer=0.1;shakeIntensity=5;
+spawnDmg(player.x+player.w/2,player.y,en.dmg,'#fff');
+const angle=Math.atan2(player.y-en.y,player.x-en.x);
+player.x+=Math.cos(angle)*30;player.y+=Math.sin(angle)*30;
+if(player.hp<=0)gameState='dead'}}}
+for(let i=enemies.length-1;i>=0;i--){if(enemies[i].hp<=0){score+=enemies[i].score;enemies.splice(i,1)}}
+if(enemies.length===0&&gameState==='playing'){wave++;
+if(wave>=WAVES.length){gameState='clear';clearTimer=0}
+else{gameState='waveWait';clearTimer=0}}
+for(let i=dmgNumbers.length-1;i>=0;i--){dmgNumbers[i].life-=dt;dmgNumbers[i].y-=40*dt;
+if(dmgNumbers[i].life<=0)dmgNumbers.splice(i,1)}
+shakeTimer=Math.max(0,shakeTimer-dt)}
 
-function resetGame() {
-  player.x = TILE * 10; player.y = TILE * 5;
-  player.hp = player.maxHp; player.invTimer = 0;
-  player.attacking = false; player.atkCooldown = 0;
-  player.dashing = false; player.dashCooldown = 0;
-  roomMap = generateRoom();
-  score = 0;
-  dmgNumbers.length = 0;
-  spawnWave();
-  gameState = 'playing';
-  clearTimer = 0;
-}
+function drawTile(c,r,color){ctx.fillStyle=color;ctx.fillRect(c*TILE,r*TILE,TILE,TILE)}
+function drawRoom(){for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+if(tileAt(roomMap,c,r)===1){drawTile(c,r,COL.wall);ctx.fillStyle='#6e6e90';
+ctx.fillRect(c*TILE,r*TILE,TILE,3)}else drawTile(c,r,(c+r)%2===0?COL.floor:COL.floorAlt)}}
 
-// --- Collision with walls ---
-function moveWithCollision(ent, dx, dy) {
-  // Try X
-  const nx = ent.x + dx;
-  const c0 = Math.floor(nx / TILE);
-  const c1 = Math.floor((nx + ent.w - 1) / TILE);
-  const r0 = Math.floor(ent.y / TILE);
-  const r1 = Math.floor((ent.y + ent.h - 1) / TILE);
-  let blocked = false;
-  for (let r = r0; r <= r1; r++)
-    for (let c = c0; c <= c1; c++)
-      if (tileAt(roomMap, c, r) === 1) blocked = true;
-  if (!blocked) ent.x = nx;
+function drawEntity(e,color,isP){const cx=e.x+e.w/2,cy=e.y+e.h/2;
+ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(cx,e.y+e.h+2,e.w/2.5,4,0,0,Math.PI*2);ctx.fill();
+ctx.fillStyle=e.hitFlash>0?'#fff':color;
+if(isP&&player.invTimer>0&&Math.floor(player.invTimer*10)%2===0)ctx.globalAlpha=0.4;
+const rr=6;ctx.beginPath();ctx.moveTo(e.x+rr,e.y);ctx.lineTo(e.x+e.w-rr,e.y);
+ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr);ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h);ctx.lineTo(e.x+rr,e.y+e.h);
+ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr);ctx.lineTo(e.x,e.y+rr);
+ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y);ctx.closePath();ctx.fill();
+ctx.strokeStyle=isP?COL.playerOutline:'#333';ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;
+const eyeY=cy-2,eyeOff=e.w*0.18;ctx.fillStyle='#fff';
+ctx.beginPath();ctx.arc(cx-eyeOff,eyeY,4,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc(cx+eyeOff,eyeY,4,0,Math.PI*2);ctx.fill();
+ctx.fillStyle='#222';const lx=isP?player.atkDir.x*1.5:0,ly=isP?player.atkDir.y*1.5:0;
+ctx.beginPath();ctx.arc(cx-eyeOff+lx,eyeY+ly,2,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc(cx+eyeOff+lx,eyeY+ly,2,0,Math.PI*2);ctx.fill();
+if(isP){ctx.fillStyle=COL.player;ctx.beginPath();ctx.moveTo(cx-6,e.y);ctx.lineTo(cx,e.y-10);
+ctx.lineTo(cx+6,e.y);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();
+ctx.arc(cx,e.y-12,3,0,Math.PI*2);ctx.fill()}}
 
-  // Try Y
-  const ny = ent.y + dy;
-  const c2 = Math.floor(ent.x / TILE);
-  const c3 = Math.floor((ent.x + ent.w - 1) / TILE);
-  const r2 = Math.floor(ny / TILE);
-  const r3 = Math.floor((ny + ent.h - 1) / TILE);
-  blocked = false;
-  for (let r = r2; r <= r3; r++)
-    for (let c = c2; c <= c3; c++)
-      if (tileAt(roomMap, c, r) === 1) blocked = true;
-  if (!blocked) ent.y = ny;
-}
+function drawHPBar(e,yOff){const bW=e.w+4,bH=5,bx=e.x-2,by=e.y+yOff;
+ctx.fillStyle=COL.hpBg;ctx.fillRect(bx,by,bW,bH);const ratio=Math.max(0,e.hp/e.maxHp);
+ctx.fillStyle=ratio>0.5?COL.hp:ratio>0.25?'#f39c12':COL.hpLost;ctx.fillRect(bx,by,bW*ratio,bH)}
 
-// --- Attack Box ---
-function getAttackBox() {
-  const range = 44;
-  const ax = player.atkDir.x, ay = player.atkDir.y;
-  return {
-    x: player.x + player.w / 2 + ax * 24 - range / 2,
-    y: player.y + player.h / 2 + ay * 24 - range / 2,
-    w: range, h: range,
-  };
-}
+function drawAttackEffect(){if(!player.attacking)return;const box=getAttackBox();
+ctx.fillStyle=COL.attack;ctx.fillRect(box.x,box.y,box.w,box.h);
+const cx=box.x+box.w/2,cy=box.y+box.h/2;ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();
+const ba=Math.atan2(player.atkDir.y,player.atkDir.x);ctx.arc(cx,cy,22,ba-0.8,ba+0.8);ctx.stroke()}
 
-// --- Update ---
-function update(dt) {
-  // --- Clear state ---
-  if (gameState === 'clear') {
-    clearTimer += dt;
-    if (clearTimer > 2 && wasPressed('KeyZ')) resetGame();
-    return;
-  }
-  if (gameState === 'dead') {
-    if (wasPressed('KeyZ')) resetGame();
-    return;
-  }
+function drawDashTrail(){if(!player.dashing)return;ctx.fillStyle=COL.dash;ctx.beginPath();
+ctx.arc(player.x+player.w/2,player.y+player.h/2,24,0,Math.PI*2);ctx.fill()}
 
-  // --- Player movement ---
-  let mx = 0, my = 0;
-  if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
-  if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
-  if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
-  if (isDown('ArrowDown') || isDown('KeyS')) my += 1;
-  // Normalize
-  if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
-  // Facing direction
-  if (mx !== 0 || my !== 0) {
-    player.atkDir.x = Math.sign(mx || 0);
-    player.atkDir.y = Math.sign(my || 0);
-    if (mx !== 0) player.atkDir.y = 0; // prioritize horizontal
-    if (my !== 0 && mx === 0) player.atkDir.x = 0;
-  }
+function drawTelegraph(en){if(en.state!=='telegraph'||!en.chargeDir)return;
+const cx=en.x+en.w/2,cy=en.y+en.h/2;ctx.fillStyle=COL.telegraph;ctx.beginPath();
+ctx.moveTo(cx-en.chargeDir.y*20,cy+en.chargeDir.x*20);
+ctx.lineTo(cx+en.chargeDir.x*200,cy+en.chargeDir.y*200);
+ctx.lineTo(cx+en.chargeDir.y*20,cy-en.chargeDir.x*20);ctx.closePath();ctx.fill();
+ctx.fillStyle='#ff0';ctx.font='bold 18px sans-serif';ctx.textAlign='center';
+ctx.fillText('!',cx,en.y-8)}
 
-  // Dash
-  player.dashCooldown = Math.max(0, player.dashCooldown - dt);
-  if (player.dashing) {
-    player.dashTimer -= dt;
-    if (player.dashTimer <= 0) player.dashing = false;
-    else {
-      moveWithCollision(player,
-        player.dashDir.x * player.dashSpeed * dt,
-        player.dashDir.y * player.dashSpeed * dt);
-    }
-  } else {
-    if (wasPressed('KeyX') && player.dashCooldown <= 0 && (mx !== 0 || my !== 0)) {
-      player.dashing = true;
-      player.dashTimer = player.dashDuration;
-      player.dashCooldown = 0.5;
-      player.dashDir.x = mx; player.dashDir.y = my;
-      player.invTimer = player.dashDuration; // i-frames during dash
-    }
-    // Normal movement (not during dash)
-    if (!player.dashing && !player.attacking) {
-      moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
-    }
-  }
+function drawHUD(){const hx=12,hy=12,hs=20;
+for(let i=0;i<player.maxHp;i++){ctx.fillStyle=i<player.hp?COL.hpLost:'#444';
+ctx.font=hs+'px sans-serif';ctx.fillText(i<player.hp?'\u2665':'\u2661',hx+i*(hs+4),hy+hs)}
+ctx.fillStyle=COL.text;ctx.font='16px sans-serif';ctx.textAlign='right';
+ctx.fillText('SCORE: '+score,CW-12,28);ctx.textAlign='left';
+ctx.fillStyle=COL.text;ctx.font='14px sans-serif';
+ctx.fillText('WAVE '+(wave+1)+'/'+WAVES.length,CW/2-30,28);
+ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='12px sans-serif';
+ctx.fillText('WASD:move  Z:attack  X:dash',12,CH-12)}
 
-  // Attack
-  player.atkCooldown = Math.max(0, player.atkCooldown - dt);
-  if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
-    player.attacking = true;
-    player.atkTimer = player.atkDuration;
-    player.atkCooldown = 0.3;
-    // Hit enemies
-    const box = getAttackBox();
-    for (const en of enemies) {
-      if (en.hp <= 0) continue;
-      if (rectOverlap(box, en)) {
-        en.hp -= 1;
-        en.hitFlash = 0.1;
-        spawnDmg(en.x + en.w / 2, en.y, 1, COL.dmg);
-        shakeTimer = 0.05; shakeIntensity = 3;
-        // Knockback
-        const angle = Math.atan2(en.y - player.y, en.x - player.x);
-        en.x += Math.cos(angle) * 20;
-        en.y += Math.sin(angle) * 20;
-      }
-    }
-  }
-  if (player.attacking) {
-    player.atkTimer -= dt;
-    if (player.atkTimer <= 0) player.attacking = false;
-  }
+function drawGameState(){
+if(gameState==='waveWait'){ctx.fillStyle=COL.text;ctx.font='bold 28px sans-serif';
+ctx.textAlign='center';ctx.fillText('WAVE '+(wave+1),CW/2,CH/2);ctx.textAlign='left'}
+if(gameState==='clear'){ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(0,0,CW,CH);
+ctx.fillStyle=COL.clear;ctx.font='bold 48px sans-serif';ctx.textAlign='center';
+ctx.fillText('CLEAR!',CW/2,CH/2-20);ctx.fillStyle=COL.text;ctx.font='20px sans-serif';
+ctx.fillText('SCORE: '+score,CW/2,CH/2+20);if(clearTimer>2){ctx.font='16px sans-serif';
+ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fillText('Z key to retry',CW/2,CH/2+55)}
+ctx.textAlign='left'}
+if(gameState==='dead'){ctx.fillStyle='rgba(80,0,0,0.6)';ctx.fillRect(0,0,CW,CH);
+ctx.fillStyle=COL.hpLost;ctx.font='bold 48px sans-serif';ctx.textAlign='center';
+ctx.fillText('GAME OVER',CW/2,CH/2-20);ctx.fillStyle=COL.text;ctx.font='20px sans-serif';
+ctx.fillText('SCORE: '+score,CW/2,CH/2+20);ctx.font='16px sans-serif';
+ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fillText('Z key to retry',CW/2,CH/2+55);
+ctx.textAlign='left'}}
 
-  // Invincibility
-  player.invTimer = Math.max(0, player.invTimer - dt);
+function drawDmgNumbers(){for(const d of dmgNumbers){ctx.globalAlpha=clamp(d.life/0.3,0,1);
+ctx.fillStyle=d.color;ctx.font='bold 18px sans-serif';ctx.textAlign='center';
+ctx.fillText(d.val,d.x,d.y);ctx.textAlign='left';ctx.globalAlpha=1}}
 
-  // Animation
-  player.animTimer += dt;
-  if (player.animTimer > 0.15) { player.animTimer = 0; player.frame = (player.frame + 1) % 4; }
+function draw(){ctx.save();if(shakeTimer>0){ctx.translate((Math.random()-0.5)*shakeIntensity*2,
+(Math.random()-0.5)*shakeIntensity*2)}ctx.fillStyle=COL.bg;ctx.fillRect(0,0,CW,CH);
+drawRoom();drawDashTrail();for(const en of enemies)if(en.hp>0)drawTelegraph(en);
+for(const en of enemies)if(en.hp>0){drawEntity(en,en.color,false);drawHPBar(en,-8)}
+drawAttackEffect();drawEntity(player,COL.player,true);drawDmgNumbers();drawHUD();
+ctx.restore();drawGameState()}
 
-  // --- Enemy AI ---
-  for (const en of enemies) {
-    if (en.hp <= 0) continue;
-    en.hitFlash = Math.max(0, en.hitFlash - dt);
-    en.stateTimer += dt;
-
-    const dx = player.x - en.x, dy = player.y - en.y;
-    const d = Math.hypot(dx, dy);
-
-    if (en.pattern === 'wander') {
-      en.wanderTimer -= dt;
-      if (en.wanderTimer <= 0) {
-        const a = Math.random() * Math.PI * 2;
-        en.wanderDir = { x: Math.cos(a), y: Math.sin(a) };
-        en.wanderTimer = 1 + Math.random() * 2;
-      }
-      moveWithCollision(en, en.wanderDir.x * en.speed * dt, en.wanderDir.y * en.speed * dt);
-    }
-
-    if (en.pattern === 'chase') {
-      if (d > 0) {
-        moveWithCollision(en, (dx / d) * en.speed * dt, (dy / d) * en.speed * dt);
-      }
-    }
-
-    if (en.pattern === 'charge') {
-      if (en.state === 'idle') {
-        // Wander slowly
-        en.wanderTimer -= dt;
-        if (en.wanderTimer <= 0) {
-          const a = Math.random() * Math.PI * 2;
-          en.wanderDir = { x: Math.cos(a), y: Math.sin(a) };
-          en.wanderTimer = 1.5 + Math.random();
-        }
-        moveWithCollision(en, en.wanderDir.x * 30 * dt, en.wanderDir.y * 30 * dt);
-        // Start charge if player is close
-        if (d < 250) {
-          en.state = 'telegraph';
-          en.telegraphTimer = en.telegraphTime;
-          en.chargeDir = { x: dx / d, y: dy / d };
-        }
-      }
-      if (en.state === 'telegraph') {
-        en.telegraphTimer -= dt;
-        if (en.telegraphTimer <= 0) {
-          en.state = 'charging';
-          en.stateTimer = 0;
-        }
-      }
-      if (en.state === 'charging') {
-        moveWithCollision(en,
-          en.chargeDir.x * en.chargeSpeed * dt,
-          en.chargeDir.y * en.chargeSpeed * dt);
-        if (en.stateTimer > en.chargeTime) {
-          en.state = 'cooldown';
-          en.stateTimer = 0;
-        }
-      }
-      if (en.state === 'cooldown') {
-        if (en.stateTimer > 0.8) {
-          en.state = 'idle';
-          en.stateTimer = 0;
-          en.wanderTimer = 0;
-        }
-      }
-    }
-
-    // Enemy damages player
-    if (player.invTimer <= 0 && !player.dashing) {
-      const pBox = { x: player.x, y: player.y, w: player.w, h: player.h };
-      const eBox = { x: en.x, y: en.y, w: en.w, h: en.h };
-      if (rectOverlap(pBox, eBox)) {
-        player.hp -= en.dmg;
-        player.invTimer = player.invDuration;
-        shakeTimer = 0.1; shakeIntensity = 5;
-        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff');
-        // Knockback player
-        const angle = Math.atan2(player.y - en.y, player.x - en.x);
-        player.x += Math.cos(angle) * 30;
-        player.y += Math.sin(angle) * 30;
-        if (player.hp <= 0) {
-          gameState = 'dead';
-        }
-      }
-    }
-  }
-
-  // Remove dead enemies
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    if (enemies[i].hp <= 0) {
-      score += enemies[i].score;
-      enemies.splice(i, 1);
-    }
-  }
-
-  // Check clear
-  if (enemies.length === 0 && gameState === 'playing') {
-    gameState = 'clear';
-    clearTimer = 0;
-  }
-
-  // Damage numbers
-  for (let i = dmgNumbers.length - 1; i >= 0; i--) {
-    dmgNumbers[i].life -= dt;
-    dmgNumbers[i].y -= 40 * dt;
-    if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1);
-  }
-
-  // Shake
-  shakeTimer = Math.max(0, shakeTimer - dt);
-}
-
-// --- Draw ---
-function drawTile(col, row, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(col * TILE, row * TILE, TILE, TILE);
-}
-
-function drawRoom() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (tileAt(roomMap, c, r) === 1) {
-        drawTile(c, r, COL.wall);
-        // Top border highlight
-        ctx.fillStyle = '#6e6e90';
-        ctx.fillRect(c * TILE, r * TILE, TILE, 3);
-      } else {
-        // Checker pattern
-        drawTile(c, r, (c + r) % 2 === 0 ? COL.floor : COL.floorAlt);
-      }
-    }
-  }
-}
-
-function drawEntity(e, color, isPlayer) {
-  const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Body
-  ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
-  // Invincibility blink
-  if (isPlayer && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) {
-    ctx.globalAlpha = 0.4;
-  }
-  // Rounded rect body
-  const r = 6;
-  ctx.beginPath();
-  ctx.moveTo(e.x + r, e.y);
-  ctx.lineTo(e.x + e.w - r, e.y);
-  ctx.quadraticCurveTo(e.x + e.w, e.y, e.x + e.w, e.y + r);
-  ctx.lineTo(e.x + e.w, e.y + e.h - r);
-  ctx.quadraticCurveTo(e.x + e.w, e.y + e.h, e.x + e.w - r, e.y + e.h);
-  ctx.lineTo(e.x + r, e.y + e.h);
-  ctx.quadraticCurveTo(e.x, e.y + e.h, e.x, e.y + e.h - r);
-  ctx.lineTo(e.x, e.y + r);
-  ctx.quadraticCurveTo(e.x, e.y, e.x + r, e.y);
-  ctx.closePath();
-  ctx.fill();
-  // Outline
-  ctx.strokeStyle = isPlayer ? COL.playerOutline : '#333';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  // Eyes
-  const eyeY = cy - 2;
-  const eyeOff = e.w * 0.18;
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#222';
-  const lookX = isPlayer ? player.atkDir.x * 1.5 : 0;
-  const lookY = isPlayer ? player.atkDir.y * 1.5 : 0;
-  ctx.beginPath(); ctx.arc(cx - eyeOff + lookX, eyeY + lookY, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeOff + lookX, eyeY + lookY, 2, 0, Math.PI * 2); ctx.fill();
-  if (isPlayer) {
-    // Little crown / antenna for Mipurin
-    ctx.fillStyle = COL.player;
-    ctx.beginPath();
-    ctx.moveTo(cx - 6, e.y);
-    ctx.lineTo(cx, e.y - 10);
-    ctx.lineTo(cx + 6, e.y);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-function drawHPBar(e, yOff) {
-  const barW = e.w + 4, barH = 5;
-  const bx = e.x - 2, by = e.y + yOff;
-  ctx.fillStyle = COL.hpBg;
-  ctx.fillRect(bx, by, barW, barH);
-  const ratio = Math.max(0, e.hp / e.maxHp);
-  ctx.fillStyle = ratio > 0.5 ? COL.hp : ratio > 0.25 ? '#f39c12' : COL.hpLost;
-  ctx.fillRect(bx, by, barW * ratio, barH);
-}
-
-function drawAttackEffect() {
-  if (!player.attacking) return;
-  const box = getAttackBox();
-  ctx.fillStyle = COL.attack;
-  ctx.fillRect(box.x, box.y, box.w, box.h);
-  // Slash arc
-  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  const baseAngle = Math.atan2(player.atkDir.y, player.atkDir.x);
-  ctx.arc(cx, cy, 22, baseAngle - 0.8, baseAngle + 0.8);
-  ctx.stroke();
-}
-
-function drawDashTrail() {
-  if (!player.dashing) return;
-  ctx.fillStyle = COL.dash;
-  ctx.beginPath();
-  ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 24, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawTelegraph(en) {
-  if (en.state !== 'telegraph' || !en.chargeDir) return;
-  const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
-  ctx.fillStyle = COL.telegraph;
-  // Draw line in charge direction
-  ctx.beginPath();
-  ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
-  ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
-  ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20);
-  ctx.closePath();
-  ctx.fill();
-  // Exclamation mark
-  ctx.fillStyle = '#ff0';
-  ctx.font = 'bold 18px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('!', cx, en.y - 8);
-}
-
-function drawHUD() {
-  // HP hearts
-  const hx = 12, hy = 12, hs = 20;
-  for (let i = 0; i < player.maxHp; i++) {
-    ctx.fillStyle = i < player.hp ? COL.hpLost : '#444';
-    ctx.font = `${hs}px sans-serif`;
-    ctx.fillText(i < player.hp ? '♥' : '♡', hx + i * (hs + 4), hy + hs);
-  }
-  // Score
-  ctx.fillStyle = COL.text;
-  ctx.font = '16px sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(`SCORE: ${score}`, CW - 12, 28);
-  ctx.textAlign = 'left';
-  // Controls hint
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '12px sans-serif';
-  ctx.fillText('WASD:移動  Z:攻撃  X:ダッシュ', 12, CH - 12);
-}
-
-function drawGameState() {
-  if (gameState === 'clear') {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.clear;
-    ctx.font = 'bold 48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('CLEAR!', CW / 2, CH / 2 - 20);
-    ctx.fillStyle = COL.text;
-    ctx.font = '20px sans-serif';
-    ctx.fillText(`SCORE: ${score}`, CW / 2, CH / 2 + 20);
-    if (clearTimer > 2) {
-      ctx.font = '16px sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.fillText('Z キーでリトライ', CW / 2, CH / 2 + 55);
-    }
-    ctx.textAlign = 'left';
-  }
-  if (gameState === 'dead') {
-    ctx.fillStyle = 'rgba(80,0,0,0.6)';
-    ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.hpLost;
-    ctx.font = 'bold 48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', CW / 2, CH / 2 - 20);
-    ctx.fillStyle = COL.text;
-    ctx.font = '20px sans-serif';
-    ctx.fillText(`SCORE: ${score}`, CW / 2, CH / 2 + 20);
-    ctx.font = '16px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillText('Z キーでリトライ', CW / 2, CH / 2 + 55);
-    ctx.textAlign = 'left';
-  }
-}
-
-function drawDmgNumbers() {
-  for (const d of dmgNumbers) {
-    ctx.globalAlpha = clamp(d.life / 0.3, 0, 1);
-    ctx.fillStyle = d.color;
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(d.val, d.x, d.y);
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  }
-}
-
-function draw() {
-  // Screen shake
-  ctx.save();
-  if (shakeTimer > 0) {
-    const sx = (Math.random() - 0.5) * shakeIntensity * 2;
-    const sy = (Math.random() - 0.5) * shakeIntensity * 2;
-    ctx.translate(sx, sy);
-  }
-
-  ctx.fillStyle = COL.bg;
-  ctx.fillRect(0, 0, CW, CH);
-
-  drawRoom();
-  drawDashTrail();
-
-  // Draw enemies (telegraphs first)
-  for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
-  for (const en of enemies) {
-    if (en.hp > 0) {
-      drawEntity(en, en.color, false);
-      drawHPBar(en, -8);
-    }
-  }
-
-  drawAttackEffect();
-  drawEntity(player, COL.player, true);
-
-  drawDmgNumbers();
-  drawHUD();
-
-  ctx.restore();
-  drawGameState();
-}
-
-// --- Main Loop ---
-let lastTime = 0;
-function loop(time) {
-  const rawDt = (time - lastTime) / 1000;
-  lastTime = time;
-  const dt = Math.min(rawDt, 0.05); // cap at 50ms
-
-  update(dt);
-  draw();
-
-  // Clear pressed
-  for (const k in pressed) pressed[k] = false;
-
-  requestAnimationFrame(loop);
-}
-
-// --- Init ---
-spawnWave();
-requestAnimationFrame((time) => { lastTime = time; requestAnimationFrame(loop); });
-
+let lastTime=0;
+function loop(time){const rawDt=(time-lastTime)/1000;lastTime=time;
+const dt=Math.min(rawDt,0.05);update(dt);draw();
+for(const k in pressed)pressed[k]=false;requestAnimationFrame(loop)}
+spawnWave();requestAnimationFrame(t=>{lastTime=t;requestAnimationFrame(loop)});
 </script>
 </body>
 </html>

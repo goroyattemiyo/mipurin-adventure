@@ -176,7 +176,7 @@ function drawStar(cx,cy,or,ir,n){
 let dmgNums=[];
 function addDmgNum(x,y,val,color){dmgNums.push({x,y,val,color:color||'#fff',life:0.8,vy:-60})}
 function updateDmgNums(dt){for(let i=dmgNums.length-1;i>=0;i--){const d=dmgNums[i];d.y+=d.vy*dt;d.vy*=0.95;d.life-=dt;if(d.life<=0)dmgNums.splice(i,1)}}
-function drawDmgNums(){for(const d of dmgNums){ctx.globalAlpha=clamp(d.life/0.3,0,1);ctx.fillStyle=d.color;ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText(d.val,d.x,d.y)}ctx.globalAlpha=1}
+function drawDmgNums(){for(const d of dmgNums){ctx.globalAlpha=clamp(d.life/0.3,0,1);ctx.fillStyle=d.color;ctx.font='bold 24px sans-serif';ctx.textAlign='center';ctx.fillText(d.val,d.x,d.y)}ctx.globalAlpha=1}
 
 /* ===== SCREEN SHAKE & HITSTOP ===== */
 let shakeTimer=0,shakeIntensity=0,hitstopTimer=0;
@@ -549,7 +549,7 @@ function drawPlayer(){
 
 /* ===== DRAW ENEMY ===== */
 function drawEnemy(en){
-  ctx.save();ctx.translate(en.x,en.y);ctx.scale(en.squashX,en.squashY);
+  ctx.save();ctx.translate(en.x,en.y);ctx.scale(en.squashX*2,en.squashY*2);
   if(en.flashTimer>0)ctx.globalAlpha=0.5+Math.sin(en.flashTimer*30)*0.5;
   const wb=Math.sin(en.wobble)*3;
   if(en.defKey==='imomushi'){
@@ -576,7 +576,7 @@ function drawEnemy(en){
     if(en.stunTimer>0){for(let i=0;i<3;i++){const a=Date.now()/200+i*Math.PI*2/3;ctx.fillStyle='#ffeb3b';drawStar(Math.cos(a)*12,-14+Math.sin(a)*4,4,2,5)}}
   }
   ctx.globalAlpha=1;ctx.restore();
-  if(en.hp<en.maxHp){const bw=28,bh=4,bx=en.x-bw/2,by=en.y-22;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle='#ef5350';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),bh);ctx.fillStyle='#fff';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),1)}
+  if(en.hp<en.maxHp){const bw=48,bh=6,bx=en.x-bw/2,by=en.y-40;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle='#ef5350';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),bh);ctx.fillStyle='#fff';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),1)}
 }
 
 /* ===== DRAW ITEMS ===== */
@@ -599,9 +599,9 @@ function drawItems(){
 function drawHUD(){
   const mhp=getPlayerMaxHp();
   // Hearts
-  for(let i=0;i<mhp;i++){const hx=12+i*22,hy=12;ctx.fillStyle=i<player.hp?'#e91e63':'#424242';ctx.beginPath();ctx.moveTo(hx,hy+5);ctx.bezierCurveTo(hx-8,hy-4,hx-8,hy-10,hx,hy-6);ctx.bezierCurveTo(hx+8,hy-10,hx+8,hy-4,hx,hy+5);ctx.fill();if(i<player.hp){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(hx-2,hy-5,2,0,Math.PI*2);ctx.fill()}}
+  for(let i=0;i<mhp;i++){const hx=16+i*32,hy=18;ctx.fillStyle=i<player.hp?'#e91e63':'#424242';ctx.beginPath();ctx.moveTo(hx,hy+8);ctx.bezierCurveTo(hx-12,hy-6,hx-12,hy-15,hx,hy-9);ctx.bezierCurveTo(hx+12,hy-15,hx+12,hy-6,hx,hy+8);ctx.fill();if(i<player.hp){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(hx-3,hy-8,3,0,Math.PI*2);ctx.fill()}}
   // Floor/Wave
-  ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='left';
+  ctx.fillStyle='#fff';ctx.font='bold 22px sans-serif';ctx.textAlign='left';
   ctx.fillText(`Floor ${floor}  Wave ${wave+1}/${WAVES.length}`,12,32);
   // Score/Pollen
   ctx.textAlign='right';ctx.fillText(`⭐${score}  🌼${player.pollen}`,CW-12,20);
@@ -609,26 +609,26 @@ function drawHUD(){
   if(player.weapon){ctx.textAlign='left';ctx.fillText(`${player.weapon.icon}${player.weapon.name} ATK:${getPlayerAtk()}`,12,50)}
   // Accessories
   ctx.textAlign='left';
-  player.accessories.forEach((a,i)=>{if(a)ctx.fillText(a.icon,12+i*22,66);else{ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillText('○',12+i*22,66);ctx.fillStyle='#fff'}});
+  player.accessories.forEach((a,i)=>{if(a)ctx.fillText(a.icon,16+i*32,94);else{ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillText('○',16+i*32,94);ctx.fillStyle='#fff'}});
   // Consumables (right top)
   for(let i=0;i<3;i++){
-    const cx=CW-120+i*36,cy=32;
+    const cx=CW-160+i*48,cy=44;
     ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);ctx.stroke();
     ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fill();
-    if(player.consumables[i]){ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(player.consumables[i].icon,cx,cy+5)}
-    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText(''+(i+1),cx,cy+22);
+    if(player.consumables[i]){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(player.consumables[i].icon,cx,cy+7)}
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(''+(i+1),cx,cy+32);
   }
   // Blessings
-  ctx.textAlign='left';player.blessings.forEach((b,i)=>{ctx.font='14px sans-serif';ctx.fillText(b.icon,12+i*20,84)});
+  ctx.textAlign='left';player.blessings.forEach((b,i)=>{ctx.font='20px sans-serif';ctx.fillText(b.icon,16+i*28,116)});
   // Buffs
   let bx=CW-200;
-  if(player.buffs.speed){ctx.fillStyle='#64b5f6';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('⚡'+Math.ceil(player.buffs.speed.timer)+'s',bx,CH-20);bx+=50}
+  if(player.buffs.speed){ctx.fillStyle='#64b5f6';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('⚡'+Math.ceil(player.buffs.speed.timer)+'s',bx,CH-20);bx+=50}
   if(player.buffs.def){ctx.fillStyle='#81c784';ctx.fillText('🛡️'+Math.ceil(player.buffs.def.timer)+'s',bx,CH-20);bx+=50}
   if(player.buffs.atk){ctx.fillStyle='#ef5350';ctx.fillText('🍬'+Math.ceil(player.buffs.atk.timer)+'s',bx,CH-20);bx+=50}
   // Hints
-  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='10px sans-serif';ctx.textAlign='center';
-  ctx.fillText('WASD:移動 Z:攻撃 X:ダッシュ 1/2/3:アイテム Tab:図鑑',CW/2,CH-4);
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='16px sans-serif';ctx.textAlign='center';
+  ctx.fillText('WASD:移動 Z:攻撃 X:ダッシュ 1/2/3:アイテム Tab:図鑑',CW/2,CH-10);
   // Collection banner
   if(collectionBannerTimer>0){
     const e=COLLECTION_ENTRIES[collectionBanner];if(e){
@@ -653,7 +653,7 @@ function drawWeaponPopup(){
   ctx.fillStyle='#555';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
   ctx.fillText('いまの',lx+bw/2,ly+20);
   ctx.font='24px sans-serif';ctx.fillText(cur?cur.icon:'❓',lx+bw/2,ly+55);
-  ctx.fillStyle='#333';ctx.font='bold 13px sans-serif';ctx.fillText(cur?cur.name:'なし',lx+bw/2,ly+80);
+  ctx.fillStyle='#333';ctx.font='bold 22px sans-serif';ctx.fillText(cur?cur.name:'なし',lx+bw/2,ly+80);
   ctx.font='12px sans-serif';ctx.fillText('ATK '+(cur?cur.atk:0),lx+bw/2,ly+100);
   // Right: new
   const rx=CW/2+20;
@@ -663,11 +663,11 @@ function drawWeaponPopup(){
   ctx.fillStyle='#555';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
   ctx.fillText(weaponPopup.sparkle?'✦ キラキラ！':'あたらしい',rx+bw/2,ly+20);
   ctx.font='24px sans-serif';ctx.fillText(w.icon,rx+bw/2,ly+55);
-  ctx.fillStyle='#333';ctx.font='bold 13px sans-serif';ctx.fillText(w.name,rx+bw/2,ly+80);
+  ctx.fillStyle='#333';ctx.font='bold 22px sans-serif';ctx.fillText(w.name,rx+bw/2,ly+80);
   const diff=w.atk-(cur?cur.atk:0);
   ctx.fillStyle=diff>0?'#4caf50':diff<0?'#f44336':'#333';
   ctx.font='12px sans-serif';ctx.fillText('ATK '+w.atk+(diff>0?' (+'+diff+')':diff<0?' ('+diff+')':''),rx+bw/2,ly+100);
-  ctx.fillStyle='#888';ctx.font='11px sans-serif';ctx.fillText(w.desc,rx+bw/2,ly+120);
+  ctx.fillStyle='#888';ctx.font='16px sans-serif';ctx.fillText(w.desc,rx+bw/2,ly+120);
   // Buttons
   ctx.fillStyle='#4caf50';ctx.font='bold 14px sans-serif';
   ctx.fillText('Z: そうび',CW/2-80,CH/2+110);
@@ -720,8 +720,8 @@ function drawCollectionUI(){
     ctx.fillStyle='#ddd';ctx.font='12px sans-serif';ctx.textAlign='left';
     ctx.fillText(e.desc,30,CH-38);
   }
-  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='11px sans-serif';ctx.textAlign='center';
-  ctx.fillText('←→:カテゴリ  ↑↓:えらぶ  Tab/Esc:とじる',CW/2,CH-4);
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='16px sans-serif';ctx.textAlign='center';
+  ctx.fillText('←→:カテゴリ  ↑↓:えらぶ  Tab/Esc:とじる',CW/2,CH-10);
 }
 
 /* ===== TITLE/PROLOGUE/BLESSING/CLEAR/DEAD SCREENS ===== */
@@ -733,7 +733,7 @@ function drawTitleScreen(){
   if(spriteLoaded)ctx.drawImage(spriteImg,0,0,250,250,CW/2-48,CH/2-100,96,96);
   ctx.fillStyle='#5d4037';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText('ミプリンの冒険',CW/2,CH/2+30);
   ctx.fillStyle='#e91e63';ctx.font='18px sans-serif';ctx.fillText('~ Cute Roguelike ~',CW/2,CH/2+55);
-  ctx.fillStyle=Math.sin(t*3)>0?'#5d4037':'#e91e63';ctx.font='bold 16px sans-serif';ctx.fillText('Zキーでスタート',CW/2,CH/2+100);
+  ctx.fillStyle=Math.sin(t*3)>0?'#5d4037':'#e91e63';ctx.font='bold 24px sans-serif';ctx.fillText('Zキーでスタート',CW/2,CH/2+100);
 }
 function drawPrologueScreen(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
@@ -750,7 +750,7 @@ function drawPrologueScreen(){
   ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,CH-80,CW,80);
   ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.textAlign='center';
   ctx.fillText(PROLOGUE_TEXTS[prologueIndex],CW/2,CH-40);
-  ctx.globalAlpha=0.4;ctx.fillStyle='#fff';ctx.font='11px sans-serif';
+  ctx.globalAlpha=0.4;ctx.fillStyle='#fff';ctx.font='16px sans-serif';
   ctx.fillText('Enter/Z: つぎへ　Esc: スキップ',CW/2,CH-10);
   ctx.globalAlpha=1;
 }
@@ -765,7 +765,7 @@ function drawBlessingScreen(){
     ctx.strokeStyle=selected?'#e91e63':rarityColors[b.rarity];ctx.lineWidth=selected?3:2;roundRect(ctx,bx,by,bw,bh,12);ctx.stroke();
     ctx.font='36px sans-serif';ctx.textAlign='center';ctx.fillText(b.icon,bx+bw/2,by+55);
     ctx.fillStyle='#333';ctx.font='bold 14px sans-serif';ctx.fillText(b.name,bx+bw/2,by+85);
-    ctx.fillStyle=rarityColors[b.rarity];ctx.font='11px sans-serif';ctx.fillText(b.rarity.toUpperCase(),bx+bw/2,by+105);
+    ctx.fillStyle=rarityColors[b.rarity];ctx.font='16px sans-serif';ctx.fillText(b.rarity.toUpperCase(),bx+bw/2,by+105);
     ctx.fillStyle='#555';ctx.font='12px sans-serif';
     const words=b.desc;let line='',ly=by+125;
     for(const ch of words){if(ctx.measureText(line+ch).width>bw-20){ctx.fillText(line,bx+bw/2,ly);ly+=16;line=ch}else line+=ch}
@@ -972,6 +972,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 
 

@@ -60,7 +60,7 @@ function tileAt(map,c,r){if(c<0||c>=COLS||r<0||r>=ROWS)return 1;return map[r*COL
 /* ===== SPRITE ===== */
 const spriteImg=new Image();spriteImg.src='assets/mipurin.png';
 let spriteLoaded=false;spriteImg.onload=()=>{spriteLoaded=true};
-const SPRITE_FRAMES={down:{sx:0,sy:0,sw:250,sh:250},up:{sx:250,sy:0,sw:250,sh:250},left:{sx:0,sy:250,sw:250,sh:250},right:{sx:250,sy:250,sw:250,sh:250}};
+const SPRITE_FRAMES={down:{sx:0,sy:0,sw:250,sh:250},up:{sx:250,sy:0,sw:250,sh:250},left:{sx:250,sy:250,sw:250,sh:250},right:{sx:0,sy:250,sw:250,sh:250}};
 
 /* ===== THEMES ===== */
 const THEMES=[
@@ -918,3 +918,5 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+

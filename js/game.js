@@ -51,7 +51,7 @@ function rectOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < 
 // ===== AUDIO (Chip-tune via Web Audio) =====
 const Audio = (() => {
   let actx = null;
-  function init() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); }
+  function init() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} } if (actx && actx.state === 'suspended') actx.resume(); }
   function play(freq, dur, type, vol) {
     init();
     const o = actx.createOscillator(), g = actx.createGain();
@@ -231,8 +231,9 @@ const THEME_ENEMIES = {
 // ===== PROJECTILES =====
 const projectiles = [];
 function spawnProjectile(x, y, dx, dy, spd, dmg, friendly) {
+  if (projectiles.length >= 50) projectiles.shift();
   const d = Math.hypot(dx, dy) || 1;
-  projectiles.push({ x, y, vx: (dx / d) * spd, vy: (dy / d) * spd, dmg, friendly: !!friendly, life: 3, size: 5 });
+  projectiles.push({ x, y, vx: (dx / d) * spd, vy: (dy / d) * spd, dmg, friendly: !!friendly, life: 3, size: 8 });
 }
 function updateProjectiles(dt) {
   for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -254,16 +255,19 @@ function updateProjectiles(dt) {
 }
 function drawProjectiles() {
   for (const p of projectiles) {
-    ctx.fillStyle = p.friendly ? '#ffd700' : '#e74c3c';
+    const col = p.friendly ? '#ffd700' : '#e74c3c';
+    ctx.fillStyle = p.friendly ? 'rgba(255,215,0,0.2)' : 'rgba(231,76,60,0.2)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2); ctx.fill();
   }
 }
 
 function spawnEnemy(type, col, row) {
   const def = ENEMY_DEFS[type]; if (!def) return;
-  const sc = 1 + floor * 0.15;
+  const sc = 1 + Math.log2(1 + floor) * 0.35;
   enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
     hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (1 + floor * 0.1)),
     score: Math.ceil(def.score * (1 + floor * 0.05)),
@@ -274,7 +278,7 @@ function spawnEnemy(type, col, row) {
 function randEnemyPos() {
   let c, r, tries = 0;
   do { c = 2 + Math.floor(rng() * (COLS - 4)); r = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
-  while (tries < 30 && (tileAt(roomMap, c, r) === 1 || (Math.abs(c - 10) < 3 && Math.abs(r - 5) < 3)));
+  while (tries < 30 && (tileAt(roomMap, c, r) === 1 || tileAt(roomMap, c-1, r) === 1 || tileAt(roomMap, c+1, r) === 1 || tileAt(roomMap, c, r-1) === 1 || tileAt(roomMap, c, r+1) === 1 || (Math.abs(c - 10) < 3 && Math.abs(r - 5) < 3)));
   return [c, r];
 }
 
@@ -363,6 +367,7 @@ function updateBoss(dt) {
     boss.teleTimer += dt; boss.shootTimer += dt;
     if (boss.teleTimer > (boss.phase >= 2 ? 2 : 3)) { boss.teleTimer = 0;
       boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4)));
+      while (tileAt(roomMap, Math.floor(boss.x / TILE), Math.floor(boss.y / TILE)) === 1) { boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4))); }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 8, 80, 0.3); }
     if (boss.shootTimer > 1) { boss.shootTimer = 0; spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 140, boss.dmg - 1, false); }
   }
@@ -373,7 +378,7 @@ function updateBoss(dt) {
       player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; Audio.hurt();
       spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
       const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
-      player.x += Math.cos(angle) * 40; player.y += Math.sin(angle) * 40;
+      moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
       if (player.hp <= 0) gameState = 'dead';
     }
   }
@@ -525,7 +530,7 @@ function update(dt) {
       if (rectOverlap(box, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
         shakeTimer = 0.05; shakeIntensity = 3; Audio.hit();
         emitParticles(en.x + en.w / 2, en.y + en.h / 2, '#fff', 3, 60, 0.2);
-        const angle = Math.atan2(en.y - player.y, en.x - player.x); en.x += Math.cos(angle) * 20; en.y += Math.sin(angle) * 20; } }
+        const angle = Math.atan2(en.y - player.y, en.x - player.x); moveWithCollision(en, Math.cos(angle) * 20, Math.sin(angle) * 20); } }
     // Hit boss
     if (boss && boss.hp > 0 && rectOverlap(box, boss)) {
       boss.hp -= atkDmg; boss.hitFlash = 0.1; spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
@@ -566,6 +571,7 @@ function update(dt) {
     if (en.pattern === 'teleport') {
       en.wanderTimer -= dt;
       if (en.wanderTimer <= 0) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4)));
+      while (tileAt(roomMap, Math.floor(en.x / TILE), Math.floor(en.y / TILE)) === 1) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4))); }
         emitParticles(en.x + en.w / 2, en.y + en.h / 2, en.color, 6, 60, 0.3); en.wanderTimer = 2 + Math.random() * 2; }
       if (d < 200 && d > 0) moveWithCollision(en, (dx / d) * en.speed * 0.5 * dt, (dy / d) * en.speed * 0.5 * dt);
     }
@@ -576,7 +582,7 @@ function update(dt) {
         player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
         spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.hurt();
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
-        const angle = Math.atan2(player.y - en.y, player.x - en.x); player.x += Math.cos(angle) * 30; player.y += Math.sin(angle) * 30;
+        const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
         if (player.hp <= 0) gameState = 'dead';
       }
@@ -659,7 +665,14 @@ function drawEntity(e, color, isP) {
   ctx.beginPath(); ctx.arc(cx + eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
   // Player crown
   if (isP) { ctx.fillStyle = COL.player; ctx.beginPath(); ctx.moveTo(cx - 6, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 6, e.y); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill();
+    // Direction indicator
+    const dirX = player.atkDir.x, dirY = player.atkDir.y;
+    const indX = cx + dirX * (e.w / 2 + 8), indY = cy + dirY * (e.h / 2 + 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.moveTo(indX + dirX * 6, indY + dirY * 6);
+    ctx.lineTo(indX - dirY * 4, indY + dirX * 4); ctx.lineTo(indX + dirY * 4, indY - dirX * 4);
+    ctx.closePath(); ctx.fill(); }
 }
 
 function drawHPBar(e, yOff) {

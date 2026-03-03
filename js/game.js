@@ -73,18 +73,71 @@ const THEMES=[
 function getTheme(){return THEMES[(floor-1)%THEMES.length]}
 
 /* ===== MAP GENERATION ===== */
+/* ===== MAP PATTERNS ===== */
+const MAP_PATTERNS=['open','cross','lwall','pillar','scatter'];
+function pickPattern(fl){
+  if(fl===1)return'open';
+  if(fl===5)return'pillar';
+  const pool=fl<=2?['open','cross','scatter']:fl<=4?['cross','lwall','scatter','pillar']:['lwall','pillar','scatter'];
+  return pool[rndInt(0,pool.length-1)];
+}
+function isSafe(c,r){return Math.abs(c-10)<=2&&Math.abs(r-5)<=2}
+function setWall(map,c,r){if(c>0&&c<COLS-1&&r>0&&r<ROWS-1&&!isSafe(c,r))map[r*COLS+c]=1}
+
 function generateRoom(fl){
   const map=[];
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     if(r===0||r===ROWS-1||c===0||c===COLS-1)map.push(1);else map.push(0);
   }
-  const pillars=2+Math.min(fl,6);let s=fl*7+13;
+  const pat=pickPattern(fl);
+  let s=fl*7+Date.now()%1000+13;
   function pRnd(){s=(s*16807+11)%2147483647;return(s&0x7fffffff)/2147483647}
-  for(let i=0;i<pillars;i++){
-    let tries=0,pc,pr;
-    do{pc=2+Math.floor(pRnd()*(COLS-4));pr=2+Math.floor(pRnd()*(ROWS-4));tries++}
-    while(tries<30&&(tileAt(map,pc,pr)===1||tileAt(map,pc-1,pr)===1||tileAt(map,pc+1,pr)===1||tileAt(map,pc,pr-1)===1||tileAt(map,pc,pr+1)===1||(Math.abs(pc-10)<3&&Math.abs(pr-5)<3)));
-    if(tries<30){map[pr*COLS+pc]=1;if(pc+1<COLS-1&&pRnd()>0.4)map[pr*COLS+pc+1]=1}
+  function pRndInt(a,b){return a+Math.floor(pRnd()*(b-a+1))}
+
+  if(pat==='open'){
+    const pillars=2+Math.min(fl,4);
+    for(let i=0;i<pillars;i++){
+      let t=0,pc,pr;
+      do{pc=pRndInt(2,COLS-3);pr=pRndInt(2,ROWS-3);t++}
+      while(t<30&&(map[pr*COLS+pc]===1||isSafe(pc,pr)));
+      if(t<30){setWall(map,pc,pr);if(pRnd()>0.5)setWall(map,pc+1,pr)}
+    }
+  }else if(pat==='cross'){
+    const cx=10,cy=5;
+    const gapV=pRndInt(3,5),gapH=pRndInt(7,13);
+    for(let r=2;r<=ROWS-3;r++){if(Math.abs(r-cy)!==0&&r!==gapV)setWall(map,cx,r)}
+    for(let c=3;c<=COLS-4;c++){if(Math.abs(c-cx)!==0&&c!==gapH)setWall(map,c,cy)}
+    const extra=pRndInt(1,3);
+    for(let i=0;i<extra;i++){let pc=pRndInt(2,COLS-3),pr=pRndInt(2,ROWS-3);setWall(map,pc,pr)}
+  }else if(pat==='lwall'){
+    const shapes=[[{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:0,r:1},{c:0,r:2}],
+                  [{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:2,r:1},{c:2,r:2}],
+                  [{c:0,r:0},{c:0,r:1},{c:0,r:2},{c:1,r:2},{c:2,r:2}],
+                  [{c:2,r:0},{c:2,r:1},{c:2,r:2},{c:1,r:2},{c:0,r:2}]];
+    const count=pRndInt(2,3);
+    for(let i=0;i<count;i++){
+      const sh=shapes[pRndInt(0,shapes.length-1)];
+      const ox=pRndInt(2,COLS-6),oy=pRndInt(2,ROWS-6);
+      let ok=true;
+      for(const s of sh){if(isSafe(ox+s.c,oy+s.r)||map[(oy+s.r)*COLS+(ox+s.c)]===1){ok=false;break}}
+      if(ok)for(const s of sh)setWall(map,ox+s.c,oy+s.r);
+    }
+  }else if(pat==='pillar'){
+    const positions=[[5,3],[15,3],[5,7],[15,7],[10,5]];
+    const count=fl>=5?4:3;
+    const chosen=[];while(chosen.length<count&&positions.length>0){chosen.push(positions.splice(pRndInt(0,positions.length-1),1)[0])}
+    for(const[px,py]of chosen){
+      const ox=px+pRndInt(-1,1),oy=py+pRndInt(-1,1);
+      setWall(map,ox,oy);setWall(map,ox+1,oy);setWall(map,ox,oy+1);setWall(map,ox+1,oy+1);
+    }
+  }else if(pat==='scatter'){
+    const num=pRndInt(10,15);
+    for(let i=0;i<num;i++){
+      let t=0,pc,pr;
+      do{pc=pRndInt(2,COLS-3);pr=pRndInt(2,ROWS-3);t++}
+      while(t<30&&(map[pr*COLS+pc]===1||isSafe(pc,pr)||(map[(pr-1)*COLS+pc]===1&&map[(pr+1)*COLS+pc]===1)||(map[pr*COLS+pc-1]===1&&map[pr*COLS+pc+1]===1)));
+      if(t<30)setWall(map,pc,pr);
+    }
   }
   return map;
 }
@@ -918,5 +971,6 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
 
 

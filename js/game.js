@@ -1314,7 +1314,7 @@ function update(dt) {
     if (wasPressed('KeyX') && player.dashCooldown <= 0) {
       player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
       player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
-      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; playSE('needle');
+      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
       emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
     }
     if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);

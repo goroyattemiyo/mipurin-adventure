@@ -248,26 +248,127 @@ function drawParticles() {
 }
 
 // ===== ROOM GENERATION =====
-function generateRoom(floor) {
-  const map = [];
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) { map.push(1); continue; }
-    map.push(0);
-  }
-  const pillarCount = 2 + Math.min(floor, 6);
-  const placed = [];
-  for (let i = 0; i < pillarCount; i++) {
-    let pc, pr, tries = 0;
-    do { pc = 2 + Math.floor(rng() * (COLS - 4)); pr = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
-    while (tries < 50 && (placed.some(p => Math.abs(p[0] - pc) < 3 && Math.abs(p[1] - pr) < 3) || (Math.abs(pc - 10) < 2 && Math.abs(pr - 5) < 2)));
-    if (tries < 50) {
-      placed.push([pc, pr]); map[pr * COLS + pc] = 1;
-      if (pc + 1 < COLS - 1) map[pr * COLS + pc + 1] = 1;
-      if (pr + 1 < ROWS - 1) map[(pr + 1) * COLS + pc] = 1;
-      if (pc + 1 < COLS - 1 && pr + 1 < ROWS - 1) map[(pr + 1) * COLS + pc + 1] = 1;
+// ===== ROOM TEMPLATES (Sprint 2) =====
+// 0=floor, 1=wall, 2=spike
+let roomSpikes = [];
+const THEME_TEMPLATES = {
+  forest:  ['open', 'circular', 'L_shape'],
+  cave:    ['maze', 'L_shape', 'cross'],
+  flower:  ['open', 'circular', 'open'],
+  abyss:   ['maze', 'cross', 'L_shape'],
+  ruins:   ['cross', 'L_shape', 'circular']
+};
+const PC = 10, PR = 7;
+function safeZone(c, r) { return Math.abs(c - PC) < 3 && Math.abs(r - PR) < 3; }
+
+function floodFill(map) {
+  const visited = new Uint8Array(COLS * ROWS);
+  const queue = [PR * COLS + PC]; visited[PR * COLS + PC] = 1; let count = 0;
+  while (queue.length > 0) {
+    const idx = queue.shift(); const c = idx % COLS, r = Math.floor(idx / COLS); count++;
+    for (const [dc, dr] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nc = c+dc, nr = r+dr;
+      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+        const ni = nr * COLS + nc;
+        if (!visited[ni] && map[ni] !== 1) { visited[ni] = 1; queue.push(ni); }
+      }
     }
   }
-  return map;
+  let total = 0; for (let i = 0; i < map.length; i++) if (map[i] !== 1) total++;
+  return count >= total;
+}
+
+function setBlock(map, c, r) {
+  for (const [bc, br] of [[c,r],[c+1,r],[c,r+1],[c+1,r+1]]) {
+    if (bc > 0 && bc < COLS-1 && br > 0 && br < ROWS-1 && !safeZone(bc,br)) map[br*COLS+bc] = 1;
+  }
+}
+
+function applyTemplate(map, name, floor) {
+  if (name === 'open') {
+    const cnt = 2 + Math.min(floor, 4); const placed = [];
+    for (let i = 0; i < cnt; i++) {
+      let pc, pr, tries = 0;
+      do { pc = 2+Math.floor(rng()*(COLS-4)); pr = 2+Math.floor(rng()*(ROWS-4)); tries++; }
+      while (tries < 50 && (placed.some(p => Math.abs(p[0]-pc)<3 && Math.abs(p[1]-pr)<3) || safeZone(pc,pr)));
+      if (tries < 50) { placed.push([pc,pr]); setBlock(map,pc,pr); }
+    }
+  } else if (name === 'maze') {
+    const segs = 3 + Math.floor(rng()*3);
+    for (let i = 0; i < segs; i++) {
+      const horiz = rng() > 0.5, len = 3+Math.floor(rng()*3);
+      const sc = 2+Math.floor(rng()*(COLS-6)), sr = 2+Math.floor(rng()*(ROWS-6));
+      for (let j = 0; j < len; j++) {
+        const c = horiz ? sc+j : sc, r = horiz ? sr : sr+j;
+        if (c>0 && c<COLS-1 && r>0 && r<ROWS-1 && !safeZone(c,r)) map[r*COLS+c] = 1;
+      }
+      const mid = Math.floor(len/2);
+      const gc = horiz ? sc+mid : sc, gr = horiz ? sr : sr+mid;
+      if (gc>0 && gc<COLS-1 && gr>0 && gr<ROWS-1) map[gr*COLS+gc] = 0;
+    }
+  } else if (name === 'circular') {
+    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2), rx = 5, ry = 4;
+    for (let r = 1; r < ROWS-1; r++) for (let c = 1; c < COLS-1; c++) {
+      const dx = (c-cx)/rx, dy = (r-cy)/ry, dist = dx*dx + dy*dy;
+      if (dist > 0.65 && dist < 1.3 && !safeZone(c,r)) map[r*COLS+c] = 1;
+    }
+    for (let d = -1; d <= 1; d++) {
+      if (cy+d>0 && cy+d<ROWS-1) { map[(cy+d)*COLS+(cx-rx)] = 0; map[(cy+d)*COLS+(cx+rx)] = 0; }
+      if (cx+d>0 && cx+d<COLS-1) { map[(cy-ry)*COLS+cx+d] = 0; map[(cy+ry)*COLS+cx+d] = 0; }
+    }
+  } else if (name === 'L_shape') {
+    const quads = [[2,2],[12,2],[2,9],[12,9]];
+    const qi = Math.floor(rng()*3), q = quads[qi<2?qi:3];
+    const bx=q[0], by=q[1], bw=3+Math.floor(rng()*2), bh=2+Math.floor(rng()*2);
+    for (let r=by; r<by+bh && r<ROWS-1; r++)
+      for (let c=bx; c<bx+bw && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    if (rng()>0.5) {
+      for (let r=by+bh; r<by+bh+3 && r<ROWS-1; r++)
+        for (let c=bx; c<bx+2 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    } else {
+      for (let r=by; r<by+2 && r<ROWS-1; r++)
+        for (let c=bx+bw; c<bx+bw+3 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    }
+    const opp = quads[qi<2?3-qi:0];
+    setBlock(map, opp[0]+Math.floor(rng()*2), opp[1]+Math.floor(rng()*2));
+  } else if (name === 'cross') {
+    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2);
+    for (let c=cx-6; c<=cx+6; c++)
+      if (c>0 && c<COLS-1 && !safeZone(c,cy) && (c-cx+6)%4!==0) map[cy*COLS+c]=1;
+    for (let r=cy-4; r<=cy+4; r++)
+      if (r>0 && r<ROWS-1 && !safeZone(cx,r) && (r-cy+4)%4!==0) map[r*COLS+cx]=1;
+    for (let r=cy-1; r<=cy+1; r++)
+      for (let c=cx-1; c<=cx+1; c++) if (r>0 && c>0) map[r*COLS+c]=0;
+  }
+}
+
+function generateRoom(floor) {
+  const themeName = getTheme(floor).name;
+  const templates = THEME_TEMPLATES[themeName] || ['open'];
+  const pick = isBossFloor() ? 'open' : templates[Math.floor(rng()*templates.length)];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const map = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (r===0||r===ROWS-1||c===0||c===COLS-1) { map.push(1); continue; } map.push(0);
+    }
+    applyTemplate(map, pick, floor);
+    roomSpikes = [];
+    if (floor >= 4 && !isBossFloor()) {
+      const maxSp = Math.min(2 + Math.floor((floor-3)*1.5), 10);
+      for (let i = 0; i < maxSp; i++) {
+        let sc, sr, tries = 0;
+        do { sc=2+Math.floor(rng()*(COLS-4)); sr=2+Math.floor(rng()*(ROWS-4)); tries++; }
+        while (tries<30 && (map[sr*COLS+sc]!==0 || safeZone(sc,sr)));
+        if (tries<30 && map[sr*COLS+sc]===0) { map[sr*COLS+sc]=2; roomSpikes.push({c:sc,r:sr}); }
+      }
+    }
+    if (floodFill(map)) return map;
+  }
+  const map = [];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    if (r===0||r===ROWS-1||c===0||c===COLS-1) map.push(1); else map.push(0);
+  }
+  roomSpikes = []; return map;
 }
 function tileAt(map, c, r) { if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 1; return map[r * COLS + c]; }
 
@@ -923,9 +1024,16 @@ function drawRoom() {
       ctx.fillStyle = th.wall; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
       ctx.fillStyle = th.wallTop; ctx.fillRect(c * TILE, r * TILE, TILE, 4);
       ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(c * TILE, r * TILE + TILE - 4, TILE, 4);
+    } else if (tileAt(roomMap, c, r) === 2) {
+      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.fillStyle = 'rgba(180,60,60,0.45)';
+      const sx = c * TILE, sy = r * TILE;
+      for (let si = 0; si < 3; si++) for (let sj = 0; sj < 3; sj++) {
+        const tx = sx + 8 + si * 18, ty = sy + 8 + sj * 18;
+        ctx.beginPath(); ctx.moveTo(tx, ty+10); ctx.lineTo(tx+5, ty); ctx.lineTo(tx+10, ty+10); ctx.fill();
+      }
     } else {
       ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-      // subtle tile border
       ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
     }
   }

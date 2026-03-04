@@ -966,37 +966,37 @@ let mipurinReady = false; mipurinImg.onload = () => { mipurinReady = true; conso
 // ===== SPRITE ENGINE (Individual PNG) =====
 const SPRITE_MAP = {
   // Enemies
-  mushroom: 'assets/sprites/enemy_mushroom.png',
-  slime: 'assets/sprites/enemy_slime.png',
-  spider: 'assets/sprites/enemy_spider.png',
-  bat: 'assets/sprites/enemy_bat.png',
-  beetle: 'assets/sprites/enemy_beetle.png',
-  wasp: 'assets/sprites/enemy_wasp.png',
-  flower: 'assets/sprites/enemy_flower.png',
-  worm: 'assets/sprites/enemy_worm.png',
-  ghost: 'assets/sprites/enemy_ghost.png',
-  golem: 'assets/sprites/enemy_golem.png',
-  vine: 'assets/sprites/enemy_vine.png',
-  darkbee: 'assets/sprites/enemy_darkbee.png',
+  mushroom: 'assets/sprites/enemy_mushroom.webp',
+  slime: 'assets/sprites/enemy_slime.webp',
+  spider: 'assets/sprites/enemy_spider.webp',
+  bat: 'assets/sprites/enemy_bat.webp',
+  beetle: 'assets/sprites/enemy_beetle.webp',
+  wasp: 'assets/sprites/enemy_wasp.webp',
+  flower: 'assets/sprites/enemy_flower.webp',
+  worm: 'assets/sprites/enemy_worm.webp',
+  ghost: 'assets/sprites/enemy_ghost.webp',
+  golem: 'assets/sprites/enemy_golem.webp',
+  vine: 'assets/sprites/enemy_vine.webp',
+  darkbee: 'assets/sprites/enemy_darkbee.webp',
   // Bosses
-  queen_hornet: 'assets/sprites/boss_queen_hornet.png',
-  fungus_king: 'assets/sprites/boss_fungus_king.png',
-  crystal_golem: 'assets/sprites/boss_crystal_golem.png',
-  shadow_moth: 'assets/sprites/boss_shadow_moth.png',
+  queen_hornet: 'assets/sprites/boss_queen_hornet.webp',
+  fungus_king: 'assets/sprites/boss_fungus_king.webp',
+  crystal_golem: 'assets/sprites/boss_crystal_golem.webp',
+  shadow_moth: 'assets/sprites/boss_shadow_moth.webp',
   // Items & drops
-  drop_pollen: 'assets/sprites/drop_pollen.png',
-  drop_heal: 'assets/sprites/drop_heal.png',
+  drop_pollen: 'assets/sprites/drop_pollen.webp',
+  drop_heal: 'assets/sprites/drop_heal.webp',
   // Consumables
-  consumable_honey: 'assets/sprites/consumable_honey.png',
-  consumable_spicy: 'assets/sprites/consumable_spicy.png',
-  consumable_royal: 'assets/sprites/consumable_royal.png',
+  consumable_honey: 'assets/sprites/consumable_honey.webp',
+  consumable_spicy: 'assets/sprites/consumable_spicy.webp',
+  consumable_royal: 'assets/sprites/consumable_royal.webp',
   // Weapons
-  weapon_needle: 'assets/sprites/weapon_needle.png',
-  weapon_honey_cannon: 'assets/sprites/weapon_honey_cannon.png',
-  weapon_pollen_shield: 'assets/sprites/weapon_pollen_shield.png',
-  weapon_vine_whip: 'assets/sprites/weapon_vine_whip.png',
-  weapon_feather_shuriken: 'assets/sprites/weapon_feather_shuriken.png',
-  weapon_queen_staff: 'assets/sprites/weapon_queen_staff.png'
+  weapon_needle: 'assets/sprites/weapon_needle.webp',
+  weapon_honey_cannon: 'assets/sprites/weapon_honey_cannon.webp',
+  weapon_pollen_shield: 'assets/sprites/weapon_pollen_shield.webp',
+  weapon_vine_whip: 'assets/sprites/weapon_vine_whip.webp',
+  weapon_feather_shuriken: 'assets/sprites/weapon_feather_shuriken.webp',
+  weapon_queen_staff: 'assets/sprites/weapon_queen_staff.webp'
 };
 
 const spriteCache = {};

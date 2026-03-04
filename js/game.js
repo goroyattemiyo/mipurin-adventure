@@ -557,6 +557,7 @@ const BOSS_DEFS = [
   { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 64, h: 64, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
   { id: 'shadow_moth', name: '闇の蛾', hp: 50, speed: 90, w: 52, h: 52, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
 
+const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }
 
 function spawnBoss() { playSE('boss_appear');
@@ -630,26 +631,62 @@ function updateBoss(dt) {
 
 // ===== BLESSINGS =====
 const BLESSING_POOL = [
-  { id: 'rose_atk', name: '\ud83c\udf39 ローザの力', desc: '攻撃力 +1', icon: '\ud83c\udf39', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
-  { id: 'lily_hp', name: '\ud83e\udd0d リリアの守り', desc: '最大HP +1 & 全回復', icon: '\ud83e\udd0d', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
-  { id: 'sunflower_speed', name: '\ud83c\udf3b ソーレの風', desc: '移動速度 +15%', icon: '\ud83c\udf3b', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
-  { id: 'lotus_heal', name: '\ud83c\udf38 ハスミの癒し', desc: 'HPを全回復', icon: '\ud83c\udf38', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
-  { id: 'sunflower_dash', name: '\u26a1 ソーレの疾走', desc: 'ダッシュCD -40%', icon: '\u26a1', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown *= 0.6; } },
-  { id: 'rose_crit', name: '\ud83d\udde1\ufe0f ローザの刃', desc: '攻撃力 +2', icon: '\ud83d\udde1\ufe0f', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
-  { id: 'wisteria_poison', name: '\ud83d\udc9c フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '\ud83d\udc9c', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; } },
-  { id: 'chrysanth_luck', name: '\u2728 キクネの幸運', desc: 'ドロップ率UP (磁力+80)', icon: '\u2728', rarity: 'rare', family: 'chrysanth', apply: () => { player.magnetRange += 80; } },
-  { id: 'lily_shield', name: '\ud83d\udee1\ufe0f リリアの結界', desc: '無敵時間 +50%', icon: '\ud83d\udee1\ufe0f', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
-  { id: 'rose_vampire', name: '\ud83e\ude78 ローザの渇き', desc: '撃破時HP回復', icon: '\ud83e\ude78', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
-  { id: 'lily_thorns', name: '\ud83c\udf3f リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '\ud83c\udf3f', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
-  { id: 'lotus_regen', name: '\ud83d\udc96 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '\ud83d\udc96', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } }
+  { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
+  { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
+  { id: 'rose_range', name: '🌹 ローザの蔓', desc: '攻撃範囲 +20', icon: '🌹', rarity: 'rare', family: 'rose', apply: () => { player.atkRangeBonus += 20; } },
+  { id: 'rose_vampire', name: '🩸 ローザの渇き', desc: '撃破時HP回復', icon: '🩸', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
+  { id: 'lily_hp', name: '🤍 リリアの守り', desc: '最大HP +1 & 全回復', icon: '🤍', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
+  { id: 'lily_shield', name: '🛡️ リリアの結界', desc: '無敵時間 +50%', icon: '🛡️', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
+  { id: 'lily_armor', name: '🤍 リリアの鎧', desc: '最大HP +2', icon: '🤍', rarity: 'rare', family: 'lily', apply: () => { player.maxHp += 2; player.hp = Math.min(player.hp + 2, player.maxHp); } },
+  { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
+  { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
+  { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.6); } },
+  { id: 'sunflower_atkspd', name: '🌻 ソーレの連撃', desc: '攻撃速度 +25%', icon: '🌻', rarity: 'rare', family: 'sunflower', apply: () => { player.weapon = {...player.weapon, speed: player.weapon.speed * 0.75}; } },
+  { id: 'sunflower_burst', name: '☀️ ソーレの閃光', desc: '移動速度+30% & ダッシュCD-30%', icon: '☀️', rarity: 'legend', family: 'sunflower', apply: () => { player.speed *= 1.3; player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.7); } },
+  { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'common', family: 'wisteria', apply: () => { player.atk += 1; } },
+  { id: 'wisteria_slow', name: '💜 フジカの霧', desc: '攻撃力+1 & 範囲+10', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; player.atkRangeBonus += 10; } },
+  { id: 'wisteria_web', name: '🕸️ フジカの絡み', desc: '攻撃範囲 +30', icon: '🕸️', rarity: 'rare', family: 'wisteria', apply: () => { player.atkRangeBonus += 30; } },
+  { id: 'wisteria_miasma', name: '☠️ フジカの瘴気', desc: '攻撃力+3 & 範囲+15', icon: '☠️', rarity: 'legend', family: 'wisteria', apply: () => { player.atk += 3; player.atkRangeBonus += 15; } },
+  { id: 'lotus_heal', name: '🌸 ハスミの癒し', desc: 'HPを全回復', icon: '🌸', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
+  { id: 'lotus_grace', name: '🌸 ハスミの恩寵', desc: 'HP+2回復 & 無敵+20%', icon: '🌸', rarity: 'rare', family: 'lotus', apply: () => { player.hp = Math.min(player.hp + 2, player.maxHp); player.invDuration *= 1.2; } },
+  { id: 'lotus_bloom', name: '🌺 ハスミの開花', desc: '最大HP+1 & 移動速度+10%', icon: '🌺', rarity: 'rare', family: 'lotus', apply: () => { player.maxHp += 1; player.hp = player.maxHp; player.speed *= 1.1; } },
+  { id: 'lotus_regen', name: '💖 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '💖', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } },
+  { id: 'chrysanth_luck', name: '✨ キクネの幸運', desc: 'ドロップ磁力+80', icon: '✨', rarity: 'common', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 80; } },
+  { id: 'chrysanth_gold', name: '✨ キクネの黄金', desc: '花粉ドロップ+倍', icon: '✨', rarity: 'rare', family: 'chrysanth', apply: () => { player.pollenBonus = (player.pollenBonus||0) + 1; } },
+  { id: 'chrysanth_sight', name: '👁️ キクネの千里眼', desc: '攻撃範囲+15 & 磁力+40', icon: '👁️', rarity: 'rare', family: 'chrysanth', apply: () => { player.atkRangeBonus += 15; player.magnetRange = (player.magnetRange||0) + 40; } },
+  { id: 'chrysanth_fortune', name: '🌟 キクネの大福', desc: '磁力+120 & 花粉+倍 & HP+1', icon: '🌟', rarity: 'legend', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 120; player.pollenBonus = (player.pollenBonus||0) + 1; player.maxHp += 1; player.hp = player.maxHp; } },
 ];
+
+// ===== DUO BLESSINGS =====
+const DUO_DEFS = [
+  { families: ['rose', 'wisteria'], name: '🌹💜 棘毒の共鳴', desc: '攻撃力 +3', apply: () => { player.atk += 3; } },
+  { families: ['lily', 'lotus'], name: '🤍🌸 守護の花環', desc: '最大HP+2 & 無敵+30%', apply: () => { player.maxHp += 2; player.hp = player.maxHp; player.invDuration *= 1.3; } },
+  { families: ['sunflower', 'rose'], name: '🌻🌹 烈火の追風', desc: '攻撃力+2 & 速度+20%', apply: () => { player.atk += 2; player.speed *= 1.2; } },
+  { families: ['wisteria', 'chrysanth'], name: '💜✨ 毒蝶の舞', desc: '攻撃+2 & 磁力+100', apply: () => { player.atk += 2; player.magnetRange = (player.magnetRange||0) + 100; } },
+  { families: ['lotus', 'lily'], name: '🌸🤍 不滅の蓮華', desc: '最大HP+3 & 被弾反撃1', apply: () => { player.maxHp += 3; player.hp = player.maxHp; player.thorns = Math.max(player.thorns||0, 1); } },
+  { families: ['sunflower', 'chrysanth'], name: '🌻✨ 黄金の収穫', desc: '速度+25% & 花粉+倍 & 磁力+60', apply: () => { player.speed *= 1.25; player.pollenBonus = (player.pollenBonus||0) + 1; player.magnetRange = (player.magnetRange||0) + 60; } }
+];
+let activeDuos = [];
+
+function checkDuos() {
+  const fams = new Set(activeBlessings.map(b => b.family));
+  for (const duo of DUO_DEFS) {
+    if (activeDuos.some(d => d.name === duo.name)) continue;
+    if (duo.families.every(f => fams.has(f))) {
+      duo.apply(); activeDuos.push(duo);
+      spawnDmg(player.x + player.w/2, player.y - 20, 0, '#ffd700');
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.5);
+      playSE('level_up');
+    }
+  }
+}
 let blessingChoices = [], activeBlessings = [], selectCursor = 0;
 
 function pickBlessings() {
   const pool = [...BLESSING_POOL];
   // Weight: common=50, rare=35, epic=15
   const weighted = [];
-  for (const b of pool) { const w = b.rarity === 'epic' ? 15 : b.rarity === 'rare' ? 35 : 50; for (let i = 0; i < w; i++) weighted.push(b); }
+  for (const b of pool) { const w = b.rarity === 'legend' ? 10 : b.rarity === 'rare' ? 30 : 50; for (let i = 0; i < w; i++) weighted.push(b); }
   const picks = [], used = new Set();
   while (picks.length < 3 && used.size < pool.length) {
     const b = weighted[Math.floor(rng() * weighted.length)];
@@ -786,7 +823,7 @@ function resetGame() {
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
   player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
-  activeBlessings = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
+  activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
   startFade(1, () => startFloor());
 }
 
@@ -814,6 +851,10 @@ function getAttackBox() {
 function update(dt) {
   updateFade(dt);
 
+  if (gameState === 'ending') {
+    if (wasPressed('KeyZ')) { stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    return;
+  }
   if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; } return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
   // Inventory toggle
@@ -830,7 +871,7 @@ function update(dt) {
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-      blessingChoices[selectCursor].apply(); activeBlessings.push(blessingChoices[selectCursor]); playSE('level_up'); nextFloor(); }
+      blessingChoices[selectCursor].apply(); activeBlessings.push(blessingChoices[selectCursor]); checkDuos(); playSE('level_up'); nextFloor(); }
     return;
   }
   if (gameState === 'shop') {
@@ -848,6 +889,7 @@ function update(dt) {
   }
   if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
   if (gameState === 'floorClear') { clearTimer += dt; if (clearTimer > 1.5) {
+      if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
   if (gameState === 'dead') { if (wasPressed('KeyZ')) { gameState = 'title'; } return; }
@@ -1213,6 +1255,30 @@ function drawHPBar(e, yOff) {
   ctx.fillStyle = ratio > 0.5 ? COL.hp : ratio > 0.25 ? '#f39c12' : COL.hpLost; ctx.fillRect(bx, by, bW * ratio, bH);
 }
 
+function drawEnding() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+  ctx.save(); ctx.globalAlpha = 0.8;
+  if (mipurinReady) {
+    const sz = 200;
+    ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
+  }
+  ctx.restore();
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('花の国に平和が戻った！', CW/2, 380);
+  ctx.fillStyle = '#fff'; ctx.font = '22px sans-serif';
+  ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
+  ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
+  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
+  ctx.fillText('祝福: ' + activeBlessings.length + '  共鳴: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), CW/2, 550);
+  ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+  const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+  if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
+  ctx.textAlign = 'left';
+  // Fade overlay
+  if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+}
+
 function drawAttackEffect() {
   if (!player.attacking) return;
   const box = getAttackBox();
@@ -1403,6 +1469,7 @@ function drawDmgNumbers() {
 }
 
 function draw() {
+  if (gameState === 'ending') { drawEnding(); return; }
   if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'title') { drawTitle(); return; }
 
   ctx.save();

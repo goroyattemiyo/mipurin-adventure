@@ -1136,7 +1136,7 @@ function drawDmgNumbers() {
 }
 
 function draw() {
-  if (gameState === 'prologue') { drawPrologue(); } else if (gameState === 'title') { drawTitle(); return; }
+  if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'title') { drawTitle(); return; }
 
   ctx.save();
   if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);

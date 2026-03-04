@@ -415,7 +415,7 @@ const CONSUMABLE_DEFS = [
   { id: 'spicy_pollen', name: '🌶️ ピリカラ花粉', desc: '8秒ATK+2', icon: '🌶️', msg: 'からい！でもちからがわく！', apply: () => { player.atk += 2; setTimeout(() => { player.atk = Math.max(1, player.atk - 2); }, 8000); } },
   { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } }
 ];
-let consumableMsg = null;
+// [REMOVED] old consumableMsg - replaced by msgQueue
 // ===== DROPS =====
 const drops = [];
 function spawnDrop(x, y, type) {
@@ -458,7 +458,134 @@ function drawDrops() {
 
 // ===== STATE =====
 let roomMap = [], floor = 1, wave = 0, WAVES = [];
-let weaponSwapMsg = null;
+// [REMOVED] old weaponSwapMsg - replaced by msgQueue
+
+// ===== Unified Message Window System =====
+let msgQueue = [];        // float messages: [{text, timer, maxTimer, color, icon}]
+let dialogMsg = null;     // dialog message: {lines:[], lineIdx:0, charIdx:0, charTimer:0, onDone:null, speaker:''}
+let dialogCallback = null;
+
+const MSG_COLORS = { info: '#ffd700', warn: '#ff6b6b', heal: '#2ecc71', buff: '#3498db', boss: '#e74c3c', duo: '#e056fd' };
+
+function showFloat(text, duration, color) {
+  duration = duration || 2.0;
+  color = color || MSG_COLORS.info;
+  msgQueue.push({ text: text, timer: duration, maxTimer: duration, color: color });
+  if (msgQueue.length > 4) msgQueue.shift();
+}
+
+function showDialog(speaker, lines, onDone) {
+  if (typeof lines === 'string') lines = [lines];
+  dialogMsg = { speaker: speaker, lines: lines, lineIdx: 0, charIdx: 0, charTimer: 0, done: false };
+  dialogCallback = onDone || null;
+  playSE('dialog_open');
+}
+
+function advanceDialog() {
+  if (!dialogMsg) return;
+  if (dialogMsg.charIdx < dialogMsg.lines[dialogMsg.lineIdx].length) {
+    dialogMsg.charIdx = dialogMsg.lines[dialogMsg.lineIdx].length;
+    return;
+  }
+  dialogMsg.lineIdx++;
+  if (dialogMsg.lineIdx >= dialogMsg.lines.length) {
+    playSE('dialog_close');
+    const cb = dialogCallback;
+    dialogMsg = null; dialogCallback = null;
+    if (cb) cb();
+    return;
+  }
+  dialogMsg.charIdx = 0; dialogMsg.charTimer = 0;
+}
+
+function updateMessages(dt) {
+  // Float messages
+  for (let i = msgQueue.length - 1; i >= 0; i--) {
+    msgQueue[i].timer -= dt;
+    if (msgQueue[i].timer <= 0) msgQueue.splice(i, 1);
+  }
+  // Dialog typewriter
+  if (dialogMsg && !dialogMsg.done) {
+    dialogMsg.charTimer += dt;
+    const charsPerSec = 20;
+    const targetChars = Math.floor(dialogMsg.charTimer * charsPerSec);
+    if (targetChars > dialogMsg.charIdx) dialogMsg.charIdx = Math.min(targetChars, dialogMsg.lines[dialogMsg.lineIdx].length);
+  }
+}
+
+function drawFloatMessages() {
+  if (msgQueue.length === 0) return;
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < msgQueue.length; i++) {
+    const m = msgQueue[i];
+    const alpha = Math.min(1, m.timer * 2.5);
+    const slideY = 80 + i * 40;
+    // Background
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.font = 'bold 20px sans-serif';
+    const tw = ctx.measureText(m.text).width + 40;
+    const rx = CW / 2 - tw / 2, ry = slideY - 16, rh = 34;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.moveTo(rx + 8, ry); ctx.lineTo(rx + tw - 8, ry);
+    ctx.quadraticCurveTo(rx + tw, ry, rx + tw, ry + 8);
+    ctx.lineTo(rx + tw, ry + rh - 8);
+    ctx.quadraticCurveTo(rx + tw, ry + rh, rx + tw - 8, ry + rh);
+    ctx.lineTo(rx + 8, ry + rh);
+    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - 8);
+    ctx.lineTo(rx, ry + 8);
+    ctx.quadraticCurveTo(rx, ry, rx + 8, ry);
+    ctx.closePath(); ctx.fill();
+    // Gold border
+    ctx.strokeStyle = m.color; ctx.lineWidth = 2; ctx.stroke();
+    // Text
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = m.color; ctx.fillText(m.text, CW / 2, slideY);
+  }
+  ctx.restore();
+}
+
+function drawDialogWindow() {
+  if (!dialogMsg) return;
+  ctx.save();
+  const dw = CW - 160, dh = 120;
+  const dx = 80, dy = CH - dh - 40;
+  // Background
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = '#0d0d2b'; ctx.fillRect(dx, dy, dw, dh);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3; ctx.strokeRect(dx, dy, dw, dh);
+  // Inner border
+  ctx.strokeStyle = 'rgba(255,215,0,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(dx + 6, dy + 6, dw - 12, dh - 12);
+  ctx.globalAlpha = 1;
+  // Speaker name
+  if (dialogMsg.speaker) {
+    const nw = ctx.measureText(dialogMsg.speaker).width + 30;
+    ctx.fillStyle = '#1a1a3e'; ctx.fillRect(dx + 20, dy - 16, nw, 28);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(dx + 20, dy - 16, nw, 28);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(dialogMsg.speaker, dx + 35, dy + 3);
+  }
+  // Text with typewriter
+  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
+  const line = dialogMsg.lines[dialogMsg.lineIdx];
+  const shown = line.substring(0, dialogMsg.charIdx);
+  ctx.fillText(shown, dx + 24, dy + 45);
+  // Page indicator
+  if (dialogMsg.charIdx >= line.length) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '14px sans-serif'; ctx.textAlign = 'right';
+    const pageText = dialogMsg.lineIdx < dialogMsg.lines.length - 1 ? 'Z: つぎへ ▼' : 'Z: とじる ▼';
+    ctx.fillText(pageText, dx + dw - 20, dy + dh - 15);
+  }
+  // Page count
+  if (dialogMsg.lines.length > 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((dialogMsg.lineIdx + 1) + '/' + dialogMsg.lines.length, dx + 24, dy + dh - 15);
+  }
+  ctx.restore();
+}
+// ===== End Message System =====
+
 let gameState = 'title', clearTimer = 0, deadTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
 let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
 let titleBlink = 0;
@@ -588,6 +715,7 @@ const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }
 
 function spawnBoss() { playSE('boss_appear');
+  // Boss dialog will be triggered after spawn
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];
   const sc = 1 + floor * 0.12;
@@ -734,7 +862,7 @@ function checkDuos() {
   for (const duo of DUO_DEFS) {
     if (activeDuos.some(d => d.name === duo.name)) continue;
     if (duo.families.every(f => fams.has(f))) {
-      duo.apply(); activeDuos.push(duo);
+      duo.apply(); activeDuos.push(duo); showFloat('✨ ' + duo.name + ' はつどう！', 3.0, MSG_COLORS.duo);
       spawnDmg(player.x + player.w/2, player.y - 20, 0, '#ffd700');
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.5);
       playSE('level_up');
@@ -769,8 +897,8 @@ function buildShop() {
     shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
       // Find empty consumable slot
       const slot = player.consumables.indexOf(null);
-      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); consumableMsg = { text: cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', timer: 1.2 }; }
-      else { consumableMsg = { text: 'アイテム枠がいっぱい！', timer: 0.8 }; }
+      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); showFloat(cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', 2.5, MSG_COLORS.info); }
+      else { showFloat('アイテム枠がいっぱい！', 2.0, MSG_COLORS.warn); }
     }});
   }
   // Random weapon
@@ -797,13 +925,28 @@ function updateFade(dt) {
 function startFloor() {
   rng = mulberry32(Date.now() + floor);
   roomSpikes = []; roomMap = generateRoom(floor);
-  if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0; }
+  if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;
+    // Boss entrance dialog
+    const bossLines = {
+      'queen_hornet': ['ブンブンブン…… ここはわたしの巣よ！', 'ミプリンなんかに まけないわ！'],
+      'fungus_king': ['フフフ…… キノコの胞子が おまえをつつむ……', 'ここから先は とおさないぞ！'],
+      'crystal_golem': ['…………ゴゴゴ……', 'このクリスタルのかたさ、ためしてみるか？'],
+      'shadow_moth': ['ヒラヒラ…… やみのなかへ おいで……', 'わたしの はやさに ついてこれるかしら？']
+    };
+    if (boss) {
+      gameState = 'dialog';
+      const bl = bossLines[boss.id] || [boss.name + ' があらわれた！'];
+      showDialog(boss.name, bl, function() { gameState = 'playing'; });
+    }
+  }
   else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
   player.x = TILE * 10; player.y = TILE * 7;
   player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
   player.dashing = false; player.dashCooldown = 0;
   dmgNumbers.length = 0; particles.length = 0;
   gameState = 'playing'; clearTimer = 0; deadTimer = 0;
+  if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
+  else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
   const floorTheme = getTheme(floor);
   if (floorTheme.bgm) playBGM(floorTheme.bgm);
   if (isBossFloor()) playBGM('boss');
@@ -926,8 +1069,7 @@ function getAttackBox() {
 // ===== UPDATE =====
 function update(dt) {
   updateFade(dt);
-  if (weaponSwapMsg) { weaponSwapMsg.timer -= dt; if (weaponSwapMsg.timer <= 0) weaponSwapMsg = null; }
-  if (consumableMsg) { consumableMsg.timer -= dt; if (consumableMsg.timer <= 0) consumableMsg = null; }
+  updateMessages(dt);
 
   if (gameState === 'ending') {
     if (wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
@@ -963,7 +1105,7 @@ function update(dt) {
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-      blessingChoices[selectCursor].apply(); activeBlessings.push(blessingChoices[selectCursor]); checkDuos(); playSE('level_up'); nextFloor(); }
+      const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); playSE('level_up'); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); nextFloor(); }
     return;
   }
   if (gameState === 'shop') {
@@ -978,7 +1120,10 @@ function update(dt) {
       pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); playSE('menu_select'); shopItems.splice(selectCursor, 1);
       selectCursor = Math.min(selectCursor, shopItems.length); }
     if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
-      gameState = 'blessing'; blessingChoices = pickBlessings(); selectCursor = 0; }
+      blessingChoices = pickBlessings(); selectCursor = 0;
+      gameState = 'dialog';
+      showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { gameState = 'blessing'; });
+    }
     return;
   }
   if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
@@ -1005,7 +1150,7 @@ function update(dt) {
         player.weapons[subIdx] = w;
         if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
         saveCollection();
-        weaponSwapMsg = { text: w.name + ' をサブにセット！ Qキーで持ちかえ！', timer: 1.5 };
+        showFloat(w.name + ' をサブにセット！ Qで持ちかえ！', 2.5, MSG_COLORS.buff);
         playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
       }
       // X: discard
@@ -1018,7 +1163,7 @@ function update(dt) {
     if (wasPressed('Digit' + (ci + 1)) && player.consumables[ci]) {
       const item = player.consumables[ci];
       item.apply();
-      consumableMsg = { text: item.msg, timer: 0.8 };
+      showFloat(item.msg, 2.5, MSG_COLORS.info);
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#fff', 6, 60, 0.3);
       playSE('item_get');
       player.consumables[ci] = null;
@@ -1031,7 +1176,7 @@ function update(dt) {
     player.weapon = player.weapons[player.weaponIdx];
     playSE('menu_select');
     spawnDmg(player.x + player.w/2, player.y - 10, 0, '#ffd700');
-    weaponSwapMsg = { text: 'ぶんぶん♪ ' + player.weapon.name, timer: 0.6 };
+    showFloat('ぶんぶん♪ ' + player.weapon.name, 1.5, MSG_COLORS.info);
   }
 
   // === Player movement ===
@@ -1055,6 +1200,7 @@ function update(dt) {
       player.hp -= 1; player.invTimer = player.invDuration;
       playSE('player_hurt');
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
+      showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
       if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
     }
   }
@@ -1412,31 +1558,10 @@ function drawEnding() {
   if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
   ctx.textAlign = 'left';
   // Consumable use message
-  if (consumableMsg) {
-    ctx.save();
-    const msgAlpha = Math.min(1, consumableMsg.timer * 2);
-    ctx.globalAlpha = msgAlpha * 0.7;
-    ctx.fillStyle = '#000';
-    const tw = ctx.measureText(consumableMsg.text).width || 300;
-    ctx.fillRect(CW/2 - tw/2 - 20, CH/2 - 130, tw + 40, 40);
-    ctx.globalAlpha = msgAlpha;
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(consumableMsg.text, CW / 2, CH / 2 - 105);
-    ctx.textAlign = 'left'; ctx.restore();
-  }
+  // [REMOVED] old consumableMsg draw - replaced by drawFloatMessages()
   // Weapon swap message
-  if (weaponSwapMsg) {
-    ctx.save();
-    const swAlpha = Math.min(1, weaponSwapMsg.timer * 2);
-    ctx.globalAlpha = swAlpha * 0.7;
-    ctx.fillStyle = '#000';
-    const sww = ctx.measureText(weaponSwapMsg.text).width || 300;
-    ctx.fillRect(CW/2 - sww/2 - 20, CH/2 - 100, sww + 40, 40);
-    ctx.globalAlpha = swAlpha;
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(weaponSwapMsg.text, CW / 2, CH / 2 - 75);
-    ctx.textAlign = 'left'; ctx.restore();
-  }
+  drawFloatMessages();
+  drawDialogWindow();
   // Fade overlay
   if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }

@@ -1235,8 +1235,8 @@ function update(dt) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
-  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); gameState = 'title'; floor = 1; resetGame(); } return; }
   if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); if (SE.game_over) { SE.game_over.pause(); SE.game_over.currentTime = 0; } gameState = 'title'; floor = 1; resetGame(); } return; }
+    if (gameState === 'weaponDrop' && weaponPopup.active) {
       // Z: equip as main
       if (wasPressed('KeyZ')) {
         const w = {...weaponPopup.weapon};

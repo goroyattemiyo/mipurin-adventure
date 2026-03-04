@@ -458,27 +458,18 @@ function startFloor() {
 
 function nextFloor() { floor++; startFade(1, () => startFloor()); }
 
-let playerSpriteReady = false;
-let playerAnimState = { name: 'idle_down', frame: 0, timer: 0 };
-SpriteLoader.load('assets/sprites/player.json').then(() => { playerSpriteReady = true; console.log('Player sprite loaded'); }).catch(e => console.warn('Sprite load failed:', e));
-
-function getPlayerAnim() {
+const mipurinImg = new Image(); mipurinImg.src = 'assets/mipurin.png';
+let mipurinReady = false; mipurinImg.onload = () => { mipurinReady = true; console.log('mipurin.png loaded'); };
+const MIPURIN_FRAMES = {
+  down:  { sx: 0,   sy: 0,   sw: 250, sh: 250 },
+  up:    { sx: 250, sy: 0,   sw: 250, sh: 250 },
+  left:  { sx: 250, sy: 250, sw: 250, sh: 250 },
+  right: { sx: 0,   sy: 250, sw: 250, sh: 250 }
+};
+function getPlayerDir() {
   const ax = player.atkDir.x, ay = player.atkDir.y;
-  const moving = player.dashing || Math.abs(ax) > 0 || Math.abs(ay) > 0;
-  if (player.attacking) return 'attack_down';
-  if (player.hp <= 0) return 'dead';
-  const dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 'right' : 'left') : (ay < 0 ? 'up' : 'down');
-  return moving ? 'walk_' + dir : 'idle_' + dir;
-}
-
-function updatePlayerAnim(dt) {
-  const want = getPlayerAnim();
-  if (want !== playerAnimState.name) { playerAnimState.name = want; playerAnimState.frame = 0; playerAnimState.timer = 0; }
-  const anim = SpriteLoader.getAnim('player', want);
-  if (!anim) return;
-  playerAnimState.timer += dt;
-  const spf = 1 / (anim.fps || 8);
-  if (playerAnimState.timer >= spf) { playerAnimState.timer -= spf; playerAnimState.frame = (playerAnimState.frame + 1) % anim.frames.length; }
+  if (Math.abs(ax) > Math.abs(ay)) return ax > 0 ? 'right' : 'left';
+  return ay < 0 ? 'up' : 'down';
 }
 
 function resetGame() {

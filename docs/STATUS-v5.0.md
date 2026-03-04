@@ -135,3 +135,48 @@ Synapse (Orchestrator/Coder/Reviewer) をこのプロジェクトに使うか。
 **E. スプライトエンジン:**
 mipurin.pngから歩行・攻撃モーションを自動生成する構想。
 Gemini API or 画像処理で実現可能か。後回しか。
+
+---
+
+## 7. 開発方針: Synapse駆動開発
+
+本プロジェクトは **Synapse** (マルチAIエージェント協調開発システム) の概念に基づいて開発を進める。
+
+### Synapseとは
+- リポジトリ: https://github.com/goroyattemiyo/Synapse
+- 3つのAIエージェントが協調してコードを生成・検証するシステム
+- Anthropic Claude API を使用
+
+### エージェント役割
+
+| Agent | 役割 | 担当 |
+|---|---|---|
+| Orchestrator (指揮者) | ゴール分析・計画立案・タスク分割 | 何を作るか決める |
+| Coder (実装者) | コード実装・ファイル生成 | 実際にコードを書く |
+| Reviewer (検証者) | コードレビュー・テスト・品質保証 | バグを見つけて指摘する |
+
+### 開発フロー
+
+ユーザーがゴールを提示
+Orchestrator が計画を作成（ファイル構成・要件・テスト方針）
+Coder が実装（write_file → run_command でテスト）
+Reviewer が検証（read_file → run_command でテスト実行）
+APPROVED or 修正指示 → 2-4を最大3ラウンド繰り返し
+成果物をリポジトリにコミット
+
+### 本チャットでの適用
+
+Synapse を直接実行しなくても、会話内で3エージェントの視点を意識して議論する:
+- **Orchestrator視点**: 次に何をすべきか、優先順位、設計判断
+- **Coder視点**: 具体的な実装方法、行数、影響範囲
+- **Reviewer視点**: バグの原因分析、テスト項目、品質チェック
+
+### 関連リソース
+
+| リソース | URL |
+|---|---|
+| Synapse リポジトリ | https://github.com/goroyattemiyo/Synapse |
+| ミプリンの冒険 リポジトリ | https://github.com/goroyattemiyo/mipurin-adventure |
+| ミプリンの冒険 デプロイ | https://goroyattemiyo.github.io/mipurin-adventure |
+| GDD v2.0 設計書 | docs/GDD-MIPURIN-v2.0.md |
+| 本ステータス文書 | docs/STATUS-v5.0.md |

@@ -583,7 +583,7 @@ function updateFade(dt) {
 // ===== GAME FLOW =====
 function startFloor() {
   rng = mulberry32(Date.now() + floor);
-  roomMap = generateRoom(floor);
+  roomSpikes = []; roomMap = generateRoom(floor);
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0; }
   else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
   player.x = TILE * 10; player.y = TILE * 7;
@@ -769,6 +769,17 @@ function update(dt) {
   }
 
   player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+  // Spike damage (トゲ床) - dash makes you immune
+  if (!player.dashing && player.invTimer <= 0) {
+    const spc = Math.floor((player.x + player.w/2) / TILE);
+    const spr = Math.floor((player.y + player.h/2) / TILE);
+    if (spc >= 0 && spc < COLS && spr >= 0 && spr < ROWS && roomMap[spr * COLS + spc] === 2) {
+      player.hp -= 1; player.invTimer = player.invDuration;
+      playSE('player_hurt');
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
+      if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
+    }
+  }
   if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
     else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
   else {

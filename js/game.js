@@ -769,7 +769,7 @@ function buildShop() {
     shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
       // Find empty consumable slot
       const slot = player.consumables.indexOf(null);
-      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); }
+      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); consumableMsg = { text: cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', timer: 1.2 }; }
       else { consumableMsg = { text: 'アイテム枠がいっぱい！', timer: 0.8 }; }
     }});
   }
@@ -977,7 +977,7 @@ function update(dt) {
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && selectCursor < shopItems.length && pollen >= shopItems[selectCursor].cost) {
       pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); playSE('menu_select'); shopItems.splice(selectCursor, 1);
       selectCursor = Math.min(selectCursor, shopItems.length); }
-    if (wasPressed('Escape') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
+    if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
       gameState = 'blessing'; blessingChoices = pickBlessings(); selectCursor = 0; }
     return;
   }
@@ -1005,6 +1005,7 @@ function update(dt) {
         player.weapons[subIdx] = w;
         if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
         saveCollection();
+        weaponSwapMsg = { text: w.name + ' をサブにセット！ Qキーで持ちかえ！', timer: 1.5 };
         playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
       }
       // X: discard
@@ -1412,16 +1413,28 @@ function drawEnding() {
   ctx.textAlign = 'left';
   // Consumable use message
   if (consumableMsg) {
-    ctx.save(); ctx.globalAlpha = Math.min(1, consumableMsg.timer * 2);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(consumableMsg.text, CW / 2, CH / 2 - 110);
+    ctx.save();
+    const msgAlpha = Math.min(1, consumableMsg.timer * 2);
+    ctx.globalAlpha = msgAlpha * 0.7;
+    ctx.fillStyle = '#000';
+    const tw = ctx.measureText(consumableMsg.text).width || 300;
+    ctx.fillRect(CW/2 - tw/2 - 20, CH/2 - 130, tw + 40, 40);
+    ctx.globalAlpha = msgAlpha;
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(consumableMsg.text, CW / 2, CH / 2 - 105);
     ctx.textAlign = 'left'; ctx.restore();
   }
   // Weapon swap message
   if (weaponSwapMsg) {
-    ctx.save(); ctx.globalAlpha = Math.min(1, weaponSwapMsg.timer * 2);
+    ctx.save();
+    const swAlpha = Math.min(1, weaponSwapMsg.timer * 2);
+    ctx.globalAlpha = swAlpha * 0.7;
+    ctx.fillStyle = '#000';
+    const sww = ctx.measureText(weaponSwapMsg.text).width || 300;
+    ctx.fillRect(CW/2 - sww/2 - 20, CH/2 - 100, sww + 40, 40);
+    ctx.globalAlpha = swAlpha;
     ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(weaponSwapMsg.text, CW / 2, CH / 2 - 80);
+    ctx.fillText(weaponSwapMsg.text, CW / 2, CH / 2 - 75);
     ctx.textAlign = 'left'; ctx.restore();
   }
   // Fade overlay
@@ -1514,23 +1527,42 @@ function drawHUD() {
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 68); }
   // Controls
   // Consumable slots
+    // Item slots with clear labels
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 32, 170, 55);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('アイテム', CW - 178, 44);
     for (let i = 0; i < 3; i++) {
-      const sx = CW - 160 + i * 48, sy = 50;
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-      if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left'; }
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '10px sans-serif'; ctx.fillText((i + 1), sx - 4, sy + 28);
+      const sx = CW - 160 + i * 52, sy = 62;
+      // Slot background
+      ctx.fillStyle = player.consumables[i] ? 'rgba(50,40,80,0.9)' : 'rgba(0,0,0,0.4)';
+      ctx.fillRect(sx - 20, sy - 16, 40, 32);
+      ctx.strokeStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx - 20, sy - 16, 40, 32);
+      if (player.consumables && player.consumables[i]) {
+        ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left';
+      }
+      // Key number (always visible)
+      ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
+      ctx.font = 'bold 12px sans-serif'; ctx.fillText((i + 1), sx - 16, sy + 20);
     }
     // Sub weapon indicator
     if (player.weapons[1] !== null) {
       const subW = player.weapons[1 - player.weaponIdx];
       if (subW) {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(10, CH - 60, 140, 24);
-        ctx.fillStyle = subW.color || '#aaa'; ctx.font = '12px sans-serif';
-        ctx.fillText('Q: ' + subW.name, 16, CH - 44);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160, 30);
+        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160, 30);
+        ctx.fillStyle = '#aaa'; ctx.font = '11px sans-serif'; ctx.fillText('もうひとつ', 14, CH - 52);
+        ctx.fillStyle = subW.color || '#fff'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('Q: ' + subW.name, 14, CH - 38);
       }
     }
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif'; ctx.fillText('WASD:いどう Z:こうげき X:ダッシュ Q:もちかえ 1/2/3:アイテム', CW / 2 - 150, CH - 6);
+    // Controls help (context-sensitive)
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    let helpText = 'WASD:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+    if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
+    if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
+    ctx.fillText(helpText, CW / 2, CH - 6); ctx.textAlign = 'left';
 }
 
 function drawBlessing() {
@@ -1609,7 +1641,7 @@ function drawShop() {
   const skipSel = selectCursor >= shopItems.length;
   ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.4)';
   ctx.font = (skipSel ? 'bold 18px' : '16px') + ' sans-serif';
-  ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Escでつぎへ', CW / 2, skipY);
+  ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Xキー / Escでつぎへ', CW / 2, skipY);
   ctx.textAlign = 'left';
 }
 

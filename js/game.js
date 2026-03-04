@@ -2008,10 +2008,8 @@ function drawGameState() {
     ctx.fillStyle = '#aaa'; ctx.font = '16px sans-serif';
     if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
     else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
-    ctx.fillStyle = COL.text; ctx.font = '20px sans-serif'; ctx.fillText('Floor ' + floor + '  Score: ' + score, CW / 2, CH / 2 + 10);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.fillText('Z: Title', CW / 2, CH / 2 + 50); ctx.textAlign = 'left'; }
+    ctx.textAlign = 'left'; }
 }
-
 function drawDmgNumbers() {
   for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
 }

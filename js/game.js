@@ -258,12 +258,12 @@ function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
 
 // ===== WEAPONS =====
 const WEAPON_DEFS = [
-  { id: 'needle', name: '🐝 蜂の針', dmgMul: 1, range: 48, speed: 0.2, dur: 0.1, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
-  { id: 'honey_cannon', name: '🍯 蜜砲', dmgMul: 1.5, range: 96, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
-  { id: 'pollen_shield', name: '🛡️ 花粉盾', dmgMul: 0.8, range: 40, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
-  { id: 'vine_whip', name: '🌿 蔦鞭', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
-  { id: 'feather_shuriken', name: '🪶 羽根手裏剣', dmgMul: 0.5, range: 64, speed: 0.12, dur: 0.06, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
-  { id: 'queen_staff', name: '👑 女王の杖', dmgMul: 2.0, range: 56, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
+  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 48, speed: 0.2, dur: 0.1, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
+  { id: 'honey_cannon', name: '\ud83c\udf6f 蜜砲', dmgMul: 1.5, range: 96, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
+  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 40, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
+  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
+  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 64, speed: 0.12, dur: 0.06, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
+  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 56, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
 
 // ===== DROPS =====
 const drops = [];
@@ -505,31 +505,19 @@ function updateBoss(dt) {
 
 // ===== BLESSINGS =====
 const BLESSING_POOL = [
-  { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
-  { id: 'lily_hp', name: '🤍 リリアの守り', desc: '最大HP +1 & 全回復', icon: '🤍', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
-  { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
-  { id: 'lotus_heal', name: '🌸 ハスミの癒し', desc: 'HPを全回復', icon: '🌸', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
-  { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown *= 0.6; } },
-  { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
-  { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; } },
-  { id: 'chrysanth_luck', name: '✨ キクネの幸運', desc: 'ドロップ率UP (磁力+80)', icon: '✨', rarity: 'rare', family: 'chrysanth', apply: () => { player.magnetRange += 80; } },
-  { id: 'lily_shield', name: '🛡️ リリアの結界', desc: '無敵時間 +50%', icon: '🛡️', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
-  { id: 'rose_vampire', name: '🩸 ローザの渇き', desc: '撃破時HP回復', icon: '🩸', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
-  { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
-  { id: 'lotus_regen', name: '💖 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '💖', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } }
-];nst BLESSING_POOL = [
-  { id: 'atk_up', name: '攻撃力UP', desc: '攻撃力 +1', icon: '\u2694', rarity: 'common', apply: () => { player.atk += 1; } },
-  { id: 'hp_up', name: '体力UP', desc: '最大HP +1 & 回復', icon: '\u2665', rarity: 'common', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
-  { id: 'speed_up', name: '移動速度UP', desc: '移動速度 +15%', icon: '\u21E8', rarity: 'common', apply: () => { player.speed *= 1.15; } },
-  { id: 'heal', name: '全回復', desc: 'HPを全回復', icon: '\u2728', rarity: 'common', apply: () => { player.hp = player.maxHp; } },
-  { id: 'dash_up', name: 'ダッシュ強化', desc: 'ダッシュCD -40%', icon: '\u26A1', rarity: 'rare', apply: () => { player.dashCooldown *= 0.6; } },
-  { id: 'crit', name: '会心の一撃', desc: '攻撃力 +2', icon: '\uD83D\uDDE1', rarity: 'rare', apply: () => { player.atk += 2; } },
-  { id: 'armor', name: '防御強化', desc: '無敵時間 +50%', icon: '\uD83D\uDEE1', rarity: 'rare', apply: () => { player.invDuration *= 1.5; } },
-  { id: 'range', name: '射程UP', desc: '攻撃範囲拡大', icon: '\uD83C\uDFF9', rarity: 'rare', apply: () => { player.atkRangeBonus = (player.atkRangeBonus || 0) + 12; } },
-  { id: 'vampiric', name: '吸血', desc: '撃破でHP回復', icon: '\uD83E\uDE78', rarity: 'epic', apply: () => { player.vampiric = true; } },
-  { id: 'thorns', name: '反射', desc: '被弾時反射ダメージ', icon: '\uD83C\uDF35', rarity: 'epic', apply: () => { player.thorns = (player.thorns || 0) + 2; } },
-  { id: 'doubleshot', name: '猛攻', desc: '攻撃速度 +30%', icon: '\uD83D\uDD25', rarity: 'epic', apply: () => { player.weapon = {...player.weapon, speed: player.weapon.speed * 0.7}; } },
-  { id: 'magnet', name: '磁石', desc: '自動回収範囲拡大', icon: '\uD83E\uDDF2', rarity: 'rare', apply: () => { player.magnetRange = (player.magnetRange || 0) + 80; } }];
+  { id: 'rose_atk', name: '\ud83c\udf39 ローザの力', desc: '攻撃力 +1', icon: '\ud83c\udf39', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
+  { id: 'lily_hp', name: '\ud83e\udd0d リリアの守り', desc: '最大HP +1 & 全回復', icon: '\ud83e\udd0d', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
+  { id: 'sunflower_speed', name: '\ud83c\udf3b ソーレの風', desc: '移動速度 +15%', icon: '\ud83c\udf3b', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
+  { id: 'lotus_heal', name: '\ud83c\udf38 ハスミの癒し', desc: 'HPを全回復', icon: '\ud83c\udf38', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
+  { id: 'sunflower_dash', name: '\u26a1 ソーレの疾走', desc: 'ダッシュCD -40%', icon: '\u26a1', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown *= 0.6; } },
+  { id: 'rose_crit', name: '\ud83d\udde1\ufe0f ローザの刃', desc: '攻撃力 +2', icon: '\ud83d\udde1\ufe0f', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
+  { id: 'wisteria_poison', name: '\ud83d\udc9c フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '\ud83d\udc9c', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; } },
+  { id: 'chrysanth_luck', name: '\u2728 キクネの幸運', desc: 'ドロップ率UP (磁力+80)', icon: '\u2728', rarity: 'rare', family: 'chrysanth', apply: () => { player.magnetRange += 80; } },
+  { id: 'lily_shield', name: '\ud83d\udee1\ufe0f リリアの結界', desc: '無敵時間 +50%', icon: '\ud83d\udee1\ufe0f', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
+  { id: 'rose_vampire', name: '\ud83e\ude78 ローザの渇き', desc: '撃破時HP回復', icon: '\ud83e\ude78', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
+  { id: 'lily_thorns', name: '\ud83c\udf3f リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '\ud83c\udf3f', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
+  { id: 'lotus_regen', name: '\ud83d\udc96 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '\ud83d\udc96', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } }
+];
 let blessingChoices = [], activeBlessings = [], selectCursor = 0;
 
 function pickBlessings() {

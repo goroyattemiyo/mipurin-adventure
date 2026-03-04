@@ -1236,7 +1236,7 @@ function update(dt) {
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
   if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); gameState = 'title'; floor = 1; resetGame(); } return; }
-    if (gameState === 'weaponDrop' && weaponPopup.active) {
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); if (SE.game_over) { SE.game_over.pause(); SE.game_over.currentTime = 0; } gameState = 'title'; floor = 1; resetGame(); } return; }
       // Z: equip as main
       if (wasPressed('KeyZ')) {
         const w = {...weaponPopup.weapon};
@@ -1613,8 +1613,8 @@ function drawEntity(e, color, isP) {
     const bob = getEnemyBob(e);
     // Code animation: bob + squash & stretch + tilt
     const isMoving = Math.abs(e.vx || 0) > 5 || Math.abs(e.vy || 0) > 5;
-    const squash = isMoving ? 1 + Math.sin(Date.now() / 150) * 0.05 : 1 + Math.sin(Date.now() / 600) * 0.02;
-    const tilt = isMoving ? Math.sin(Date.now() / 200) * 0.06 : 0;
+    const squash = isMoving ? 1 + Math.sin(Date.now() / 150) * 0.12 : 1 + Math.sin(Date.now() / 600) * 0.06;
+    const tilt = isMoving ? Math.sin(Date.now() / 200) * 0.15 : Math.sin(Date.now() / 800) * 0.03;
     ctx.save();
     ctx.translate(e.x + e.w / 2, e.y + e.h / 2 + bob);
     ctx.rotate(tilt);

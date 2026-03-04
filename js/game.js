@@ -88,6 +88,87 @@ function stopBGM() {
   currentBGM = '';
 }
 
+// ===== COLLECTION (図鑑) =====
+const collection = {};
+function recordEnemy(name, defeated) {
+  if (!collection[name]) collection[name] = { seen: 0, defeated: 0 };
+  collection[name].seen++;
+  if (defeated) collection[name].defeated++;
+}
+
+// ===== INVENTORY SCREEN =====
+let inventoryOpen = false, inventoryTab = 0;
+function drawInventory() {
+  if (!inventoryOpen) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, CW, CH);
+  const tabs = ['持ち物', '図鑑'];
+  for (let i = 0; i < tabs.length; i++) {
+    const tx = CW / 2 - 120 + i * 240, ty = 60;
+    ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
+    ctx.fillRect(tx - 80, ty - 20, 160, 40);
+    ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(tabs[i], tx, ty + 7);
+  }
+  ctx.textAlign = 'left';
+  if (inventoryTab === 0) drawInventoryItems();
+  else drawCollectionTab();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('← → でタブ切替  /  TAB で閉じる', CW / 2, CH - 30);
+  ctx.textAlign = 'left';
+}
+function drawInventoryItems() {
+  const lx = 120, ly = 140;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('ステータス', lx, ly);
+  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
+  const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
+  for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + 40 + i * 30);
+  const wx = CW / 2 + 40, wy = 140;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('武器', wx, wy);
+  ctx.fillStyle = player.weapon.color; ctx.font = '20px sans-serif';
+  ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + 40);
+  ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif';
+  ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
+  ctx.fillText('射程: ' + player.weapon.range, wx + 20, wy + 85);
+  ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + 105);
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('祝福', wx, wy + 150);
+  if (activeBlessings.length === 0) { ctx.fillStyle = '#888'; ctx.font = '16px sans-serif'; ctx.fillText('なし', wx + 20, wy + 185); }
+  else { for (let i = 0; i < activeBlessings.length; i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + 185 + i * 28); ctx.fillStyle = '#aaa'; ctx.font = '12px sans-serif'; ctx.fillText(b.desc, wx + 50, wy + 200 + i * 28); } }
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('アイテム', lx, ly + 280);
+  for (let i = 0; i < 3; i++) {
+    const sx = lx + 30 + i * 80, sy = ly + 320;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('[' + (i + 1) + ']', sx, sy + 46);
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
+    else { ctx.fillStyle = '#555'; ctx.font = '14px sans-serif'; ctx.fillText('空', sx, sy + 5); }
+    ctx.textAlign = 'left';
+  }
+}
+function drawCollectionTab() {
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('モンスター図鑑', 120, 140);
+  const names = Object.keys(collection);
+  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px sans-serif'; ctx.fillText('まだ敵に遭遇していません', 140, 190); return; }
+  for (let i = 0; i < names.length; i++) {
+    const c = collection[names[i]];
+    const col = i % 2, row = Math.floor(i / 2);
+    const ex = 140 + col * 500, ey = 180 + row * 50;
+    ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(names[i], ex, ey);
+    ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif'; ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, ex + 160, ey);
+  }
+}
+
+
 
 
 // ===== PALETTE =====
@@ -594,6 +675,13 @@ function update(dt) {
 
   if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; } return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
+  // Inventory toggle
+  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; }
+  if (inventoryOpen) {
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) inventoryTab = 0;
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) inventoryTab = 1;
+    return;
+  }
   if (gameState === 'blessing') {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.shop(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.shop(); }
@@ -645,7 +733,7 @@ function update(dt) {
     else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
   else {
     if (wasPressed('KeyX') && player.dashCooldown <= 0) {
-      console.log("DASH!", player.dashDir); player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
+      player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
       player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
       player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
       emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
@@ -750,6 +838,7 @@ function update(dt) {
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
       if (Math.random() < 0.15) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+      recordEnemy(enemies[i].name || 'enemy', true);
       enemies.splice(i, 1);
     }
   }
@@ -1150,6 +1239,7 @@ function draw() {
   ctx.restore();
   drawGameState(); drawBlessing(); drawShop();
 
+  drawInventory();
   // Fade overlay
   if (fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }

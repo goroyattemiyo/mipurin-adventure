@@ -603,7 +603,7 @@ function updateBoss(dt) {
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
         player.hp -= boss.dmg; player.invTimer = player.invDuration; playSE('player_hurt');
-        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; } }
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); } }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
     if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
   }
@@ -624,7 +624,7 @@ function updateBoss(dt) {
       spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
       const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
       moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
-      if (player.hp <= 0) { gameState = 'dead'; }
+      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
     }
   }
 }
@@ -728,7 +728,7 @@ function startFloor() {
   player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
   player.dashing = false; player.dashCooldown = 0;
   dmgNumbers.length = 0; particles.length = 0;
-  gameState = 'playing'; clearTimer = 0;
+  gameState = 'playing'; clearTimer = 0; deadTimer = 0;
   const floorTheme = getTheme(floor);
   if (floorTheme.bgm) playBGM(floorTheme.bgm);
   if (isBossFloor()) playBGM('boss');
@@ -892,7 +892,7 @@ function update(dt) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
-  if (gameState === 'dead') { if (wasPressed('KeyZ')) { gameState = 'title'; } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { gameState = 'title'; floor = 1; resetGame(); } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
       if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; playSE('level_up'); weaponPopup.active = false; gameState = 'playing'; }
       if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
@@ -1014,7 +1014,7 @@ function update(dt) {
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
-        if (player.hp <= 0) { gameState = 'dead'; }
+        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
       }
     }
   }
@@ -1459,7 +1459,14 @@ function drawGameState() {
       ctx.textAlign = 'left';
     }
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 30);
+    // Mipurin fallen
+    if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
+    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
+    ctx.fillStyle = '#ddd'; ctx.font = '20px sans-serif';
+    ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
+    ctx.fillStyle = '#aaa'; ctx.font = '16px sans-serif';
+    if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
+    else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
     ctx.fillStyle = COL.text; ctx.font = '20px sans-serif'; ctx.fillText('Floor ' + floor + '  Score: ' + score, CW / 2, CH / 2 + 10);
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.fillText('Z: Title', CW / 2, CH / 2 + 50); ctx.textAlign = 'left'; }
 }

@@ -1216,11 +1216,20 @@ function drawHPBar(e, yOff) {
 function drawAttackEffect() {
   if (!player.attacking) return;
   const box = getAttackBox();
-  ctx.fillStyle = COL.attack; ctx.fillRect(box.x, box.y, box.w, box.h);
   const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-  ctx.strokeStyle = player.weapon.color || '#fff'; ctx.lineWidth = 3; ctx.beginPath();
-  const ba = Math.atan2(player.atkDir.y, player.atkDir.x); ctx.arc(cx, cy, 22, ba - 0.8, ba + 0.8); ctx.stroke();
-  emitParticles(cx, cy, player.weapon.color || '#fff', 1, 40, 0.15);
+  const ba = Math.atan2(player.atkDir.y, player.atkDir.x);
+  const wc = player.weapon.color || '#fff';
+  const progress = 1 - (player.atkTimer / player.atkDuration);
+  // Slash arc (wide sweep)
+  ctx.save();
+  ctx.globalAlpha = 0.7 * (1 - progress);
+  ctx.strokeStyle = wc; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(cx, cy, 24 + progress * 12, ba - 1.0, ba + 1.0); ctx.stroke();
+  // Inner arc
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 16 + progress * 8, ba - 0.6, ba + 0.6); ctx.stroke();
+  ctx.restore();
+  emitParticles(cx, cy, wc, 1, 40, 0.15);
 }
 
 function drawDashTrail() {

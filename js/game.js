@@ -1,982 +1,2044 @@
 'use strict';
-/* ============================================================
-   ミプリンの冒険 v3.0 — Cute Roguelike
-   js/game.js  (all-in-one)
-   ============================================================ */
+/*============================================================
+  ミプリンの冒険 v5.0 — かわいい蜂の冒険RPG
+  明るいテーマ・日本語UI・プロローグ・BGM対応
+  1280x960, 64px tiles, Canvas 2D
+============================================================*/
 
-/* ===== CONSTANTS ===== */
-const CW=1280,CH=960,TILE=64,COLS=20,ROWS=15,FPS=60;
-const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
-
-/* ===== INPUT ===== */
-const keys={},pressed={};
-window.addEventListener('keydown',e=>{if(!keys[e.code])pressed[e.code]=true;keys[e.code]=true;e.preventDefault();});
-window.addEventListener('keyup',e=>{keys[e.code]=false;});
-function isDown(c){return!!keys[c]}
-function wasPressed(c){const v=!!pressed[c];pressed[c]=false;return v}
-
-/* ===== AUDIO ===== */
-let actx=null;
-function initAudio(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext);if(actx.state==='suspended')actx.resume()}
-window.addEventListener('keydown',initAudio,{once:false});
-function playSE(freq,dur,type,vol){
-  if(!actx)return;const o=actx.createOscillator(),g=actx.createGain();
-  o.type=type||'sine';o.frequency.value=freq*(0.95+Math.random()*0.1);
-  g.gain.value=vol||0.15;g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+dur);
-  o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+dur);
-}
-function seAttack(){playSE(880,0.08,'square',0.1);playSE(1200,0.06,'sine',0.08)}
-function seHit(){playSE(600,0.1,'sine',0.12);playSE(900,0.05,'sine',0.08)}
-function seKill(){playSE(1400,0.15,'sine',0.12);playSE(1800,0.1,'sine',0.08);playSE(700,0.2,'triangle',0.1)}
-function seHurt(){playSE(200,0.2,'sawtooth',0.1);playSE(150,0.15,'square',0.08)}
-function seDash(){playSE(500,0.1,'sine',0.08);playSE(800,0.06,'sine',0.06)}
-function seClear(){for(let i=0;i<5;i++)setTimeout(()=>playSE(800+i*200,0.2,'sine',0.1),i*80)}
-function seSelect(){playSE(1000,0.1,'sine',0.1);playSE(1500,0.08,'sine',0.08)}
-function seBless(){playSE(600,0.15,'sine',0.12);playSE(900,0.12,'sine',0.1);playSE(1200,0.1,'sine',0.08)}
-function seEquip(){playSE(700,0.12,'triangle',0.12);playSE(1100,0.08,'sine',0.1)}
-function seItem(){playSE(1200,0.1,'sine',0.12);playSE(1600,0.06,'sine',0.08)}
-function seCollect(){playSE(800,0.15,'sine',0.1);playSE(1000,0.12,'sine',0.1);playSE(1400,0.1,'sine',0.08)}
-
-/* ===== BGM LOADER (placeholder — loads mp3 when available) ===== */
-const BGM={current:null,el:null};
-function playBGM(name){
-  const path='assets/music/'+name+'.mp3';
-  if(BGM.current===name)return;
-  if(BGM.el){BGM.el.pause();BGM.el=null}
-  const a=new Audio(path);a.loop=true;a.volume=0.3;
-  a.play().catch(()=>{});BGM.el=a;BGM.current=name;
-}
-function stopBGM(){if(BGM.el){BGM.el.pause();BGM.el=null;BGM.current=null}}
-
-/* ===== UTILS ===== */
-function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v}
-function rectOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-function lerp(a,b,t){return a+(b-a)*t}
-function rnd(a,b){return a+Math.random()*(b-a)}
-function rndInt(a,b){return Math.floor(rnd(a,b+1))}
-function tileAt(map,c,r){if(c<0||c>=COLS||r<0||r>=ROWS)return 1;return map[r*COLS+c]}
-
-/* ===== SPRITE ===== */
-const spriteImg=new Image();spriteImg.src='assets/mipurin.png';
-let spriteLoaded=false;spriteImg.onload=()=>{spriteLoaded=true};
-const SPRITE_FRAMES={down:{sx:0,sy:0,sw:250,sh:250},up:{sx:250,sy:0,sw:250,sh:250},left:{sx:250,sy:250,sw:250,sh:250},right:{sx:0,sy:250,sw:250,sh:250}};
-
-/* ===== THEMES ===== */
-const THEMES=[
-  {name:'はらっぱ',bg:'#c8e6c9',wall:'#81c784',floor:'#e8f5e9',accent:'#66bb6a',deco:'🌸',bgm:'forest_south'},
-  {name:'おかしの国',bg:'#f8bbd0',wall:'#f06292',floor:'#fce4ec',accent:'#ec407a',deco:'🍬',bgm:'shop'},
-  {name:'ほしぞら',bg:'#c5cae9',wall:'#7986cb',floor:'#e8eaf6',accent:'#5c6bc0',deco:'⭐',bgm:'cave'},
-  {name:'うみべ',bg:'#b2ebf2',wall:'#4dd0e1',floor:'#e0f7fa',accent:'#26c6da',deco:'🐚',bgm:'flower_field'},
-  {name:'おしろ',bg:'#fff9c4',wall:'#ffd54f',floor:'#fffde7',accent:'#ffca28',deco:'👑',bgm:'nest'}
-];
-function getTheme(){return THEMES[(floor-1)%THEMES.length]}
-
-/* ===== MAP GENERATION ===== */
-/* ===== MAP PATTERNS ===== */
-const MAP_PATTERNS=['open','cross','lwall','pillar','scatter'];
-function pickPattern(fl){
-  if(fl===1)return'open';
-  if(fl===5)return'pillar';
-  const pool=fl<=2?['open','cross','scatter']:fl<=4?['cross','lwall','scatter','pillar']:['lwall','pillar','scatter'];
-  return pool[rndInt(0,pool.length-1)];
-}
-function isSafe(c,r){return Math.abs(c-10)<=2&&Math.abs(r-7)<=2}
-function setWall(map,c,r){if(c>0&&c<COLS-1&&r>0&&r<ROWS-1&&!isSafe(c,r))map[r*COLS+c]=1}
-
-function generateRoom(fl){
-  const map=[];
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    if(r===0||r===ROWS-1||c===0||c===COLS-1)map.push(1);else map.push(0);
+// ===== SPRITE LOADER (Sprite Processor JSON compatible) =====
+const SpriteLoader = {
+  cache: {},
+  async load(jsonPath) {
+    const res = await fetch(jsonPath);
+    const data = await res.json();
+    const img = new Image();
+    const dir = jsonPath.substring(0, jsonPath.lastIndexOf('/') + 1);
+    await new Promise((ok, ng) => { img.onload = ok; img.onerror = ng; img.src = dir + data.image; });
+    data._img = img;
+    this.cache[data.name] = data;
+    return data;
+  },
+  getAnim(name, animName) {
+    const d = this.cache[name];
+    if (!d || !d.animations[animName]) return null;
+    return d.animations[animName];
+  },
+  drawFrame(ctx, name, frameIdx, x, y, w, h) {
+    const d = this.cache[name];
+    if (!d) return false;
+    const f = d.frames[frameIdx];
+    if (!f) return false;
+    ctx.drawImage(d._img, f.sx, f.sy, f.sw, f.sh, x, y, w, h);
+    return true;
   }
-  const pat=pickPattern(fl);
-  let s=fl*7+Date.now()%1000+13;
-  function pRnd(){s=(s*16807+11)%2147483647;return(s&0x7fffffff)/2147483647}
-  function pRndInt(a,b){return a+Math.floor(pRnd()*(b-a+1))}
-
-  if(pat==='open'){
-    const pillars=2+Math.min(fl,4);
-    for(let i=0;i<pillars;i++){
-      let t=0,pc,pr;
-      do{pc=pRndInt(2,COLS-3);pr=pRndInt(2,ROWS-3);t++}
-      while(t<30&&(map[pr*COLS+pc]===1||isSafe(pc,pr)));
-      if(t<30){setWall(map,pc,pr);if(pRnd()>0.5)setWall(map,pc+1,pr)}
-    }
-  }else if(pat==='cross'){
-    const cx=10,cy=7;
-    const gapV=pRndInt(3,5),gapH=pRndInt(7,13);
-    for(let r=2;r<=ROWS-3;r++){if(Math.abs(r-cy)!==0&&r!==gapV)setWall(map,cx,r)}
-    for(let c=3;c<=COLS-4;c++){if(Math.abs(c-cx)!==0&&c!==gapH)setWall(map,c,cy)}
-    const extra=pRndInt(1,3);
-    for(let i=0;i<extra;i++){let pc=pRndInt(2,COLS-3),pr=pRndInt(2,ROWS-3);setWall(map,pc,pr)}
-  }else if(pat==='lwall'){
-    const shapes=[[{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:0,r:1},{c:0,r:2}],
-                  [{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:2,r:1},{c:2,r:2}],
-                  [{c:0,r:0},{c:0,r:1},{c:0,r:2},{c:1,r:2},{c:2,r:2}],
-                  [{c:2,r:0},{c:2,r:1},{c:2,r:2},{c:1,r:2},{c:0,r:2}]];
-    const count=pRndInt(2,3);
-    for(let i=0;i<count;i++){
-      const sh=shapes[pRndInt(0,shapes.length-1)];
-      const ox=pRndInt(2,COLS-6),oy=pRndInt(2,ROWS-6);
-      let ok=true;
-      for(const s of sh){if(isSafe(ox+s.c,oy+s.r)||map[(oy+s.r)*COLS+(ox+s.c)]===1){ok=false;break}}
-      if(ok)for(const s of sh)setWall(map,ox+s.c,oy+s.r);
-    }
-  }else if(pat==='pillar'){
-    const positions=[[5,4],[15,4],[5,10],[15,10],[10,7]];
-    const count=fl>=5?4:3;
-    const chosen=[];while(chosen.length<count&&positions.length>0){chosen.push(positions.splice(pRndInt(0,positions.length-1),1)[0])}
-    for(const[px,py]of chosen){
-      const ox=px+pRndInt(-1,1),oy=py+pRndInt(-1,1);
-      setWall(map,ox,oy);setWall(map,ox+1,oy);setWall(map,ox,oy+1);setWall(map,ox+1,oy+1);
-    }
-  }else if(pat==='scatter'){
-    const num=pRndInt(10,15);
-    for(let i=0;i<num;i++){
-      let t=0,pc,pr;
-      do{pc=pRndInt(2,COLS-3);pr=pRndInt(2,ROWS-3);t++}
-      while(t<30&&(map[pr*COLS+pc]===1||isSafe(pc,pr)||(map[(pr-1)*COLS+pc]===1&&map[(pr+1)*COLS+pc]===1)||(map[pr*COLS+pc-1]===1&&map[pr*COLS+pc+1]===1)));
-      if(t<30)setWall(map,pc,pr);
-    }
-  }
-  return map;
-}
-
-/* ===== PARTICLES ===== */
-let particles=[];
-function addParticle(x,y,type,count){
-  for(let i=0;i<(count||1);i++){
-    const a=rnd(0,Math.PI*2),sp=rnd(30,120);
-    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,maxLife:rnd(0.3,0.7),type,size:rnd(3,8),
-      color:type==='star'?['#ffeb3b','#ff9800','#e91e63','#9c27b0'][rndInt(0,3)]:type==='poof'?['#f8bbd0','#e1bee7','#fff9c4'][rndInt(0,2)]:'#fff'});
-  }
-}
-function updateParticles(dt){
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=200*dt;p.vx*=0.97;p.life-=dt/p.maxLife;
-    if(p.life<=0)particles.splice(i,1);
-  }
-}
-function drawParticles(){
-  for(const p of particles){
-    ctx.globalAlpha=Math.max(0,p.life);
-    if(p.type==='star'){ctx.fillStyle=p.color;drawStar(p.x,p.y,p.size,p.size*0.4,5)}
-    else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fill()}
-  }
-  ctx.globalAlpha=1;
-}
-function drawStar(cx,cy,or,ir,n){
-  ctx.beginPath();
-  for(let i=0;i<n*2;i++){const a=-Math.PI/2+i*Math.PI/n,r=i%2===0?or:ir;
-    if(i===0)ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);else ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
-  ctx.closePath();ctx.fill();
-}
-
-/* ===== DAMAGE NUMBERS ===== */
-let dmgNums=[];
-function addDmgNum(x,y,val,color){dmgNums.push({x,y,val,color:color||'#fff',life:0.8,vy:-60})}
-function updateDmgNums(dt){for(let i=dmgNums.length-1;i>=0;i--){const d=dmgNums[i];d.y+=d.vy*dt;d.vy*=0.95;d.life-=dt;if(d.life<=0)dmgNums.splice(i,1)}}
-function drawDmgNums(){for(const d of dmgNums){ctx.globalAlpha=clamp(d.life/0.3,0,1);ctx.fillStyle=d.color;ctx.font='bold 24px sans-serif';ctx.textAlign='center';ctx.fillText(d.val,d.x,d.y)}ctx.globalAlpha=1}
-
-/* ===== SCREEN SHAKE & HITSTOP ===== */
-let shakeTimer=0,shakeIntensity=0,hitstopTimer=0;
-function doShake(i,d){shakeIntensity=i;shakeTimer=d}
-function doHitstop(f){hitstopTimer=Math.max(hitstopTimer,f)}
-
-/* ===== WEAPON DEFINITIONS ===== */
-const WEAPONS=[
-  {id:'hana_needle',name:'はなのハリ',atk:2,speed:1.2,range:40,arc:Math.PI/2,dur:0.10,cd:0.22,desc:'みぷりんの最初のハリ',icon:'🌸',rarity:'normal',fx:null},
-  {id:'wax_needle',name:'みつろうのハリ',atk:4,speed:1.0,range:44,arc:Math.PI/2,dur:0.12,cd:0.25,desc:'蜜蝋で固めた丈夫なハリ',icon:'🕯️',rarity:'normal',fx:null},
-  {id:'silver_needle',name:'ぎんのハリ',atk:7,speed:1.0,range:44,arc:Math.PI/2,dur:0.12,cd:0.25,desc:'銀の輝き。会心+5%',icon:'🪡',rarity:'rare',fx:'crit',critBonus:5},
-  {id:'crystal_needle',name:'クリスタルのハリ',atk:10,speed:0.8,range:52,arc:Math.PI/1.8,dur:0.15,cd:0.30,desc:'広い範囲を薙ぎ払う',icon:'💎',rarity:'rare',fx:'ice'},
-  {id:'fire_needle',name:'ほのおのハリ',atk:12,speed:1.2,range:44,arc:Math.PI/2,dur:0.10,cd:0.22,desc:'周囲にスプラッシュ1ダメージ',icon:'🔥',rarity:'rare',fx:'splash'},
-  {id:'dark_needle',name:'やみのハリ',atk:15,speed:1.0,range:44,arc:Math.PI/2,dur:0.12,cd:0.25,desc:'HP吸収3%',icon:'🌑',rarity:'rare',fx:'lifesteal'},
-  {id:'queen_needle',name:'じょおうのハリ',atk:18,speed:1.0,range:50,arc:Math.PI/1.8,dur:0.12,cd:0.25,desc:'女王の力。全ステ微増',icon:'👑',rarity:'legendary',fx:'queen'},
-  {id:'star_needle',name:'ほしくずのハリ',atk:22,speed:1.2,range:52,arc:Math.PI/1.6,dur:0.10,cd:0.20,desc:'会心時に星爆発',icon:'⭐',rarity:'legendary',fx:'starburst',critBonus:15}
-];
-const WEAPON_DROP_TABLE=[
-  [[0,1]],           // Floor 1: hana or wax
-  [[1,2]],           // Floor 2: wax or silver
-  [[2,3,4]],         // Floor 3: silver, crystal, fire
-  [[3,4,5]],         // Floor 4: crystal, fire, dark
-  [[5,6],[7]]         // Floor 5: dark, queen; legendary: star
-];
-function rollWeaponDrop(fl){
-  const table=WEAPON_DROP_TABLE[Math.min(fl-1,4)];
-  // 1% legendary chance
-  if(table.length>1&&Math.random()<0.01){const pool=table[1];return WEAPONS[pool[rndInt(0,pool.length-1)]]}
-  const pool=table[0];return WEAPONS[pool[rndInt(0,pool.length-1)]];
-}
-
-/* ===== ACCESSORY DEFINITIONS ===== */
-const ACCESSORIES=[
-  {id:'pollen_ring',name:'かふんのゆびわ',desc:'ドロップ率+20%',icon:'💍',effect:{dropRate:0.2}},
-  {id:'speed_anklet',name:'そくみつアンクレット',desc:'移動速度+15%',icon:'👟',effect:{speed:0.15}},
-  {id:'crit_charm',name:'かいしんのおまもり',desc:'会心率+10%',icon:'✨',effect:{critRate:10}},
-  {id:'bee_brooch',name:'みつばちのブローチ',desc:'10秒ごとにHP1回復',icon:'🐝',effect:{regen:1}},
-  {id:'tough_belt',name:'がんじょうなベルト',desc:'最大HP+2',icon:'🎗️',effect:{maxHp:2}},
-  {id:'vamp_fang',name:'きゅうけつのキバ',desc:'与ダメの5%HP回復',icon:'🦷',effect:{lifesteal:0.05}},
-  {id:'needle_ring',name:'はりしのゆびわ',desc:'攻撃速度+20%',icon:'📌',effect:{atkSpeed:0.2}},
-  {id:'magnet_pendant',name:'じしゃくペンダント',desc:'吸引範囲3倍',icon:'🧲',effect:{magnetRange:3}}
-];
-
-/* ===== CONSUMABLE DEFINITIONS ===== */
-const CONSUMABLES=[
-  {id:'pollen_heal',name:'ポーレン',desc:'HP1かいふく',icon:'🌼',effect:'heal',value:1},
-  {id:'royal_jelly',name:'ロイヤルゼリー',desc:'HPぜんかいふく',icon:'🍯',effect:'healFull',value:0},
-  {id:'pollen_bomb',name:'かふんだん',desc:'まわりに2ダメージ',icon:'💣',effect:'aoe',value:2},
-  {id:'speed_honey',name:'そくみつドリンク',desc:'20びょうかん はやくなる',icon:'⚡',effect:'buffSpeed',value:1.5,duration:20},
-  {id:'wax_shield',name:'みつろうのたて',desc:'30びょうかん かたくなる',icon:'🛡️',effect:'buffDef',value:1,duration:30},
-  {id:'hard_candy',name:'かたみつキャンディ',desc:'30びょうかん つよくなる',icon:'🍬',effect:'buffAtk',value:2,duration:30}
-];
-
-/* ===== COLLECTION / ENCYCLOPEDIA ===== */
-const COLLECTION_ENTRIES={};
-// Enemies
-const ENEMY_COLLECTION=[
-  {id:'imomushi',cat:'enemy',name:'いもむし',desc:'はらっぱに住む緑のいもむし。のんびり歩いている。',icon:'🐛',color:'#8bc34a'},
-  {id:'tentou',cat:'enemy',name:'てんとうむし',desc:'赤い背中に黒い水玉。怒ると追いかけてくる。',icon:'🐞',color:'#f44336'},
-  {id:'kabuto',cat:'enemy',name:'かぶとむし',desc:'立派な角を持つ虫。突進してくるので注意。',icon:'🪲',color:'#795548'},
-  {id:'kumo',cat:'enemy',name:'くも',desc:'巣を張って待ち伏せする。糸で動きを遅くしてくる。',icon:'🕷️',color:'#9e9e9e'},
-  {id:'hachi_dark',cat:'enemy',name:'カゲバチ',desc:'闇に操られた蜂。かつては仲間だったかもしれない。',icon:'🐝',color:'#2c3e50'},
-  {id:'kinoko',cat:'enemy',name:'ドクキノコ',desc:'毒の胞子をまき散らすキノコ。近づくと危険。',icon:'🍄',color:'#9b59b6'},
-  {id:'slime_green',cat:'enemy',name:'ミドリスライム',desc:'好奇心が強いスライム。ぷるぷる揺れている。',icon:'🟢',color:'#2ecc71'},
-  {id:'koumori',cat:'enemy',name:'コウモリ',desc:'暗い場所を好む。素早く急降下してくる。',icon:'🦇',color:'#7f8c8d'},
-  {id:'ice_worm',cat:'enemy',name:'コオリムシ',desc:'冷たい体を持つ虫。触れると凍える。',icon:'🐛',color:'#3498db'},
-  {id:'dark_flower',cat:'enemy',name:'ヤミバナ',desc:'闇に染まった花。根で攻撃してくる。',icon:'🌺',color:'#1a1a2a'},
-  {id:'mushroom_king',cat:'enemy',name:'マッシュルーム王',desc:'キノコたちの王。巨大な体から胞子をまき散らす。',icon:'👑',color:'#e74c3c'},
-  {id:'dark_queen',cat:'enemy',name:'やみのじょおうバチ',desc:'闇に蝕まれた女王。その瞳には時折優しい光が宿る。',icon:'👸',color:'#1a1a2a'}
-];
-// Weapons
-WEAPONS.forEach(w=>{COLLECTION_ENTRIES['weapon_'+w.id]={id:'weapon_'+w.id,cat:'treasure',name:w.name,desc:w.desc,icon:w.icon,color:w.rarity==='legendary'?'#ff2222':w.rarity==='rare'?'#ffdd00':'#cccccc'}});
-// Sparkle variants
-WEAPONS.forEach(w=>{COLLECTION_ENTRIES['weapon_'+w.id+'_sparkle']={id:'weapon_'+w.id+'_sparkle',cat:'treasure',name:'✦'+w.name,desc:'キラキラ光る特別な'+w.name+'。ATK+2。',icon:'✦',color:'#ff88ff'}});
-// Accessories
-ACCESSORIES.forEach(a=>{COLLECTION_ENTRIES['acc_'+a.id]={id:'acc_'+a.id,cat:'treasure',name:a.name,desc:a.desc,icon:a.icon,color:'#64b5f6'}});
-// Consumables
-CONSUMABLES.forEach(c=>{COLLECTION_ENTRIES['item_'+c.id]={id:'item_'+c.id,cat:'item',name:c.name,desc:c.desc,icon:c.icon,color:'#fff9c4'}});
-// Enemies
-ENEMY_COLLECTION.forEach(e=>{COLLECTION_ENTRIES[e.id]={...e}});
-// Places
-THEMES.forEach((t,i)=>{COLLECTION_ENTRIES['place_floor'+(i+1)]={id:'place_floor'+(i+1),cat:'place',name:t.name,desc:'Floor '+(i+1)+'のテーマ。',icon:t.deco,color:t.accent}});
-
-const COLLECTION_CATS=[
-  {id:'enemy',name:'むし',icon:'🐛'},
-  {id:'treasure',name:'おたから',icon:'💎'},
-  {id:'item',name:'つかいもの',icon:'🌼'},
-  {id:'place',name:'ばしょ',icon:'🗺️'}
-];
-
-let collectionDiscovered={};
-function collectionInit(){try{const d=localStorage.getItem('mipurin_collection');if(d)collectionDiscovered=JSON.parse(d)}catch(e){}}
-function collectionSave(){try{localStorage.setItem('mipurin_collection',JSON.stringify(collectionDiscovered))}catch(e){}}
-function collectionDiscover(id){if(!COLLECTION_ENTRIES[id])return false;if(collectionDiscovered[id])return false;collectionDiscovered[id]={date:Date.now()};collectionSave();collectionBanner=id;collectionBannerTimer=2.5;seCollect();return true}
-function collectionIsFound(id){return!!collectionDiscovered[id]}
-function collectionCount(){return Object.keys(collectionDiscovered).length}
-function collectionTotal(){return Object.keys(COLLECTION_ENTRIES).length}
-let collectionBanner=null,collectionBannerTimer=0;
-
-/* ===== PROLOGUE SYSTEM ===== */
-let prologueImages=[];
-let prologueLoaded=false;
-let prologueIndex=0,prologueAlpha=0,prologuePhase='fadein',prologueTimer=0;
-const PROLOGUE_TEXTS=[
-  'むかしむかし、蜂の国「ハニーヴィル」がありました。',
-  'みんなが蜂蜜を集めて、平和に暮らしていました。',
-  'ある日、不思議な闇の胞子が森から広がり始めました。',
-  '虫たちが凶暴化していきます。',
-  'みぷりんは女王蜂から「黄金蜂蜜のかけら」を集めてほしいと頼まれました。',
-  '小さな冒険の、はじまりです。'
-];
-function loadPrologueImages(){
-  let loaded=0;const total=10;
-  for(let i=1;i<=total;i++){
-    const img=new Image();const idx=i<10?'0'+i:''+i;
-    img.src='assets/prologue/prologue_'+idx+'.webp';
-    img.onload=()=>{loaded++;if(loaded>=total)prologueLoaded=true};
-    img.onerror=()=>{loaded++;if(loaded>=total)prologueLoaded=true};
-    prologueImages.push(img);
-  }
-}
-
-/* ===== GAME STATE ===== */
-let gameState='title';
-let floor=1,wave=0,score=0,roomMap=[],enemies=[],items=[],projectiles=[];
-let waveTimer=0;
-let blessingChoices=[],selectCursor=0;
-let prologueSeen=false;
-
-/* ===== PLAYER ===== */
-let player={
-  x:TILE*10,y:TILE*7,w:56,h:56,speed:200,hp:5,maxHp:5,atk:1,
-  dir:'down',attacking:false,atkTimer:0,atkCd:0,
-  dashing:false,dashTimer:0,dashCd:0,dashSpeed:550,
-  iframes:0,face:'normal',
-  squashX:1,squashY:1,bobTimer:0,wingTimer:0,breathTimer:0,
-  blessings:[],magnetRange:60,pollen:0,
-  weapon:null,accessories:[null,null],
-  consumables:[null,null,null],
-  buffs:{speed:null,def:null,atk:null},
-  regenTimer:0,critRate:5,
-  comboKills:0,comboTimer:0
 };
 
-/* ===== WEAPON POPUP STATE ===== */
-let weaponPopup={active:false,weapon:null,sparkle:false};
+// ===== CONSTANTS =====
+const CW = 1280, CH = 960, TILE = 64, COLS = 20, ROWS = 15;
 
-/* ===== COLLECTION UI STATE ===== */
-let collectionUI={open:false,catIdx:0,cursor:0,scroll:0};
+// ===== CANVAS =====
+const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
 
-/* ===== ENEMY DEFINITIONS ===== */
-const ENEMY_DEFS={
-  imomushi:{name:'いもむし',hp:3,speed:40,dmg:1,score:10,type:'wander',color:'#8bc34a',bodyColor:'#689f38',dropChance:0.15},
-  tentou:{name:'てんとう',hp:4,speed:75,dmg:1,score:15,type:'chase',color:'#f44336',bodyColor:'#d32f2f',dropChance:0.2},
-  kabuto:{name:'かぶとむし',hp:6,speed:40,dmg:2,score:25,type:'charge',color:'#795548',bodyColor:'#5d4037',chargeSpeed:350,telegraphDur:0.6,chargeDur:0.3,dropChance:0.3}
+// ===== INPUT =====
+const keys = {}, pressed = {};
+window.addEventListener('keydown', e => { if (['F12','F5','F11'].includes(e.code) || e.ctrlKey || e.metaKey) return; if (!keys[e.code]) pressed[e.code] = true; keys[e.code] = true; e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+function isDown(c) { return !!keys[c] }
+function wasPressed(c) { const v = !!pressed[c]; pressed[c] = false; return v }
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v }
+function rectOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y }
+
+// ===== AUDIO (Chip-tune via Web Audio) =====
+const Audio = (() => {
+  let actx = null;
+  function init() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} } if (actx && actx.state === 'suspended') actx.resume(); }
+  function play(freq, dur, type, vol) {
+    init();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.1, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
+  }
+  return {
+    hit() { play(200, 0.08, 'square', 0.12); play(150, 0.06, 'sawtooth', 0.08); },
+    hurt() { play(100, 0.15, 'sawtooth', 0.15); },
+    kill() { play(400, 0.1, 'square', 0.1); play(600, 0.15, 'square', 0.08); },
+    dash() { play(300, 0.06, 'triangle', 0.08); },
+    blessing() { play(523, 0.12, 'sine', 0.1); play(659, 0.12, 'sine', 0.1); setTimeout(() => play(784, 0.2, 'sine', 0.12), 120); },
+    clear() { play(523, 0.15, 'square', 0.1); play(659, 0.15, 'square', 0.1); setTimeout(() => play(784, 0.3, 'square', 0.12), 150); },
+    shop() { play(440, 0.1, 'sine', 0.08); },
+    buy() { play(600, 0.08, 'sine', 0.1); play(800, 0.12, 'sine', 0.1); },
+    drop() { play(500, 0.06, 'triangle', 0.06); }
+  };
+})();
+
+// ===== BGM SYSTEM =====
+let bgmAudio = null, currentBGM = '';
+function playBGM(name) {
+  if (currentBGM === name) return;
+  stopBGM();
+  currentBGM = name;
+  bgmAudio = new window.Audio('assets/music/' + name + '.mp3');
+  bgmAudio.loop = true; bgmAudio.volume = 0.3;
+  bgmAudio.play().catch(() => {});
+}
+function stopBGM() {
+  if (bgmAudio) { bgmAudio.pause(); bgmAudio.currentTime = 0; bgmAudio = null; }
+  currentBGM = '';
+}
+
+
+// ===== SE SYSTEM (mp3) =====
+const SE = {};
+const SE_FILES = {
+  attack: 'attack.mp3', hit: 'hit.mp3', enemy_die: 'enemy_die.mp3',
+  player_hurt: 'player_hurt.mp3', item_get: 'item_get.mp3', level_up: 'level_up.mp3',
+  boss_appear: 'boss_appear.mp3', game_over: 'game_over.mp3', needle: 'needle.mp3',
+  menu_move: 'menu_move.mp3', menu_select: 'menu_select.mp3',
+  door_open: 'door_open.mp3', save: 'save.mp3'
 };
+for (const [k, v] of Object.entries(SE_FILES)) {
+  const a = new window.Audio('assets/se/' + v);
+  a.volume = 0.4;
+  SE[k] = a;
+}
+function playSE(name) {
+  const s = SE[name];
+  if (!s) return;
+  if (s.currentTime > 0) { s.currentTime = 0; }
+  s.play().catch(() => {});
+}
 
-/* ===== WAVES ===== */
-function buildWaves(fl){
-  return[
-    [{type:'imomushi',count:3}],
-    [{type:'imomushi',count:2},{type:'tentou',count:1}],
-    [{type:'tentou',count:2},{type:'imomushi',count:2}],
-    [{type:'tentou',count:2},{type:'kabuto',count:1}],
-    [{type:'kabuto',count:1},{type:'tentou',count:2},{type:'imomushi',count:2}]
-  ];
+// ===== HIT STOP SYSTEM =====
+let hitStopTimer = 0;
+// ===== COLLECTION (図鑑) =====
+const collection = {};
+function recordEnemy(name, defeated) {
+  if (!collection[name]) collection[name] = { seen: 0, defeated: 0 };
+  collection[name].seen++;
+  if (defeated) collection[name].defeated++;
 }
-let WAVES=[];
 
-/* ===== BLESSINGS ===== */
-const BLESSING_POOL=[
-  {id:'dashStrike',name:'ダッシュ斬り',desc:'ダッシュ直後の攻撃ダメージ2倍',icon:'💨',rarity:'common'},
-  {id:'comboHeal',name:'コンボ回復',desc:'3体連続キルでHP1回復',icon:'💗',rarity:'common'},
-  {id:'wallCrush',name:'壁ドン',desc:'壁際の敵にダメージ1.5倍',icon:'🧱',rarity:'common'},
-  {id:'lastStand',name:'ラストスタンド',desc:'HP1の時、攻撃速度2倍',icon:'🔥',rarity:'rare'},
-  {id:'sweetTooth',name:'あまいもの好き',desc:'回復アイテムの効果2倍',icon:'🍯',rarity:'common'},
-  {id:'critWing',name:'羽ばたきクリティカル',desc:'移動中の攻撃が20%で会心',icon:'✨',rarity:'rare'},
-  {id:'thornAura',name:'とげオーラ',desc:'被弾時、周囲の敵に1ダメージ',icon:'🌹',rarity:'rare'},
-  {id:'honeyTrap',name:'ハニートラップ',desc:'キル時に蜂蜜。踏んだ敵が減速',icon:'🍯',rarity:'epic'},
-  {id:'queenBee',name:'女王蜂',desc:'全ステ微増＋味方蜂を1匹召喚',icon:'👑',rarity:'epic'},
-  {id:'berserker',name:'バーサーカー',desc:'HP半分以下でATK1.5倍',icon:'💢',rarity:'rare'}
-];
-function pickBlessings(){
-  const pool=[...BLESSING_POOL].filter(b=>!player.blessings.find(pb=>pb.id===b.id));
-  const picked=[];while(picked.length<3&&pool.length>0){picked.push(pool.splice(rndInt(0,pool.length-1),1)[0])}return picked;
-}
-function applyBlessing(b){player.blessings.push(b)}
-function hasBlessing(id){return player.blessings.some(b=>b.id===id)}
-
-/* ===== ACCESSORY HELPERS ===== */
-function hasAccessory(id){return player.accessories.some(a=>a&&a.id===id)}
-function getAccBonus(key){
-  let v=0;player.accessories.forEach(a=>{if(a&&a.effect[key])v+=a.effect[key]});return v;
-}
-function getPlayerSpeed(){return player.speed*(1+getAccBonus('speed'))*(player.buffs.speed?player.buffs.speed.value:1)}
-function getPlayerAtk(){
-  let a=player.atk+(player.weapon?player.weapon.atk:0)+(player.buffs.atk?player.buffs.atk.value:0);
-  if(hasBlessing('berserker')&&player.hp<=Math.floor(player.maxHp/2))a=Math.ceil(a*1.5);
-  if(player.weapon&&player.weapon.fx==='queen')a+=2;
-  return a;
-}
-function getPlayerCritRate(){
-  let c=player.critRate+getAccBonus('critRate');
-  if(player.weapon&&player.weapon.critBonus)c+=player.weapon.critBonus;
-  return c;
-}
-function getPlayerMagnetRange(){
-  const mult=getAccBonus('magnetRange');
-  return player.magnetRange*(mult>0?mult:1);
-}
-function getPlayerMaxHp(){return player.maxHp+getAccBonus('maxHp')}
-
-/* ===== CONSUMABLE USE ===== */
-function useConsumable(slotIdx){
-  const c=player.consumables[slotIdx];if(!c)return;
-  switch(c.effect){
-    case'heal':player.hp=Math.min(getPlayerMaxHp(),player.hp+(hasBlessing('sweetTooth')?c.value*2:c.value));addDmgNum(player.x,player.y-20,'+'+(hasBlessing('sweetTooth')?c.value*2:c.value)+'HP','#e91e63');break;
-    case'healFull':player.hp=getPlayerMaxHp();addDmgNum(player.x,player.y-20,'FULL','#e91e63');break;
-    case'aoe':enemies.forEach(en=>{if(dist(player,en)<100){en.hp-=c.value;en.flashTimer=0.15;addDmgNum(en.x,en.y-10,c.value,'#ff9800');addParticle(en.x,en.y,'star',3)}});doShake(4,0.1);break;
-    case'buffSpeed':player.buffs.speed={value:c.value,timer:c.duration};break;
-    case'buffDef':player.buffs.def={value:c.value,timer:c.duration};break;
-    case'buffAtk':player.buffs.atk={value:c.value,timer:c.duration};break;
+// ===== INVENTORY SCREEN =====
+let inventoryOpen = false, inventoryTab = 0;
+function drawInventory() {
+  if (!inventoryOpen) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, CW, CH);
+  const tabs = ['持ち物', '図鑑'];
+  for (let i = 0; i < tabs.length; i++) {
+    const tx = CW / 2 - 120 + i * 240, ty = 60;
+    ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
+    ctx.fillRect(tx - 80, ty - 20, 160, 40);
+    ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(tabs[i], tx, ty + 7);
   }
-  seItem();addParticle(player.x,player.y,'star',5);
-  collectionDiscover('item_'+c.id);
-  player.consumables[slotIdx]=null;
+  ctx.textAlign = 'left';
+  if (inventoryTab === 0) drawInventoryItems();
+  else drawCollectionTab();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('← → でタブ切替  /  TAB で閉じる', CW / 2, CH - 30);
+  ctx.textAlign = 'left';
 }
-
-/* ===== COLLISION ===== */
-function moveWithCollision(ent,dx,dy){
-  const nx=ent.x+dx,ny=ent.y+dy,hw=ent.w/2,hh=ent.h/2;
-  let bx=false;
-  for(let r=Math.floor((ny-hh)/TILE);r<=Math.floor((ny+hh-1)/TILE);r++)
-    for(let c=Math.floor((nx-hw)/TILE);c<=Math.floor((nx+hw-1)/TILE);c++)
-      if(tileAt(roomMap,c,r)===1){bx=true;break}
-  if(!bx){ent.x=nx;ent.y=ny}else{
-    let xOk=true;
-    for(let r=Math.floor((ent.y-hh)/TILE);r<=Math.floor((ent.y+hh-1)/TILE);r++)
-      for(let c=Math.floor((nx-hw)/TILE);c<=Math.floor((nx+hw-1)/TILE);c++)
-        if(tileAt(roomMap,c,r)===1){xOk=false;break}
-    if(xOk)ent.x=nx;
-    let yOk=true;
-    for(let r=Math.floor((ny-hh)/TILE);r<=Math.floor((ny+hh-1)/TILE);r++)
-      for(let c=Math.floor((ent.x-hw)/TILE);c<=Math.floor((ent.x+hw-1)/TILE);c++)
-        if(tileAt(roomMap,c,r)===1){yOk=false;break}
-    if(yOk)ent.y=ny;
+function drawInventoryItems() {
+  const lx = 120, ly = 140;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('ステータス', lx, ly);
+  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
+  const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
+  for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + 40 + i * 30);
+  const wx = CW / 2 + 40, wy = 140;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('武器', wx, wy);
+  ctx.fillStyle = player.weapon.color; ctx.font = '20px sans-serif';
+  ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + 40);
+  ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif';
+  ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
+  ctx.fillText('射程: ' + player.weapon.range, wx + 20, wy + 85);
+    // Weapon slots
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('【おきにいり】', wx + 20, wy + 115);
+    const w0 = player.weapons[0];
+    if (w0) { ctx.fillStyle = w0.color; ctx.font = '14px sans-serif'; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + 135); }
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('【もうひとつ】', wx + 20, wy + 160);
+    const w1 = player.weapons[1];
+    if (w1) { ctx.fillStyle = w1.color; ctx.font = '14px sans-serif'; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + 180); }
+    else { ctx.fillStyle = '#666'; ctx.font = '14px sans-serif'; ctx.fillText('- なし -', wx + 30, wy + 180); }
+  ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + 105);
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('祝福', wx, wy + 150);
+  if (activeBlessings.length === 0) { ctx.fillStyle = '#888'; ctx.font = '16px sans-serif'; ctx.fillText('なし', wx + 20, wy + 185); }
+  else { for (let i = 0; i < activeBlessings.length; i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + 185 + i * 28); ctx.fillStyle = '#aaa'; ctx.font = '12px sans-serif'; ctx.fillText(b.desc, wx + 50, wy + 200 + i * 28); } }
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('アイテム', lx, ly + 280);
+  for (let i = 0; i < 3; i++) {
+    const sx = lx + 30 + i * 80, sy = ly + 320;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('[' + (i + 1) + ']', sx, sy + 46);
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
+    else { ctx.fillStyle = '#555'; ctx.font = '14px sans-serif'; ctx.fillText('空', sx, sy + 5); }
+    ctx.textAlign = 'left';
   }
-  ent.x=clamp(ent.x,ent.w/2,CW-ent.w/2);ent.y=clamp(ent.y,ent.h/2,CH-ent.h/2);
 }
-
-/* ===== SPAWN ===== */
-function randEnemyPos(){
-  let c,r,tries=0;
-  do{c=rndInt(2,COLS-3);r=rndInt(2,ROWS-3);tries++}
-  while(tries<30&&(tileAt(roomMap,c,r)===1||tileAt(roomMap,c-1,r)===1||tileAt(roomMap,c+1,r)===1||tileAt(roomMap,c,r-1)===1||tileAt(roomMap,c,r+1)===1||(Math.abs(c-10)<3&&Math.abs(r-7)<3)));
-  return{x:c*TILE+TILE/2,y:r*TILE+TILE/2};
-}
-function spawnWave(){
-  if(wave>=WAVES.length)return;
-  roomMap=generateRoom(floor);
-  for(const g of WAVES[wave]){
-    const def=ENEMY_DEFS[g.type];const sc=1+floor*0.12;
-    for(let i=0;i<g.count;i++){
-      const pos=randEnemyPos();
-      enemies.push({...pos,w:52,h:52,hp:Math.ceil(def.hp*sc),maxHp:Math.ceil(def.hp*sc),
-        speed:def.speed,dmg:def.dmg,score:def.score,type:def.type,defKey:g.type,
-        color:def.color,bodyColor:def.bodyColor,dropChance:def.dropChance||0.15,
-        dir:rnd(0,Math.PI*2),wanderTimer:rnd(0.5,2),
-        charging:false,telegraphing:false,telegraphTimer:0,chargeTimer:0,chargeCd:0,chargeDir:0,
-        flashTimer:0,squashX:1,squashY:1,stunTimer:0,
-        chargeSpeed:def.chargeSpeed||0,telegraphDur:def.telegraphDur||0,chargeDur:def.chargeDur||0,
-        wobble:0,wobbleSpeed:rnd(3,6),face:'normal'});
+function drawCollectionTab() {
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('🌸 花の国のいきもの図鑑', 120, 140);
+  const names = Object.keys(collection);
+  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px sans-serif'; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 200); return; }
+  // 敵定義からloreを引く
+  const allDefs = Object.values(ENEMY_DEFS);
+  for (let i = 0; i < names.length; i++) {
+    const c = collection[names[i]];
+    const row = i;
+    const ey = 180 + row * 70;
+    if (ey > CH - 80) break; // 画面外防止
+    // 敵の色を探す
+    const def = allDefs.find(d => d.name === names[i]) || {};
+    ctx.fillStyle = def.color || '#fff';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(names[i], 140, ey);
+    ctx.fillStyle = '#ccc'; ctx.font = '13px sans-serif';
+    ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, 340, ey);
+    if (def.lore && c.defeated > 0) {
+      ctx.fillStyle = '#999'; ctx.font = '12px sans-serif';
+      ctx.fillText(def.lore, 160, ey + 22);
+    } else if (c.defeated === 0) {
+      ctx.fillStyle = '#666'; ctx.font = '12px sans-serif';
+      ctx.fillText('??? （倒すと情報が解放されるよ）', 160, ey + 22);
     }
   }
 }
 
-/* ===== DROPS ===== */
-function dropFromEnemy(x,y,defKey,dropChance){
-  // Pollen (always)
-  if(Math.random()<0.4)items.push({x:x+rnd(-10,10),y:y+rnd(-10,10),type:'pollen',life:10,w:12,h:12,bobTimer:Math.random()*10});
-  // Heal
-  if(Math.random()<0.1)items.push({x:x+rnd(-10,10),y:y+rnd(-10,10),type:'heal',life:10,w:14,h:14,bobTimer:Math.random()*10});
-  // Weapon drop
-  const dRate=dropChance*(1+getAccBonus('dropRate'));
-  if(Math.random()<dRate*0.3){
-    const w=rollWeaponDrop(floor);const sparkle=Math.random()<0.05;
-    items.push({x,y,type:'weapon',life:30,w:16,h:16,bobTimer:0,weapon:{...w},sparkle});
-  }
-  // Consumable drop
-  if(Math.random()<dRate*0.2){
-    const c=CONSUMABLES[rndInt(0,CONSUMABLES.length-1)];
-    items.push({x,y,type:'consumable',life:30,w:14,h:14,bobTimer:0,consumable:{...c}});
+
+
+
+// ===== PALETTE =====
+const COL = { bg: '#a8d5ba', wall: '#6b8f71', floor: '#c8e6c9', floorAlt: '#b2dfb5',
+  player: '#ffd700', playerOutline: '#b8860b',
+  hp: '#e74c3c', hpBg: '#ddd', hpLost: '#c0392b',
+  text: '#333', clear: '#2ecc71', dmg: '#e74c3c',
+  dash: 'rgba(255,215,0,0.4)', attack: 'rgba(255,200,50,0.5)',
+  telegraph: 'rgba(255,0,0,0.2)',
+  bless: '#ffd700', blessBox: 'rgba(255,255,255,0.95)',
+  pollen: '#f1c40f', pollenBg: 'rgba(255,255,255,0.7)' };
+
+// ===== SEEDED RNG =====
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+let rng = mulberry32(Date.now());
+
+// ===== PARTICLES =====
+const particles = [];
+function emitParticles(x, y, color, count, spd, life) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2, s = Math.random() * spd;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life || 0.4, maxLife: life || 0.4, color, size: 2 + Math.random() * 3 });
   }
 }
-
-/* ===== RESET ===== */
-function resetGame(){
-  floor=1;wave=0;score=0;
-  player.x=TILE*10;player.y=TILE*7;player.maxHp=5;player.hp=5;player.atk=1;
-  player.speed=200;player.blessings=[];player.magnetRange=60;player.pollen=0;
-  player.attacking=false;player.atkTimer=0;player.atkCd=0;
-  player.dashing=false;player.dashTimer=0;player.dashCd=0;
-  player.iframes=0;player.dir='down';player.face='normal';
-  player.squashX=1;player.squashY=1;player.critRate=5;
-  player.weapon={...WEAPONS[0]};player.accessories=[null,null];
-  player.consumables=[null,null,null];
-  player.buffs={speed:null,def:null,atk:null};
-  player.regenTimer=0;player.comboKills=0;player.comboTimer=0;
-  weaponPopup.active=false;
-  particles=[];dmgNums=[];items=[];projectiles=[];enemies=[];
-  roomMap=generateRoom(floor);WAVES=buildWaves(floor);spawnWave();
-  collectionDiscover('place_floor1');
-  collectionDiscover('weapon_'+WEAPONS[0].id);
-  gameState='playing';
-}
-function startFloor(){
-  wave=0;player.x=TILE*10;player.y=TILE*7;
-  enemies=[];items=[];projectiles=[];particles=[];
-  roomMap=generateRoom(floor);WAVES=buildWaves(floor);spawnWave();
-  collectionDiscover('place_floor'+floor);
-  playBGM(getTheme().bgm);
-  gameState='playing';
-}
-
-/* ===== DRAW TILES ===== */
-function drawTiles(){
-  const th=getTheme();
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    const x=c*TILE,y=r*TILE;
-    if(tileAt(roomMap,c,r)===1){
-      ctx.fillStyle=th.wall;ctx.fillRect(x,y,TILE,TILE);
-      ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(x,y+TILE-4,TILE,4);
-      if((c+r)%5===0){ctx.font='12px sans-serif';ctx.fillText(th.deco,x+8,y+30)}
-    }else{
-      ctx.fillStyle=th.floor;ctx.fillRect(x,y,TILE,TILE);
-      if((c+r)%7===0){ctx.fillStyle=th.bg;ctx.beginPath();ctx.arc(x+24,y+24,3,0,Math.PI*2);ctx.fill()}
-    }
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
   }
 }
-
-/* ===== DRAW PLAYER ===== */
-function drawPlayer(){
-  const p=player;
-  if(p.iframes>0&&Math.floor(p.iframes*15)%2===0)return;
-  ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.squashX,p.squashY);
-  const bob=Math.sin(p.bobTimer*10)*2;ctx.translate(0,bob);
-  if(spriteLoaded){
-    const frame=SPRITE_FRAMES[p.dir]||SPRITE_FRAMES.down;const ds=96;
-    ctx.drawImage(spriteImg,frame.sx,frame.sy,frame.sw,frame.sh,-ds/2,-ds/2,ds,ds);
-    // Wing flutter
-    ctx.globalAlpha=0.3;ctx.fillStyle='#bbdefb';
-    const ws=10*(0.5+Math.sin(p.wingTimer*20)*0.3);
-    ctx.beginPath();ctx.ellipse(-16,0,ws,6,0,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(16,0,ws,6,0,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;
-    if(p.iframes>0){ctx.globalAlpha=0.4;ctx.fillStyle=`hsla(${Date.now()%360},80%,70%,0.3)`;ctx.fillRect(-ds/2,-ds/2,ds,ds);ctx.globalAlpha=1}
-  }else{
-    ctx.fillStyle='#ffd54f';ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.arc(-5,-3,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5,-3,3,0,Math.PI*2);ctx.fill();
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
   }
-  if(p.dashing){ctx.globalAlpha=0.2;ctx.fillStyle='#bbdefb';ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
-  ctx.restore();
-  if(p.attacking){
-    const dirs={down:{x:0,y:1},up:{x:0,y:-1},left:{x:-1,y:0},right:{x:1,y:0}};
-    const d=dirs[p.dir];const ax=p.x+d.x*45,ay=p.y+d.y*45;
-    ctx.fillStyle='#ffeb3b';ctx.globalAlpha=0.7;drawStar(ax,ay,14,6,4);ctx.globalAlpha=1;
-    ctx.fillStyle='#fff';drawStar(ax+rnd(-8,8),ay+rnd(-8,8),4,2,4);
-  }
+  ctx.globalAlpha = 1;
 }
 
-/* ===== DRAW ENEMY ===== */
-function drawEnemy(en){
-  ctx.save();ctx.translate(en.x,en.y);ctx.scale(en.squashX*2,en.squashY*2);
-  if(en.flashTimer>0)ctx.globalAlpha=0.5+Math.sin(en.flashTimer*30)*0.5;
-  const wb=Math.sin(en.wobble)*3;
-  if(en.defKey==='imomushi'){
-    ctx.fillStyle=en.color;
-    for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(-10+i*7,wb*(i%2===0?1:-1),8-i*0.5,0,Math.PI*2);ctx.fill()}
-    ctx.fillStyle=en.bodyColor;for(let i=1;i<4;i++){ctx.beginPath();ctx.arc(-10+i*7,wb*(i%2===0?1:-1)+2,5,0,Math.PI);ctx.fill()}
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-13,-3,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(-7,-3,4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#333';ctx.beginPath();ctx.arc(-12,-3,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(-6,-3,2,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,138,128,0.4)';ctx.beginPath();ctx.arc(-15,2,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(-3,2,3,0,Math.PI*2);ctx.fill();
-  }else if(en.defKey==='tentou'){
-    ctx.fillStyle=en.color;ctx.beginPath();ctx.ellipse(0,2,14,12,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#333';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(0,14);ctx.stroke();
-    ctx.fillStyle='#333';[{x:-6,y:-1,r:3},{x:6,y:-1,r:3},{x:-4,y:7,r:2.5},{x:4,y:7,r:2.5}].forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});
-    ctx.fillStyle='#333';ctx.beginPath();ctx.arc(0,-8,7,Math.PI,0);ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-3,-10,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(3,-10,3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=en.face==='angry'?'#f44336':'#333';ctx.beginPath();ctx.arc(-3,-10,1.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(3,-10,1.5,0,Math.PI*2);ctx.fill();
-  }else if(en.defKey==='kabuto'){
-    ctx.fillStyle=en.color;ctx.beginPath();ctx.ellipse(0,4,16,14,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=en.bodyColor;ctx.beginPath();ctx.ellipse(0,8,14,8,0,0,Math.PI);ctx.fill();
-    ctx.fillStyle='#5d4037';ctx.beginPath();ctx.moveTo(-3,-10);ctx.lineTo(0,-24);ctx.lineTo(3,-10);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-5,-4,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5,-4,4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=en.telegraphing?'#f44336':'#333';ctx.beginPath();ctx.arc(-5,-4,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(5,-4,2,0,Math.PI*2);ctx.fill();
-    if(en.telegraphing){ctx.fillStyle='#f44336';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.fillText('!',0,-30)}
-    if(en.stunTimer>0){for(let i=0;i<3;i++){const a=Date.now()/200+i*Math.PI*2/3;ctx.fillStyle='#ffeb3b';drawStar(Math.cos(a)*12,-14+Math.sin(a)*4,4,2,5)}}
-  }
-  ctx.globalAlpha=1;ctx.restore();
-  if(en.hp<en.maxHp){const bw=48,bh=6,bx=en.x-bw/2,by=en.y-40;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle='#ef5350';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),bh);ctx.fillStyle='#fff';ctx.fillRect(bx,by,bw*(en.hp/en.maxHp),1)}
-}
+// ===== ROOM GENERATION =====
+// ===== ROOM TEMPLATES (Sprint 2) =====
+// 0=floor, 1=wall, 2=spike
+let roomSpikes = [];
+const THEME_TEMPLATES = {
+  forest:  ['open', 'circular', 'L_shape'],
+  cave:    ['maze', 'L_shape', 'cross'],
+  flower:  ['open', 'circular', 'open'],
+  abyss:   ['maze', 'cross', 'L_shape'],
+  ruins:   ['cross', 'L_shape', 'circular']
+};
+const PC = 10, PR = 7;
+function safeZone(c, r) { return Math.abs(c - PC) < 3 && Math.abs(r - PR) < 3; }
 
-/* ===== DRAW ITEMS ===== */
-function drawItems(){
-  for(const it of items){
-    const bob=Math.sin(it.bobTimer*4)*3;
-    if(it.type==='pollen'){ctx.fillStyle='#ffeb3b';drawStar(it.x,it.y+bob,6,3,6);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(it.x,it.y+bob,2,0,Math.PI*2);ctx.fill()}
-    else if(it.type==='heal'){ctx.fillStyle='#e91e63';const hx=it.x,hy=it.y+bob;ctx.beginPath();ctx.moveTo(hx,hy+4);ctx.bezierCurveTo(hx-7,hy-3,hx-7,hy-8,hx,hy-5);ctx.bezierCurveTo(hx+7,hy-8,hx+7,hy-3,hx,hy+4);ctx.fill()}
-    else if(it.type==='weapon'){
-      ctx.fillStyle=it.sparkle?'#ff88ff':'#ffeb3b';ctx.globalAlpha=0.6+Math.sin(it.bobTimer*6)*0.3;
-      drawStar(it.x,it.y+bob,10,5,4);ctx.globalAlpha=1;
-      ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(it.weapon.icon,it.x,it.y+bob-2);
-    }else if(it.type==='consumable'){
-      ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(it.consumable.icon,it.x,it.y+bob);
-    }
-  }
-}
-
-/* ===== HUD ===== */
-function drawHUD(){
-  const mhp=getPlayerMaxHp();
-  // Hearts
-  for(let i=0;i<mhp;i++){const hx=16+i*32,hy=18;ctx.fillStyle=i<player.hp?'#e91e63':'#424242';ctx.beginPath();ctx.moveTo(hx,hy+8);ctx.bezierCurveTo(hx-12,hy-6,hx-12,hy-15,hx,hy-9);ctx.bezierCurveTo(hx+12,hy-15,hx+12,hy-6,hx,hy+8);ctx.fill();if(i<player.hp){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(hx-3,hy-8,3,0,Math.PI*2);ctx.fill()}}
-  // Floor/Wave
-  ctx.fillStyle='#fff';ctx.font='bold 22px sans-serif';ctx.textAlign='left';
-  ctx.fillText(`Floor ${floor}  Wave ${wave+1}/${WAVES.length}`,12,32);
-  // Score/Pollen
-  ctx.textAlign='right';ctx.fillText(`⭐${score}  🌼${player.pollen}`,CW-12,20);
-  // Weapon
-  if(player.weapon){ctx.textAlign='left';ctx.fillText(`${player.weapon.icon}${player.weapon.name} ATK:${getPlayerAtk()}`,12,50)}
-  // Accessories
-  ctx.textAlign='left';
-  player.accessories.forEach((a,i)=>{if(a)ctx.fillText(a.icon,16+i*32,94);else{ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillText('○',16+i*32,94);ctx.fillStyle='#fff'}});
-  // Consumables (right top)
-  for(let i=0;i<3;i++){
-    const cx=CW-160+i*48,cy=44;
-    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fill();
-    if(player.consumables[i]){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(player.consumables[i].icon,cx,cy+7)}
-    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(''+(i+1),cx,cy+32);
-  }
-  // Blessings
-  ctx.textAlign='left';player.blessings.forEach((b,i)=>{ctx.font='20px sans-serif';ctx.fillText(b.icon,16+i*28,116)});
-  // Buffs
-  let bx=CW-200;
-  if(player.buffs.speed){ctx.fillStyle='#64b5f6';ctx.font='16px sans-serif';ctx.textAlign='left';ctx.fillText('⚡'+Math.ceil(player.buffs.speed.timer)+'s',bx,CH-20);bx+=50}
-  if(player.buffs.def){ctx.fillStyle='#81c784';ctx.fillText('🛡️'+Math.ceil(player.buffs.def.timer)+'s',bx,CH-20);bx+=50}
-  if(player.buffs.atk){ctx.fillStyle='#ef5350';ctx.fillText('🍬'+Math.ceil(player.buffs.atk.timer)+'s',bx,CH-20);bx+=50}
-  // Hints
-  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='16px sans-serif';ctx.textAlign='center';
-  ctx.fillText('WASD:移動 Z:攻撃 X:ダッシュ 1/2/3:アイテム Tab:図鑑',CW/2,CH-10);
-  // Collection banner
-  if(collectionBannerTimer>0){
-    const e=COLLECTION_ENTRIES[collectionBanner];if(e){
-      ctx.globalAlpha=Math.min(1,collectionBannerTimer);
-      ctx.fillStyle='rgba(0,0,0,0.7)';const tw=240,th=30;ctx.fillRect(CW/2-tw/2,80,tw,th);
-      ctx.fillStyle='#ffeb3b';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
-      ctx.fillText('📖 '+e.name+' をずかんにきろく！',CW/2,100);
-      ctx.globalAlpha=1;
-    }
-  }
-}
-
-/* ===== WEAPON POPUP ===== */
-function drawWeaponPopup(){
-  if(!weaponPopup.active)return;
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,CW,CH);
-  const w=weaponPopup.weapon;const cur=player.weapon;
-  // Left: current
-  const lx=CW/2-140,ly=CH/2-80,bw=120,bh=160;
-  ctx.fillStyle='rgba(255,255,255,0.9)';
-  roundRect(ctx,lx,ly,bw,bh,10);ctx.fill();
-  ctx.fillStyle='#555';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
-  ctx.fillText('いまの',lx+bw/2,ly+20);
-  ctx.font='24px sans-serif';ctx.fillText(cur?cur.icon:'❓',lx+bw/2,ly+55);
-  ctx.fillStyle='#333';ctx.font='bold 22px sans-serif';ctx.fillText(cur?cur.name:'なし',lx+bw/2,ly+80);
-  ctx.font='12px sans-serif';ctx.fillText('ATK '+(cur?cur.atk:0),lx+bw/2,ly+100);
-  // Right: new
-  const rx=CW/2+20;
-  const borderColor=weaponPopup.sparkle?'#ff88ff':w.rarity==='legendary'?'#ff2222':w.rarity==='rare'?'#ffdd00':'#ccc';
-  ctx.fillStyle='rgba(255,255,255,0.95)';roundRect(ctx,rx,ly,bw,bh,10);ctx.fill();
-  ctx.strokeStyle=borderColor;ctx.lineWidth=3;roundRect(ctx,rx,ly,bw,bh,10);ctx.stroke();
-  ctx.fillStyle='#555';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
-  ctx.fillText(weaponPopup.sparkle?'✦ キラキラ！':'あたらしい',rx+bw/2,ly+20);
-  ctx.font='24px sans-serif';ctx.fillText(w.icon,rx+bw/2,ly+55);
-  ctx.fillStyle='#333';ctx.font='bold 22px sans-serif';ctx.fillText(w.name,rx+bw/2,ly+80);
-  const diff=w.atk-(cur?cur.atk:0);
-  ctx.fillStyle=diff>0?'#4caf50':diff<0?'#f44336':'#333';
-  ctx.font='12px sans-serif';ctx.fillText('ATK '+w.atk+(diff>0?' (+'+diff+')':diff<0?' ('+diff+')':''),rx+bw/2,ly+100);
-  ctx.fillStyle='#888';ctx.font='16px sans-serif';ctx.fillText(w.desc,rx+bw/2,ly+120);
-  // Buttons
-  ctx.fillStyle='#4caf50';ctx.font='bold 14px sans-serif';
-  ctx.fillText('Z: そうび',CW/2-80,CH/2+110);
-  ctx.fillStyle='#f44336';
-  ctx.fillText('X: すてる',CW/2+80,CH/2+110);
-}
-
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
-}
-
-/* ===== COLLECTION UI ===== */
-function drawCollectionUI(){
-  if(!collectionUI.open)return;
-  ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,CW,CH);
-  // Title
-  ctx.fillStyle='#ffeb3b';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
-  ctx.fillText('📖 ずかん ('+collectionCount()+'/'+collectionTotal()+')',CW/2,36);
-  // Category tabs
-  const tabW=CW/COLLECTION_CATS.length;
-  COLLECTION_CATS.forEach((cat,i)=>{
-    const tx=i*tabW,active=i===collectionUI.catIdx;
-    ctx.fillStyle=active?'rgba(255,235,59,0.2)':'transparent';ctx.fillRect(tx,50,tabW,28);
-    ctx.fillStyle=active?'#ffeb3b':'#888';ctx.font=active?'bold 14px sans-serif':'14px sans-serif';ctx.textAlign='center';
-    ctx.fillText(cat.icon+' '+cat.name,tx+tabW/2,68);
-  });
-  // Entries
-  const cat=COLLECTION_CATS[collectionUI.catIdx];
-  const entries=Object.values(COLLECTION_ENTRIES).filter(e=>e.cat===cat.id);
-  const listY=90,lineH=26,maxVisible=Math.floor((CH-140)/lineH);
-  const scrollOffset=Math.max(0,collectionUI.cursor-maxVisible+1);
-  ctx.textAlign='left';ctx.font='14px sans-serif';
-  for(let i=0;i<maxVisible&&i+scrollOffset<entries.length;i++){
-    const idx=i+scrollOffset,e=entries[idx],y=listY+i*lineH;
-    const found=collectionIsFound(e.id),selected=idx===collectionUI.cursor;
-    if(selected){ctx.fillStyle='rgba(255,235,59,0.1)';ctx.fillRect(20,y-2,CW-40,lineH)}
-    if(found){
-      if(selected){ctx.fillStyle='#ffeb3b';ctx.fillText('▶',24,y+14)}
-      ctx.fillStyle=e.color||'#fff';ctx.fillText(e.icon||'?',48,y+14);
-      ctx.fillStyle=selected?'#fff':'#ccc';ctx.fillText(e.name,72,y+14);
-    }else{ctx.fillStyle='#555';ctx.fillText('？',48,y+14);ctx.fillText('？？？？？',72,y+14)}
-  }
-  // Description
-  if(entries[collectionUI.cursor]&&collectionIsFound(entries[collectionUI.cursor].id)){
-    const e=entries[collectionUI.cursor];
-    ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(20,CH-60,CW-40,50);
-    ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.strokeRect(20,CH-60,CW-40,50);
-    ctx.fillStyle='#ddd';ctx.font='12px sans-serif';ctx.textAlign='left';
-    ctx.fillText(e.desc,30,CH-38);
-  }
-  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='16px sans-serif';ctx.textAlign='center';
-  ctx.fillText('←→:カテゴリ  ↑↓:えらぶ  Tab/Esc:とじる',CW/2,CH-10);
-}
-
-/* ===== TITLE/PROLOGUE/BLESSING/CLEAR/DEAD SCREENS ===== */
-function drawTitleScreen(){
-  const grd=ctx.createLinearGradient(0,0,0,CH);grd.addColorStop(0,'#fce4ec');grd.addColorStop(1,'#fff9c4');
-  ctx.fillStyle=grd;ctx.fillRect(0,0,CW,CH);
-  const t=Date.now()/1000;
-  for(let i=0;i<8;i++){const x=CW/2+Math.sin(t+i*0.8)*200,y=100+Math.cos(t*0.7+i)*80+i*40;ctx.fillStyle='rgba(255,235,59,0.3)';drawStar(x,y,8,4,5)}
-  if(spriteLoaded)ctx.drawImage(spriteImg,0,0,250,250,CW/2-48,CH/2-100,96,96);
-  ctx.fillStyle='#5d4037';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText('ミプリンの冒険',CW/2,CH/2+30);
-  ctx.fillStyle='#e91e63';ctx.font='18px sans-serif';ctx.fillText('~ Cute Roguelike ~',CW/2,CH/2+55);
-  ctx.fillStyle=Math.sin(t*3)>0?'#5d4037':'#e91e63';ctx.font='bold 24px sans-serif';ctx.fillText('Zキーでスタート',CW/2,CH/2+100);
-}
-function drawPrologueScreen(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
-  if(prologueIndex>=PROLOGUE_TEXTS.length){gameState='playing';resetGame();return}
-  // If prologue images available, draw them
-  if(prologueImages[prologueIndex]&&prologueImages[prologueIndex].complete&&prologueImages[prologueIndex].naturalWidth){
-    const img=prologueImages[prologueIndex];
-    const sc=Math.min(CW/img.naturalWidth,CH/img.naturalHeight);
-    const w=img.naturalWidth*sc,h=img.naturalHeight*sc;
-    ctx.globalAlpha=prologueAlpha;ctx.drawImage(img,(CW-w)/2,(CH-h)/2,w,h);ctx.globalAlpha=1;
-  }
-  // Text
-  ctx.globalAlpha=prologueAlpha;
-  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,CH-80,CW,80);
-  ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.textAlign='center';
-  ctx.fillText(PROLOGUE_TEXTS[prologueIndex],CW/2,CH-40);
-  ctx.globalAlpha=0.4;ctx.fillStyle='#fff';ctx.font='16px sans-serif';
-  ctx.fillText('Enter/Z: つぎへ　Esc: スキップ',CW/2,CH-10);
-  ctx.globalAlpha=1;
-}
-function drawBlessingScreen(){
-  ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,0,CW,CH);
-  ctx.fillStyle='#fff';ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText('🌸 祝福を選んでね 🌸',CW/2,80);
-  const rarityColors={common:'#e0e0e0',rare:'#64b5f6',epic:'#ffd54f'};
-  blessingChoices.forEach((b,i)=>{
-    const bx=CW/2-200+i*180,by=130,bw=160,bh=200,selected=i===selectCursor;
-    ctx.fillStyle=selected?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)';
-    roundRect(ctx,bx,by,bw,bh,12);ctx.fill();
-    ctx.strokeStyle=selected?'#e91e63':rarityColors[b.rarity];ctx.lineWidth=selected?3:2;roundRect(ctx,bx,by,bw,bh,12);ctx.stroke();
-    ctx.font='36px sans-serif';ctx.textAlign='center';ctx.fillText(b.icon,bx+bw/2,by+55);
-    ctx.fillStyle='#333';ctx.font='bold 14px sans-serif';ctx.fillText(b.name,bx+bw/2,by+85);
-    ctx.fillStyle=rarityColors[b.rarity];ctx.font='16px sans-serif';ctx.fillText(b.rarity.toUpperCase(),bx+bw/2,by+105);
-    ctx.fillStyle='#555';ctx.font='12px sans-serif';
-    const words=b.desc;let line='',ly=by+125;
-    for(const ch of words){if(ctx.measureText(line+ch).width>bw-20){ctx.fillText(line,bx+bw/2,ly);ly+=16;line=ch}else line+=ch}
-    if(line)ctx.fillText(line,bx+bw/2,ly);
-    if(selected){ctx.fillStyle='#e91e63';ctx.font='12px sans-serif';ctx.fillText('▶ Z ◀',bx+bw/2,by+bh+20)}
-  });
-  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('← A / D → で選択',CW/2,CH-20);
-}
-
-/* ===== UPDATE ===== */
-let lastTime=0;
-function update(dt){
-  if(hitstopTimer>0){hitstopTimer-=dt*60;return}
-  if(collectionBannerTimer>0)collectionBannerTimer-=dt;
-
-  // Collection UI
-  if(collectionUI.open){
-    const cats=COLLECTION_CATS;
-    const entries=Object.values(COLLECTION_ENTRIES).filter(e=>e.cat===cats[collectionUI.catIdx].id);
-    if(wasPressed('ArrowLeft')||wasPressed('KeyA')){collectionUI.catIdx=(collectionUI.catIdx-1+cats.length)%cats.length;collectionUI.cursor=0}
-    if(wasPressed('ArrowRight')||wasPressed('KeyD')){collectionUI.catIdx=(collectionUI.catIdx+1)%cats.length;collectionUI.cursor=0}
-    if(wasPressed('ArrowUp')||wasPressed('KeyW'))collectionUI.cursor=Math.max(0,collectionUI.cursor-1);
-    if(wasPressed('ArrowDown')||wasPressed('KeyS'))collectionUI.cursor=Math.min(entries.length-1,collectionUI.cursor+1);
-    if(wasPressed('Tab')||wasPressed('Escape'))collectionUI.open=false;
-    return;
-  }
-
-  // Weapon popup
-  if(weaponPopup.active){
-    if(wasPressed('KeyZ')){
-      const w=weaponPopup.weapon;
-      player.weapon={...w};if(weaponPopup.sparkle){player.weapon.atk+=2;player.weapon.name='✦'+player.weapon.name}
-      collectionDiscover('weapon_'+w.id+(weaponPopup.sparkle?'_sparkle':''));
-      seEquip();weaponPopup.active=false;
-    }
-    if(wasPressed('KeyX')){weaponPopup.active=false}
-    return;
-  }
-
-  if(gameState==='title'){
-    if(wasPressed('KeyZ')){seSelect();
-      if(!prologueSeen){prologueSeen=true;loadPrologueImages();prologueIndex=0;prologueAlpha=0;prologuePhase='fadein';prologueTimer=0;gameState='prologue'}
-      else resetGame();
-    }
-    return;
-  }
-  if(gameState==='prologue'){
-    prologueTimer+=dt;
-    if(prologuePhase==='fadein'){prologueAlpha=Math.min(1,prologueTimer/0.8);if(prologueTimer>=0.8){prologuePhase='hold';prologueTimer=0}}
-    else if(prologuePhase==='hold'){if(prologueTimer>=2.5||wasPressed('KeyZ')||wasPressed('Enter')){prologuePhase='fadeout';prologueTimer=0}}
-    else if(prologuePhase==='fadeout'){prologueAlpha=Math.max(0,1-prologueTimer/0.5);if(prologueTimer>=0.5){prologueIndex++;if(prologueIndex>=PROLOGUE_TEXTS.length){resetGame();return}prologuePhase='fadein';prologueTimer=0;prologueAlpha=0}}
-    if(wasPressed('Escape')){resetGame();return}
-    return;
-  }
-  if(gameState==='dead'){if(wasPressed('KeyZ')){resetGame();seSelect()}return}
-  if(gameState==='clear'){if(wasPressed('KeyZ')){gameState='title';seSelect()}return}
-  if(gameState==='blessing'){
-    if(wasPressed('ArrowLeft')||wasPressed('KeyA'))selectCursor=(selectCursor+2)%3;
-    if(wasPressed('ArrowRight')||wasPressed('KeyD'))selectCursor=(selectCursor+1)%3;
-    if(wasPressed('KeyZ')&&blessingChoices[selectCursor]){applyBlessing(blessingChoices[selectCursor]);seBless();floor++;startFloor()}
-    return;
-  }
-  if(gameState==='waveWait'){waveTimer-=dt;if(waveTimer<=0){spawnWave();gameState='playing'}return}
-  if(gameState==='floorClear'){waveTimer-=dt;if(waveTimer<=0){if(floor>=5){gameState='clear';seClear();return}blessingChoices=pickBlessings();selectCursor=0;gameState='blessing'}return}
-
-  // === PLAYING ===
-  if(wasPressed('Tab')){collectionUI.open=true;collectionUI.cursor=0;return}
-
-  const p=player;
-  // Timers
-  if(p.atkCd>0)p.atkCd-=dt;if(p.dashCd>0)p.dashCd-=dt;if(p.iframes>0)p.iframes-=dt;
-  if(p.comboTimer>0){p.comboTimer-=dt;if(p.comboTimer<=0)p.comboKills=0}
-  p.bobTimer+=dt;p.wingTimer+=dt;p.breathTimer+=dt;
-  p.squashX=lerp(p.squashX,1,dt*12);p.squashY=lerp(p.squashY,1,dt*12);
-  // Buffs
-  if(p.buffs.speed){p.buffs.speed.timer-=dt;if(p.buffs.speed.timer<=0)p.buffs.speed=null}
-  if(p.buffs.def){p.buffs.def.timer-=dt;if(p.buffs.def.timer<=0)p.buffs.def=null}
-  if(p.buffs.atk){p.buffs.atk.timer-=dt;if(p.buffs.atk.timer<=0)p.buffs.atk=null}
-  // Accessory regen
-  if(hasAccessory('bee_brooch')){p.regenTimer+=dt;if(p.regenTimer>=10){p.regenTimer-=10;p.hp=Math.min(getPlayerMaxHp(),p.hp+1);addDmgNum(p.x,p.y-20,'+1HP','#e91e63')}}
-  // Consumables
-  if(wasPressed('Digit1'))useConsumable(0);
-  if(wasPressed('Digit2'))useConsumable(1);
-  if(wasPressed('Digit3'))useConsumable(2);
-
-  // Movement
-  let mx=0,my=0;
-  if(isDown('KeyA')||isDown('ArrowLeft'))mx=-1;if(isDown('KeyD')||isDown('ArrowRight'))mx=1;
-  if(isDown('KeyW')||isDown('ArrowUp'))my=-1;if(isDown('KeyS')||isDown('ArrowDown'))my=1;
-  if(mx||my){
-    const len=Math.hypot(mx,my);mx/=len;my/=len;
-    if(Math.abs(mx)>Math.abs(my))p.dir=mx>0?'right':'left';else p.dir=my>0?'down':'up';
-    moveWithCollision(p,mx*getPlayerSpeed()*dt,my*getPlayerSpeed()*dt);
-    if(!p.dashing){p.squashX=1+Math.sin(p.bobTimer*15)*0.04;p.squashY=1-Math.sin(p.bobTimer*15)*0.04}
-  }
-  // Dash
-  if(wasPressed('KeyX')&&p.dashCd<=0&&!p.dashing){p.dashing=true;p.dashTimer=0.15;p.dashCd=0.4;p.iframes=0.2;p.squashX=1.3;p.squashY=0.7;seDash()}
-  if(p.dashing){p.dashTimer-=dt;if(p.dashTimer<=0){p.dashing=false;p.squashX=0.85;p.squashY=1.15}}
-  // Attack
-  const wep=p.weapon||WEAPONS[0];
-  const atkSpdMult=1+getAccBonus('atkSpeed');
-  if(wasPressed('KeyZ')&&p.atkCd<=0&&!p.attacking){
-    p.attacking=true;p.atkTimer=wep.dur/atkSpdMult;
-    const cdMult=(hasBlessing('lastStand')&&p.hp===1)?0.5:1;
-    p.atkCd=wep.cd*cdMult/atkSpdMult;p.squashX=0.8;p.squashY=1.2;seAttack();
-    const dirs={down:{x:0,y:1},up:{x:0,y:-1},left:{x:-1,y:0},right:{x:1,y:0}};
-    const d=dirs[p.dir];const ax=p.x+d.x*24,ay=p.y+d.y*24;
-    for(const en of enemies){
-      if(dist({x:ax,y:ay},en)<wep.range){
-        let dmg=getPlayerAtk();
-        if(hasBlessing('dashStrike')&&p.dashCd>0.2)dmg*=2;
-        if(hasBlessing('wallCrush')){const ec=Math.floor(en.x/TILE),er=Math.floor(en.y/TILE);if(tileAt(roomMap,ec-1,er)===1||tileAt(roomMap,ec+1,er)===1||tileAt(roomMap,ec,er-1)===1||tileAt(roomMap,ec,er+1)===1)dmg=Math.ceil(dmg*1.5)}
-        // Crit
-        let isCrit=Math.random()*100<getPlayerCritRate();
-        if(hasBlessing('critWing')&&(mx||my)&&Math.random()<0.2)isCrit=true;
-        if(isCrit){dmg=Math.ceil(dmg*1.8);addParticle(en.x,en.y,'star',5)}
-        en.hp-=dmg;en.flashTimer=0.15;en.squashX=1.3;en.squashY=0.7;
-        seHit();doHitstop(3);doShake(3,0.08);
-        addDmgNum(en.x,en.y-10,isCrit?dmg+'!':dmg,isCrit?'#ffeb3b':'#fff');addParticle(en.x,en.y,'star',3);
-        const angle=Math.atan2(en.y-p.y,en.x-p.x);moveWithCollision(en,Math.cos(angle)*20,Math.sin(angle)*20);
-        // Weapon FX
-        if(wep.fx==='splash'){enemies.forEach(e2=>{if(e2!==en&&dist(en,e2)<60){e2.hp-=1;e2.flashTimer=0.1;addDmgNum(e2.x,e2.y-10,1,'#ff9800')}})}
-        if(wep.fx==='lifesteal'||hasAccessory('vamp_fang')){const heal=Math.max(1,Math.floor(dmg*(0.03+(hasAccessory('vamp_fang')?0.05:0))));p.hp=Math.min(getPlayerMaxHp(),p.hp+heal)}
-        if(wep.fx==='starburst'&&isCrit){addParticle(en.x,en.y,'star',10);doShake(5,0.12)}
+function floodFill(map) {
+  const visited = new Uint8Array(COLS * ROWS);
+  const queue = [PR * COLS + PC]; visited[PR * COLS + PC] = 1; let count = 0;
+  while (queue.length > 0) {
+    const idx = queue.shift(); const c = idx % COLS, r = Math.floor(idx / COLS); count++;
+    for (const [dc, dr] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nc = c+dc, nr = r+dr;
+      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+        const ni = nr * COLS + nc;
+        if (!visited[ni] && map[ni] !== 1) { visited[ni] = 1; queue.push(ni); }
       }
     }
   }
-  if(p.attacking){p.atkTimer-=dt;if(p.atkTimer<=0)p.attacking=false}
-  // Enemies
-  for(let i=enemies.length-1;i>=0;i--){
-    const en=enemies[i];en.wobble+=dt*en.wobbleSpeed;en.squashX=lerp(en.squashX,1,dt*10);en.squashY=lerp(en.squashY,1,dt*10);
-    if(en.flashTimer>0)en.flashTimer-=dt;if(en.stunTimer>0){en.stunTimer-=dt;continue}
-    if(en.type==='wander'){en.wanderTimer-=dt;if(en.wanderTimer<=0){en.dir=rnd(0,Math.PI*2);en.wanderTimer=rnd(1,3)}moveWithCollision(en,Math.cos(en.dir)*en.speed*dt,Math.sin(en.dir)*en.speed*dt)}
-    else if(en.type==='chase'){const a=Math.atan2(p.y-en.y,p.x-en.x);en.face=dist(en,p)<150?'angry':'normal';const spd=en.face==='angry'?en.speed*1.3:en.speed;moveWithCollision(en,Math.cos(a)*spd*dt,Math.sin(a)*spd*dt)}
-    else if(en.type==='charge'){
-      if(en.chargeCd>0){en.chargeCd-=dt;continue}
-      if(!en.telegraphing&&!en.charging){if(dist(en,p)<200){en.telegraphing=true;en.telegraphTimer=en.telegraphDur;en.face='angry'}else{en.wanderTimer-=dt;if(en.wanderTimer<=0){en.dir=rnd(0,Math.PI*2);en.wanderTimer=rnd(1,3)}moveWithCollision(en,Math.cos(en.dir)*en.speed*dt,Math.sin(en.dir)*en.speed*dt)}}
-      if(en.telegraphing){en.telegraphTimer-=dt;en.squashX=1+Math.sin(en.telegraphTimer*20)*0.1;if(en.telegraphTimer<=0){en.telegraphing=false;en.charging=true;en.chargeTimer=en.chargeDur;en.chargeDir=Math.atan2(p.y-en.y,p.x-en.x)}}
-      if(en.charging){en.chargeTimer-=dt;moveWithCollision(en,Math.cos(en.chargeDir)*en.chargeSpeed*dt,Math.sin(en.chargeDir)*en.chargeSpeed*dt);if(en.chargeTimer<=0){en.charging=false;en.chargeCd=2;en.stunTimer=0.8;en.face='normal'}}
-    }
-    // Enemy→Player collision
-    if(p.iframes<=0&&rectOverlap({x:p.x-p.w/2,y:p.y-p.h/2,w:p.w,h:p.h},{x:en.x-en.w/2,y:en.y-en.h/2,w:en.w,h:en.h})){
-      let dmg=en.dmg;if(p.buffs.def)dmg=Math.max(0,dmg-p.buffs.def.value);
-      p.hp-=Math.max(1,dmg);p.iframes=1;seHurt();doShake(5,0.15);p.squashX=0.6;p.squashY=1.4;addDmgNum(p.x,p.y-20,dmg,'#e91e63');
-      const angle=Math.atan2(p.y-en.y,p.x-en.x);moveWithCollision(p,Math.cos(angle)*30,Math.sin(angle)*30);
-      if(hasBlessing('thornAura')){enemies.forEach(e2=>{if(dist(p,e2)<80){e2.hp-=1;e2.flashTimer=0.1;addParticle(e2.x,e2.y,'star',2)}})}
-      if(p.hp<=0){gameState='dead';p.face='hurt'}
-    }
-    // Enemy death
-    if(en.hp<=0){
-      score+=en.score;seKill();addParticle(en.x,en.y,'poof',8);addParticle(en.x,en.y,'star',5);doShake(2,0.05);
-      dropFromEnemy(en.x,en.y,en.defKey,en.dropChance);
-      collectionDiscover(en.defKey);
-      p.comboKills++;p.comboTimer=2;
-      if(hasBlessing('comboHeal')&&p.comboKills>=3){p.hp=Math.min(getPlayerMaxHp(),p.hp+1);p.comboKills=0;addDmgNum(p.x,p.y-30,'+1HP','#e91e63')}
-      enemies.splice(i,1);
-    }
-  }
-  // Items
-  for(let i=items.length-1;i>=0;i--){
-    const it=items[i];it.bobTimer+=dt;it.life-=dt;
-    if((it.type==='pollen'||it.type==='heal')&&dist(p,it)<getPlayerMagnetRange()){const a=Math.atan2(p.y-it.y,p.x-it.x);it.x+=Math.cos(a)*300*dt;it.y+=Math.sin(a)*300*dt}
-    if(dist(p,it)<20){
-      if(it.type==='pollen'){p.pollen++;score+=5;seItem()}
-      else if(it.type==='heal'){const h=hasBlessing('sweetTooth')?2:1;p.hp=Math.min(getPlayerMaxHp(),p.hp+h);seItem()}
-      else if(it.type==='weapon'){weaponPopup={active:true,weapon:it.weapon,sparkle:it.sparkle||false};seItem()}
-      else if(it.type==='consumable'){
-        const empty=p.consumables.findIndex(c=>c===null);
-        if(empty>=0){p.consumables[empty]={...it.consumable};seItem();collectionDiscover('item_'+it.consumable.id)}
-        // If full, ignore (could add swap UI later)
-      }
-      items.splice(i,1);continue;
-    }
-    if(it.life<=0)items.splice(i,1);
-  }
-  // Wave check
-  if(enemies.length===0&&gameState==='playing'){wave++;if(wave>=WAVES.length){gameState='floorClear';waveTimer=1.5;seClear()}else{gameState='waveWait';waveTimer=1}}
-  updateParticles(dt);updateDmgNums(dt);if(shakeTimer>0)shakeTimer-=dt;
+  let total = 0; for (let i = 0; i < map.length; i++) if (map[i] !== 1) total++;
+  return count >= total;
 }
 
-/* ===== DRAW ===== */
-function draw(){
+function setBlock(map, c, r) {
+  for (const [bc, br] of [[c,r],[c+1,r],[c,r+1],[c+1,r+1]]) {
+    if (bc > 0 && bc < COLS-1 && br > 0 && br < ROWS-1 && !safeZone(bc,br)) map[br*COLS+bc] = 1;
+  }
+}
+
+function applyTemplate(map, name, floor) {
+  if (name === 'open') {
+    const cnt = 2 + Math.min(floor, 4); const placed = [];
+    for (let i = 0; i < cnt; i++) {
+      let pc, pr, tries = 0;
+      do { pc = 2+Math.floor(rng()*(COLS-4)); pr = 2+Math.floor(rng()*(ROWS-4)); tries++; }
+      while (tries < 50 && (placed.some(p => Math.abs(p[0]-pc)<3 && Math.abs(p[1]-pr)<3) || safeZone(pc,pr)));
+      if (tries < 50) { placed.push([pc,pr]); setBlock(map,pc,pr); }
+    }
+  } else if (name === 'maze') {
+    const segs = 3 + Math.floor(rng()*3);
+    for (let i = 0; i < segs; i++) {
+      const horiz = rng() > 0.5, len = 3+Math.floor(rng()*3);
+      const sc = 2+Math.floor(rng()*(COLS-6)), sr = 2+Math.floor(rng()*(ROWS-6));
+      for (let j = 0; j < len; j++) {
+        const c = horiz ? sc+j : sc, r = horiz ? sr : sr+j;
+        if (c>0 && c<COLS-1 && r>0 && r<ROWS-1 && !safeZone(c,r)) map[r*COLS+c] = 1;
+      }
+      const mid = Math.floor(len/2);
+      const gc = horiz ? sc+mid : sc, gr = horiz ? sr : sr+mid;
+      if (gc>0 && gc<COLS-1 && gr>0 && gr<ROWS-1) map[gr*COLS+gc] = 0;
+    }
+  } else if (name === 'circular') {
+    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2), rx = 5, ry = 4;
+    for (let r = 1; r < ROWS-1; r++) for (let c = 1; c < COLS-1; c++) {
+      const dx = (c-cx)/rx, dy = (r-cy)/ry, dist = dx*dx + dy*dy;
+      if (dist > 0.65 && dist < 1.3 && !safeZone(c,r)) map[r*COLS+c] = 1;
+    }
+    for (let d = -1; d <= 1; d++) {
+      if (cy+d>0 && cy+d<ROWS-1) { map[(cy+d)*COLS+(cx-rx)] = 0; map[(cy+d)*COLS+(cx+rx)] = 0; }
+      if (cx+d>0 && cx+d<COLS-1) { map[(cy-ry)*COLS+cx+d] = 0; map[(cy+ry)*COLS+cx+d] = 0; }
+    }
+  } else if (name === 'L_shape') {
+    const quads = [[2,2],[12,2],[2,9],[12,9]];
+    const qi = Math.floor(rng()*3), q = quads[qi<2?qi:3];
+    const bx=q[0], by=q[1], bw=3+Math.floor(rng()*2), bh=2+Math.floor(rng()*2);
+    for (let r=by; r<by+bh && r<ROWS-1; r++)
+      for (let c=bx; c<bx+bw && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    if (rng()>0.5) {
+      for (let r=by+bh; r<by+bh+3 && r<ROWS-1; r++)
+        for (let c=bx; c<bx+2 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    } else {
+      for (let r=by; r<by+2 && r<ROWS-1; r++)
+        for (let c=bx+bw; c<bx+bw+3 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+    }
+    const opp = quads[qi<2?3-qi:0];
+    setBlock(map, opp[0]+Math.floor(rng()*2), opp[1]+Math.floor(rng()*2));
+  } else if (name === 'cross') {
+    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2);
+    for (let c=cx-6; c<=cx+6; c++)
+      if (c>0 && c<COLS-1 && !safeZone(c,cy) && (c-cx+6)%4!==0) map[cy*COLS+c]=1;
+    for (let r=cy-4; r<=cy+4; r++)
+      if (r>0 && r<ROWS-1 && !safeZone(cx,r) && (r-cy+4)%4!==0) map[r*COLS+cx]=1;
+    for (let r=cy-1; r<=cy+1; r++)
+      for (let c=cx-1; c<=cx+1; c++) if (r>0 && c>0) map[r*COLS+c]=0;
+  }
+}
+
+function generateRoom(floor) {
+  const themeName = getTheme(floor).name;
+  const templates = THEME_TEMPLATES[themeName] || ['open'];
+  const pick = isBossFloor() ? 'open' : templates[Math.floor(rng()*templates.length)];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const map = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (r===0||r===ROWS-1||c===0||c===COLS-1) { map.push(1); continue; } map.push(0);
+    }
+    applyTemplate(map, pick, floor);
+    roomSpikes = [];
+    if (floor >= 4 && !isBossFloor()) {
+      const maxSp = Math.min(2 + Math.floor((floor-3)*1.5), 10);
+      for (let i = 0; i < maxSp; i++) {
+        let sc, sr, tries = 0;
+        do { sc=2+Math.floor(rng()*(COLS-4)); sr=2+Math.floor(rng()*(ROWS-4)); tries++; }
+        while (tries<30 && (map[sr*COLS+sc]!==0 || safeZone(sc,sr)));
+        if (tries<30 && map[sr*COLS+sc]===0) { map[sr*COLS+sc]=2; roomSpikes.push({c:sc,r:sr}); }
+      }
+    }
+    if (floodFill(map)) return map;
+  }
+  const map = [];
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    if (r===0||r===ROWS-1||c===0||c===COLS-1) map.push(1); else map.push(0);
+  }
+  roomSpikes = []; return map;
+}
+function tileAt(map, c, r) { if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 1; return map[r * COLS + c]; }
+
+// ===== THEMES =====
+const THEMES = [
+  { name: 'forest', bg: '#a8d5ba', wall: '#6b8f71', floor: '#c8e6c9', floorAlt: '#b2dfb5', wallTop: '#7da882', bgm: 'forest_south' },
+  { name: 'cave', bg: '#b0c4de', wall: '#708090', floor: '#c5d3e0', floorAlt: '#b8c8d8', wallTop: '#8a9aaa', bgm: 'cave' },
+  { name: 'flower', bg: '#fce4ec', wall: '#e91e63', floor: '#f8bbd0', floorAlt: '#f48fb1', wallTop: '#ec407a', bgm: 'flower_field' },
+  { name: 'abyss', bg: '#e8eaf6', wall: '#5c6bc0', floor: '#c5cae9', floorAlt: '#b3b9e0', wallTop: '#7986cb', bgm: 'forest_north' },
+  { name: 'ruins', bg: '#fff3e0', wall: '#ff9800', floor: '#ffe0b2', floorAlt: '#ffcc80', wallTop: '#ffa726', bgm: 'nest' }];
+function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
+
+// ===== WEAPONS =====
+const WEAPON_DEFS = [
+  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 64, speed: 0.18, dur: 0.15, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
+  { id: 'honey_cannon', name: '\ud83c\udf6f 蜜砲', dmgMul: 1.5, range: 108, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
+  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 52, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
+  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 84, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
+  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
+  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
+
+
+// ===== WEAPON COLLECTION =====
+let weaponCollection = new Set();
+function saveCollection() { try { localStorage.setItem('mipurin_weaponcol', JSON.stringify([...weaponCollection])); } catch(e) {} }
+function loadCollection() { try { const d = localStorage.getItem('mipurin_weaponcol'); if (d) weaponCollection = new Set(JSON.parse(d)); } catch(e) {} }
+loadCollection();
+// Record initial weapon
+weaponCollection.add(WEAPON_DEFS[0].id); saveCollection();
+
+// ===== CONSUMABLES =====
+const CONSUMABLE_DEFS = [
+  { id: 'honey_drop', name: '🍯 はちみつドロップ', desc: 'HP+3', icon: '🍯', msg: 'あまくておいしい！', apply: () => { player.hp = Math.min(player.hp + 3, player.maxHp); } },
+  { id: 'spicy_pollen', name: '🌶️ ピリカラ花粉', desc: '8秒ATK+2', icon: '🌶️', msg: 'からい！でもちからがわく！', apply: () => { player.atk += 2; setTimeout(() => { player.atk = Math.max(1, player.atk - 2); }, 8000); } },
+  { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } }
+];
+// [REMOVED] old consumableMsg - replaced by msgQueue
+// ===== DROPS =====
+const drops = [];
+function spawnDrop(x, y, type) {
+  drops.push({ x, y, type, life: 8, bobTimer: 0 });
+}
+function updateDrops(dt) {
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i]; d.life -= dt; d.bobTimer += dt;
+    if (d.life <= 0) { drops.splice(i, 1); continue; }
+    const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+    const magR = player.magnetRange || 0;
+    if (magR > 0 && Math.hypot(d.x - (player.x + player.w/2), d.y - (player.y + player.h/2)) < magR) {
+      const mdx = player.x + player.w/2 - d.x, mdy = player.y + player.h/2 - d.y;
+      const md = Math.hypot(mdx, mdy) || 1;
+      d.x += (mdx / md) * 200 * dt; d.y += (mdy / md) * 200 * dt;
+    }
+    const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
+    if (rectOverlap(pb, db)) {
+      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); playSE('item_get'); }
+      if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); }
+      drops.splice(i, 1);
+    }
+  }
+}
+function drawDrops() {
+  for (const d of drops) {
+    const bob = Math.sin(d.bobTimer * 4) * 3;
+    ctx.globalAlpha = d.life < 2 ? d.life / 2 : 1;
+    // Try sprite icon first
+    if (hasSprite('drop_' + d.type) && drawSpriteImg('drop_' + d.type, d.x - 12, d.y + bob - 12, 24, 24)) {
+      ctx.globalAlpha = 1; continue;
+    }
+    // Fallback canvas shapes
+    if (d.type === 'pollen') {
+      ctx.fillStyle = COL.pollen; ctx.beginPath(); ctx.arc(d.x, d.y + bob, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d.x - 2, d.y + bob - 2, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    if (d.type === 'heal') {
+      ctx.fillStyle = '#2ecc71';
+      ctx.fillRect(d.x - 2, d.y + bob - 6, 4, 12); ctx.fillRect(d.x - 6, d.y + bob - 2, 12, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== STATE =====
+let roomMap = [], floor = 1, wave = 0, WAVES = [];
+// [REMOVED] old weaponSwapMsg - replaced by msgQueue
+
+// ===== Unified Message Window System =====
+let msgQueue = [];        // float messages: [{text, timer, maxTimer, color, icon}]
+let dialogMsg = null;     // dialog message: {lines:[], lineIdx:0, charIdx:0, charTimer:0, onDone:null, speaker:''}
+let dialogCallback = null;
+
+const MSG_COLORS = { info: '#ffd700', warn: '#ff6b6b', heal: '#2ecc71', buff: '#3498db', boss: '#e74c3c', duo: '#e056fd' };
+
+function showFloat(text, duration, color) {
+  duration = duration || 2.0;
+  color = color || MSG_COLORS.info;
+  msgQueue.push({ text: text, timer: duration, maxTimer: duration, color: color });
+  if (msgQueue.length > 4) msgQueue.shift();
+}
+
+function showDialog(speaker, lines, onDone) {
+  if (typeof lines === 'string') lines = [lines];
+  dialogMsg = { speaker: speaker, lines: lines, lineIdx: 0, charIdx: 0, charTimer: 0, done: false };
+  dialogCallback = onDone || null;
+  playSE('dialog_open');
+}
+
+function advanceDialog() {
+  if (!dialogMsg) return;
+  if (dialogMsg.charIdx < dialogMsg.lines[dialogMsg.lineIdx].length) {
+    dialogMsg.charIdx = dialogMsg.lines[dialogMsg.lineIdx].length;
+    return;
+  }
+  dialogMsg.lineIdx++;
+  if (dialogMsg.lineIdx >= dialogMsg.lines.length) {
+    playSE('dialog_close');
+    const cb = dialogCallback;
+    dialogMsg = null; dialogCallback = null;
+    if (cb) cb();
+    return;
+  }
+  dialogMsg.charIdx = 0; dialogMsg.charTimer = 0;
+}
+
+function updateMessages(dt) {
+  // Float messages
+  for (let i = msgQueue.length - 1; i >= 0; i--) {
+    msgQueue[i].timer -= dt;
+    if (msgQueue[i].timer <= 0) msgQueue.splice(i, 1);
+  }
+  // Dialog typewriter
+  if (dialogMsg && !dialogMsg.done) {
+    dialogMsg.charTimer += dt;
+    const charsPerSec = 20;
+    const targetChars = Math.floor(dialogMsg.charTimer * charsPerSec);
+    if (targetChars > dialogMsg.charIdx) dialogMsg.charIdx = Math.min(targetChars, dialogMsg.lines[dialogMsg.lineIdx].length);
+  }
+}
+
+function drawFloatMessages() {
+  if (msgQueue.length === 0) return;
   ctx.save();
-  if(shakeTimer>0)ctx.translate(rnd(-shakeIntensity,shakeIntensity),rnd(-shakeIntensity,shakeIntensity));
-  const th=getTheme();ctx.fillStyle=th.bg;ctx.fillRect(0,0,CW,CH);
-  if(gameState==='title'){drawTitleScreen();ctx.restore();return}
-  if(gameState==='prologue'){drawPrologueScreen();ctx.restore();return}
-  drawTiles();drawItems();enemies.forEach(en=>drawEnemy(en));drawPlayer();drawParticles();drawDmgNums();drawHUD();
-  if(gameState==='waveWait'){ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(0,0,CW,CH);ctx.fillStyle='#fff';ctx.font='bold 28px sans-serif';ctx.textAlign='center';ctx.fillText('Wave '+(wave+1),CW/2,CH/2)}
-  if(gameState==='floorClear'){ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(0,0,CW,CH);ctx.fillStyle='#ffeb3b';ctx.font='bold 32px sans-serif';ctx.textAlign='center';ctx.fillText('Floor '+floor+' クリア!',CW/2,CH/2);ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.fillText('✨ おめでとう! ✨',CW/2,CH/2+30)}
-  if(gameState==='blessing')drawBlessingScreen();
-  if(gameState==='dead'){ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(0,0,CW,CH);ctx.fillStyle='#e91e63';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText('ゲームオーバー',CW/2,CH/2-20);ctx.fillStyle='#fff';ctx.font='16px sans-serif';ctx.fillText('スコア:'+score+'  Floor:'+floor,CW/2,CH/2+15);ctx.fillText('Zキーでリトライ',CW/2,CH/2+40)}
-  if(gameState==='clear'){ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(0,0,CW,CH);ctx.fillStyle='#ffeb3b';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText('🎉 クリア! 🎉',CW/2,CH/2-20);ctx.fillStyle='#fff';ctx.font='18px sans-serif';ctx.fillText('スコア:'+score,CW/2,CH/2+15);ctx.fillText('Zキーでタイトルへ',CW/2,CH/2+40)}
-  drawWeaponPopup();drawCollectionUI();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < msgQueue.length; i++) {
+    const m = msgQueue[i];
+    const alpha = Math.min(1, m.timer * 2.5);
+    const slideY = 80 + i * 40;
+    // Background
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.font = 'bold 20px sans-serif';
+    const tw = ctx.measureText(m.text).width + 40;
+    const rx = CW / 2 - tw / 2, ry = slideY - 16, rh = 34;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.moveTo(rx + 8, ry); ctx.lineTo(rx + tw - 8, ry);
+    ctx.quadraticCurveTo(rx + tw, ry, rx + tw, ry + 8);
+    ctx.lineTo(rx + tw, ry + rh - 8);
+    ctx.quadraticCurveTo(rx + tw, ry + rh, rx + tw - 8, ry + rh);
+    ctx.lineTo(rx + 8, ry + rh);
+    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - 8);
+    ctx.lineTo(rx, ry + 8);
+    ctx.quadraticCurveTo(rx, ry, rx + 8, ry);
+    ctx.closePath(); ctx.fill();
+    // Gold border
+    ctx.strokeStyle = m.color; ctx.lineWidth = 2; ctx.stroke();
+    // Text
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = m.color; ctx.fillText(m.text, CW / 2, slideY);
+  }
   ctx.restore();
 }
 
-/* ===== LOOP ===== */
-collectionInit();
-function loop(ts){
-  const dt=Math.min((ts-(lastTime||ts))/1000,1/30);lastTime=ts;
-  update(dt);draw();
-  for(const k in pressed)pressed[k]=false;
+function drawDialogWindow() {
+  if (!dialogMsg) return;
+  ctx.save();
+  const dw = CW - 160, dh = 120;
+  const dx = 80, dy = CH - dh - 40;
+  // Background
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = '#0d0d2b'; ctx.fillRect(dx, dy, dw, dh);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3; ctx.strokeRect(dx, dy, dw, dh);
+  // Inner border
+  ctx.strokeStyle = 'rgba(255,215,0,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(dx + 6, dy + 6, dw - 12, dh - 12);
+  ctx.globalAlpha = 1;
+  // Speaker name
+  if (dialogMsg.speaker) {
+    const nw = ctx.measureText(dialogMsg.speaker).width + 30;
+    ctx.fillStyle = '#1a1a3e'; ctx.fillRect(dx + 20, dy - 16, nw, 28);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(dx + 20, dy - 16, nw, 28);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(dialogMsg.speaker, dx + 35, dy + 3);
+  }
+  // Text with typewriter
+  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
+  const line = dialogMsg.lines[dialogMsg.lineIdx];
+  const shown = line.substring(0, dialogMsg.charIdx);
+  ctx.fillText(shown, dx + 24, dy + 45);
+  // Page indicator
+  if (dialogMsg.charIdx >= line.length) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '14px sans-serif'; ctx.textAlign = 'right';
+    const pageText = dialogMsg.lineIdx < dialogMsg.lines.length - 1 ? 'Z: つぎへ ▼' : 'Z: とじる ▼';
+    ctx.fillText(pageText, dx + dw - 20, dy + dh - 15);
+  }
+  // Page count
+  if (dialogMsg.lines.length > 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText((dialogMsg.lineIdx + 1) + '/' + dialogMsg.lines.length, dx + 24, dy + dh - 15);
+  }
+  ctx.restore();
+}
+// ===== End Message System =====
+
+let gameState = 'title', clearTimer = 0, deadTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
+let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
+let titleBlink = 0;
+
+const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, maxHp: 5, atk: 1,
+  attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
+  atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
+  dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
+  weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
+
+// ===== ENEMIES =====
+const enemies = [];
+const dmgNumbers = [];
+function spawnDmg(x, y, val, color) { dmgNumbers.push({ x, y, val: String(val), color: color || COL.dmg, life: 0.8 }); }
+
+const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#e67e22', '#3498db', '#1abc9c', '#e84393', '#d35400', '#2c3e50', '#c0392b', '#6c5ce7', '#00b894', '#fd79a8'];
+
+const ENEMY_DEFS = {
+  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom', name: 'どくキノコ', lore: '森にひっそり生える毒キノコ。近づくとふらふら歩いてくる' },
+  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob', name: 'はちみつスライム', lore: 'こぼれた蜜から生まれた。ぷるぷるしていてちょっとかわいい' },
+  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider', name: 'あみぐもちゃん', lore: '花の国の糸使い。すばしっこくて追いかけてくる！' },
+  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat', name: 'やみコウモリ', lore: '洞窟に住む小さなコウモリ。暗いところが大好き' },
+  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', name: 'かぶとむしナイト', lore: '立派なツノで突進してくる！赤く光ったら要注意', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
+  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp', name: 'わるいハチ', lore: 'ミプリンと違って意地悪なハチ。すごく速い！' },
+  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', name: 'パクパクフラワー', lore: '動けないけど花粉弾を飛ばしてくる。きれいだけど危険！', shootInterval: 2.0 },
+  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm', name: 'もぐもぐイモムシ', lore: 'のんびり屋だけど体が丈夫。踏まないように注意！' },
+  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost', name: 'ひとだまホタル', lore: '消えたり現れたり…幽霊みたいなホタル。つかまえられる？' },
+  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', name: 'いわいわゴーレム', lore: '岩でできた大きな番人。遅いけどパワーはすごい！', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
+  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', name: 'つるつるツタ', lore: '地面から生えたツタ。種を飛ばして攻撃してくる', shootInterval: 1.5 },
+  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee', name: 'ダークビー', lore: '闇に染まったミツバチ。かつては仲間だったのかも…' }
+};
+
+const THEME_ENEMIES = {
+  forest: ['mushroom', 'slime', 'spider', 'bat'],
+  cave: ['bat', 'worm', 'beetle', 'golem'],
+  flower: ['flower', 'vine', 'wasp', 'slime'],
+  abyss: ['ghost', 'darkbee', 'golem', 'spider'],
+  ruins: ['beetle', 'worm', 'ghost', 'darkbee']
+};
+
+// ===== PROJECTILES =====
+const projectiles = [];
+function spawnProjectile(x, y, dx, dy, spd, dmg, friendly) {
+  if (projectiles.length >= 50) projectiles.shift();
+  const d = Math.hypot(dx, dy) || 1;
+  projectiles.push({ x, y, vx: (dx / d) * spd, vy: (dy / d) * spd, dmg, friendly: !!friendly, life: 3, size: 8 });
+}
+function updateProjectiles(dt) {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    const tc = Math.floor(p.x / TILE), tr = Math.floor(p.y / TILE);
+    if (p.life <= 0 || tileAt(roomMap, tc, tr) === 1) { projectiles.splice(i, 1); continue; }
+    if (!p.friendly) {
+      const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+      if (player.invTimer <= 0 && !player.dashing && rectOverlap(pb, { x: p.x - p.size, y: p.y - p.size, w: p.size * 2, h: p.size * 2 })) {
+        player.hp -= p.dmg; player.invTimer = player.invDuration;
+        shakeTimer = 0.1; shakeIntensity = 5; playSE('player_hurt');
+        spawnDmg(player.x + player.w / 2, player.y, p.dmg, '#fff');
+        emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
+        if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
+        projectiles.splice(i, 1);
+      }
+    }
+  }
+}
+function drawProjectiles() {
+  for (const p of projectiles) {
+    const col = p.friendly ? '#ffd700' : '#e74c3c';
+    ctx.fillStyle = p.friendly ? 'rgba(255,215,0,0.2)' : 'rgba(231,76,60,0.2)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function spawnEnemy(type, col, row) {
+  const def = ENEMY_DEFS[type]; if (!def) return;
+  const sc = 1 + Math.log2(1 + floor) * 0.35;
+  enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
+    hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (1 + floor * 0.1)),
+    score: Math.ceil(def.score * (1 + floor * 0.05)),
+    vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
+    chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
+}
+
+function randEnemyPos() {
+  let c, r, tries = 0;
+  do { c = 2 + Math.floor(rng() * (COLS - 4)); r = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
+  while (tries < 30 && (tileAt(roomMap, c, r) === 1 || tileAt(roomMap, c-1, r) === 1 || tileAt(roomMap, c+1, r) === 1 || tileAt(roomMap, c, r-1) === 1 || tileAt(roomMap, c, r+1) === 1 || (Math.abs(c - 10) < 3 && Math.abs(r - 5) < 3)));
+  return [c, r];
+}
+
+function buildWaves() {
+  const th = getTheme(floor);
+  const pool = THEME_ENEMIES[th.name] || THEME_ENEMIES.forest;
+  const waveCount = Math.min(2 + Math.floor(floor / 2), 5);
+  const waves = [];
+  for (let w = 0; w < waveCount; w++) {
+    const count = Math.min(2 + w + Math.floor(floor / 3), 7);
+    const wv = [];
+    for (let i = 0; i < count; i++) {
+      const ti = Math.floor(rng() * Math.min(2 + w + Math.floor(floor / 2), pool.length));
+      const [c, r] = randEnemyPos();
+      wv.push({ type: pool[ti], col: c, row: r });
+    }
+    waves.push(wv);
+  }
+  return waves;
+}
+
+function spawnWave() {
+  enemies.length = 0; projectiles.length = 0;
+  if (wave < WAVES.length) { for (const e of WAVES[wave]) spawnEnemy(e.type, e.col, e.row); }
+}
+
+// ===== BOSS =====
+let boss = null;
+const BOSS_DEFS = [
+  { id: 'queen_hornet', name: 'スズメバチの女王', hp: 30, speed: 70, w: 56, h: 56, dmg: 3, color: '#f39c12', pattern: 'boss_charge', score: 200, phases: 2 },
+  { id: 'fungus_king', name: 'キノコの王', hp: 45, speed: 40, w: 64, h: 64, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot', score: 300, phases: 2 },
+  { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 64, h: 64, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
+  { id: 'shadow_moth', name: '闇の蛾', hp: 50, speed: 90, w: 52, h: 52, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
+
+const MAX_FLOOR = 15;
+function isBossFloor() { return floor % 3 === 0; }
+
+function spawnBoss() { playSE('boss_appear');
+  // Boss dialog will be triggered after spawn
+  const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
+  const def = BOSS_DEFS[bi];
+  const sc = 1 + floor * 0.12;
+  boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 2, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
+    dmg: Math.ceil(def.dmg * (1 + floor * 0.08)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
+    chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0 };
+}
+
+function updateBoss(dt) {
+  if (!boss || boss.hp <= 0) return;
+  boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+  boss.stateTimer += dt;
+  const dx = player.x - boss.x, dy = player.y - boss.y, d = Math.hypot(dx, dy) || 1;
+  boss.phase = boss.hp < boss.maxHp * 0.3 ? (boss.phases >= 3 ? 3 : 2) : boss.hp < boss.maxHp * 0.6 ? 2 : 1;
+  const spdMul = boss.phase >= 2 ? 1.3 : 1;
+
+  if (boss.pattern === 'boss_charge') {
+    if (boss.state === 'idle') { moveWithCollision(boss, (dx / d) * boss.speed * spdMul * 0.5 * dt, (dy / d) * boss.speed * spdMul * 0.5 * dt);
+      if (boss.stateTimer > (2.5 / spdMul)) { boss.state = 'telegraph'; boss.telegraphTimer = 0.5; boss.chargeDir = { x: dx / d, y: dy / d }; } }
+    if (boss.state === 'telegraph') { boss.telegraphTimer -= dt; if (boss.telegraphTimer <= 0) { boss.state = 'charging'; boss.stateTimer = 0; } }
+    if (boss.state === 'charging') { moveWithCollision(boss, boss.chargeDir.x * 350 * spdMul * dt, boss.chargeDir.y * 350 * spdMul * dt);
+      if (boss.stateTimer > 0.4) { boss.state = 'cooldown'; boss.stateTimer = 0; } }
+    if (boss.state === 'cooldown') { if (boss.stateTimer > 0.6) { boss.state = 'idle'; boss.stateTimer = 0; }
+      if (boss.phase >= 2 && boss.stateTimer > 0.3) { spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 150, boss.dmg - 1, false); boss.stateTimer = 0.6; } }
+  }
+  if (boss.pattern === 'boss_shoot') {
+    moveWithCollision(boss, (dx / d) * boss.speed * 0.3 * dt, (dy / d) * boss.speed * 0.3 * dt);
+    boss.shootTimer += dt;
+    const interval = boss.phase >= 2 ? 0.8 : 1.5;
+    if (boss.shootTimer >= interval) { boss.shootTimer = 0;
+      const angles = boss.phase >= 2 ? [-0.3, 0, 0.3] : [0];
+      for (const a of angles) { const bx = dx / d, by = dy / d; const ca = Math.cos(a), sa = Math.sin(a);
+        spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, bx * ca - by * sa, bx * sa + by * ca, 120, boss.dmg - 1, false); } }
+  }
+  if (boss.pattern === 'boss_slam') {
+    if (boss.state === 'idle') { moveWithCollision(boss, (dx / d) * boss.speed * spdMul * dt, (dy / d) * boss.speed * spdMul * dt);
+      if (d < 80 || boss.stateTimer > 3) { boss.state = 'telegraph'; boss.telegraphTimer = 0.6; } }
+    if (boss.state === 'telegraph') { boss.telegraphTimer -= dt; if (boss.telegraphTimer <= 0) { boss.state = 'slam'; boss.stateTimer = 0;
+      shakeTimer = 0.3; shakeIntensity = 8;
+      const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+      if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
+        player.hp -= boss.dmg; player.invTimer = player.invDuration; playSE('player_hurt');
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); } }
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
+    if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
+  }
+  if (boss.pattern === 'boss_teleport') {
+    moveWithCollision(boss, (dx / d) * boss.speed * spdMul * 0.6 * dt, (dy / d) * boss.speed * spdMul * 0.6 * dt);
+    boss.teleTimer += dt; boss.shootTimer += dt;
+    if (boss.teleTimer > (boss.phase >= 2 ? 2 : 3)) { boss.teleTimer = 0;
+      boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4)));
+      while (tileAt(roomMap, Math.floor(boss.x / TILE), Math.floor(boss.y / TILE)) === 1) { boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4))); }
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 8, 80, 0.3); }
+    if (boss.shootTimer > 1) { boss.shootTimer = 0; spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 140, boss.dmg - 1, false); }
+  }
+
+  // Boss contact damage
+  if (player.invTimer <= 0 && !player.dashing) {
+    if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: boss.x, y: boss.y, w: boss.w, h: boss.h })) {
+      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; playSE('player_hurt');
+      spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
+      const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+      moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
+      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
+    }
+  }
+}
+
+// ===== BLESSINGS =====
+// ===== META PROGRESSION (Sprint 5) =====
+let nectar = 0;
+let gardenUpgrades = { hp: 0, atk: 0 };
+const GARDEN_DEFS = [
+  { id: 'hp', name: '🌱 生命の花壇', desc: '初期HP +1', cost: [10, 25, 50, 100, 200], max: 5, icon: '❤️' },
+  { id: 'atk', name: '🌹 力の花壇', desc: '初期ATK +1', cost: [15, 35, 70, 140, 250], max: 5, icon: '⚔️' }
+];
+let gardenCursor = 0;
+let runNectar = 0; // nectar earned this run
+
+function saveMeta() {
+  try { localStorage.setItem('mipurin_nectar', nectar); localStorage.setItem('mipurin_garden', JSON.stringify(gardenUpgrades)); } catch(e) {}
+}
+function loadMeta() {
+  try {
+    const n = localStorage.getItem('mipurin_nectar'); if (n !== null) nectar = parseInt(n) || 0;
+    const g = localStorage.getItem('mipurin_garden'); if (g) gardenUpgrades = JSON.parse(g);
+  } catch(e) {}
+}
+loadMeta();
+
+function getGardenCost(id) {
+  const def = GARDEN_DEFS.find(d => d.id === id);
+  const lv = gardenUpgrades[id] || 0;
+  if (lv >= def.max) return -1;
+  return def.cost[lv];
+}
+
+function applyGardenBonuses() {
+  player.maxHp = 5 + (gardenUpgrades.hp || 0);
+  player.hp = player.maxHp;
+  player.atk = 1 + (gardenUpgrades.atk || 0);
+}
+
+const BLESSING_POOL = [
+  { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
+  { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
+  { id: 'rose_range', name: '🌹 ローザの蔓', desc: '攻撃範囲 +20', icon: '🌹', rarity: 'rare', family: 'rose', apply: () => { player.atkRangeBonus += 20; } },
+  { id: 'rose_vampire', name: '🩸 ローザの渇き', desc: '撃破時HP回復', icon: '🩸', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
+  { id: 'lily_hp', name: '🤍 リリアの守り', desc: '最大HP +1 & 全回復', icon: '🤍', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
+  { id: 'lily_shield', name: '🛡️ リリアの結界', desc: '無敵時間 +50%', icon: '🛡️', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
+  { id: 'lily_armor', name: '🤍 リリアの鎧', desc: '最大HP +2', icon: '🤍', rarity: 'rare', family: 'lily', apply: () => { player.maxHp += 2; player.hp = Math.min(player.hp + 2, player.maxHp); } },
+  { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
+  { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
+  { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.6); } },
+  { id: 'sunflower_atkspd', name: '🌻 ソーレの連撃', desc: '攻撃速度 +25%', icon: '🌻', rarity: 'rare', family: 'sunflower', apply: () => { player.atkSpeedBonus += 0.25; } },
+  { id: 'sunflower_burst', name: '☀️ ソーレの閃光', desc: '移動速度+30% & ダッシュCD-30%', icon: '☀️', rarity: 'legend', family: 'sunflower', apply: () => { player.speed *= 1.3; player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.7); } },
+  { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'common', family: 'wisteria', apply: () => { player.atk += 1; } },
+  { id: 'wisteria_slow', name: '💜 フジカの霧', desc: '攻撃力+1 & 範囲+10', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; player.atkRangeBonus += 10; } },
+  { id: 'wisteria_web', name: '🕸️ フジカの絡み', desc: '攻撃範囲 +30', icon: '🕸️', rarity: 'rare', family: 'wisteria', apply: () => { player.atkRangeBonus += 30; } },
+  { id: 'wisteria_miasma', name: '☠️ フジカの瘴気', desc: '攻撃力+3 & 範囲+15', icon: '☠️', rarity: 'legend', family: 'wisteria', apply: () => { player.atk += 3; player.atkRangeBonus += 15; } },
+  { id: 'lotus_heal', name: '🌸 ハスミの癒し', desc: 'HPを全回復', icon: '🌸', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
+  { id: 'lotus_grace', name: '🌸 ハスミの恩寵', desc: 'HP+2回復 & 無敵+20%', icon: '🌸', rarity: 'rare', family: 'lotus', apply: () => { player.hp = Math.min(player.hp + 2, player.maxHp); player.invDuration *= 1.2; } },
+  { id: 'lotus_bloom', name: '🌺 ハスミの開花', desc: '最大HP+1 & 移動速度+10%', icon: '🌺', rarity: 'rare', family: 'lotus', apply: () => { player.maxHp += 1; player.hp = player.maxHp; player.speed *= 1.1; } },
+  { id: 'lotus_regen', name: '💖 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '💖', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } },
+  { id: 'chrysanth_luck', name: '✨ キクネの幸運', desc: 'ドロップ磁力+80', icon: '✨', rarity: 'common', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 80; } },
+  { id: 'chrysanth_gold', name: '✨ キクネの黄金', desc: '花粉ドロップ+倍', icon: '✨', rarity: 'rare', family: 'chrysanth', apply: () => { player.pollenBonus = (player.pollenBonus||0) + 1; } },
+  { id: 'chrysanth_sight', name: '👁️ キクネの千里眼', desc: '攻撃範囲+15 & 磁力+40', icon: '👁️', rarity: 'rare', family: 'chrysanth', apply: () => { player.atkRangeBonus += 15; player.magnetRange = (player.magnetRange||0) + 40; } },
+  { id: 'chrysanth_fortune', name: '🌟 キクネの大福', desc: '磁力+120 & 花粉+倍 & HP+1', icon: '🌟', rarity: 'legend', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 120; player.pollenBonus = (player.pollenBonus||0) + 1; player.maxHp += 1; player.hp = player.maxHp; } },
+];
+
+// ===== DUO BLESSINGS =====
+const DUO_DEFS = [
+  { families: ['rose', 'wisteria'], name: '🌹💜 棘毒の共鳴', desc: '攻撃力 +3', apply: () => { player.atk += 3; } },
+  { families: ['lily', 'lotus'], name: '🤍🌸 守護の花環', desc: '最大HP+2 & 無敵+30%', apply: () => { player.maxHp += 2; player.hp = player.maxHp; player.invDuration *= 1.3; } },
+  { families: ['sunflower', 'rose'], name: '🌻🌹 烈火の追風', desc: '攻撃力+2 & 速度+20%', apply: () => { player.atk += 2; player.speed *= 1.2; } },
+  { families: ['wisteria', 'chrysanth'], name: '💜✨ 毒蝶の舞', desc: '攻撃+2 & 磁力+100', apply: () => { player.atk += 2; player.magnetRange = (player.magnetRange||0) + 100; } },
+  { families: ['lotus', 'lily'], name: '🌸🤍 不滅の蓮華', desc: '最大HP+3 & 被弾反撃1', apply: () => { player.maxHp += 3; player.hp = player.maxHp; player.thorns = Math.max(player.thorns||0, 1); } },
+  { families: ['sunflower', 'chrysanth'], name: '🌻✨ 黄金の収穫', desc: '速度+25% & 花粉+倍 & 磁力+60', apply: () => { player.speed *= 1.25; player.pollenBonus = (player.pollenBonus||0) + 1; player.magnetRange = (player.magnetRange||0) + 60; } }
+];
+let activeDuos = [];
+
+function checkDuos() {
+  const fams = new Set(activeBlessings.map(b => b.family));
+  for (const duo of DUO_DEFS) {
+    if (activeDuos.some(d => d.name === duo.name)) continue;
+    if (duo.families.every(f => fams.has(f))) {
+      duo.apply(); activeDuos.push(duo); showFloat('✨ ' + duo.name + ' はつどう！', 3.0, MSG_COLORS.duo);
+      spawnDmg(player.x + player.w/2, player.y - 20, 0, '#ffd700');
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.5);
+      playSE('level_up');
+    }
+  }
+}
+let blessingChoices = [], activeBlessings = [], selectCursor = 0;
+
+function pickBlessings() {
+  const pool = [...BLESSING_POOL];
+  // Weight: common=50, rare=35, epic=15
+  const weighted = [];
+  for (const b of pool) { const w = b.rarity === 'legend' ? 10 : b.rarity === 'rare' ? 30 : 50; for (let i = 0; i < w; i++) weighted.push(b); }
+  const picks = [], used = new Set();
+  while (picks.length < 3 && used.size < pool.length) {
+    const b = weighted[Math.floor(rng() * weighted.length)];
+    if (!used.has(b.id)) { used.add(b.id); picks.push(b); }
+  }
+  selectCursor = 0;
+  return picks;
+}
+
+// ===== SHOP =====
+let shopItems = [];
+function buildShop() {
+  shopItems = [];
+  // Heal
+  shopItems.push({ name: '回復 +2', cost: 3 + floor, icon: '\u2665', action: () => { player.hp = Math.min(player.hp + 2, player.maxHp); } });
+  // Consumable shop items
+  for (const cdef of CONSUMABLE_DEFS) {
+    const baseCost = cdef.id === 'honey_drop' ? 5 : cdef.id === 'spicy_pollen' ? 8 : 12;
+    shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
+      // Find empty consumable slot
+      const slot = player.consumables.indexOf(null);
+      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); showFloat(cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', 2.5, MSG_COLORS.info); }
+      else { showFloat('アイテム枠がいっぱい！', 2.0, MSG_COLORS.warn); }
+    }});
+  }
+  // Random weapon
+  const wep = WEAPON_DEFS[Math.floor(rng() * WEAPON_DEFS.length)];
+  shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {
+      player.weapons[player.weaponIdx] = {...wep}; player.weapon = player.weapons[player.weaponIdx];
+      if (typeof weaponCollection !== 'undefined') { weaponCollection.add(wep.id); saveCollection(); }
+      playSE('level_up');
+    } });
+  // Max HP
+  shopItems.push({ name: '最大HP +1', cost: 8 + floor * 2, icon: '\u2B06', action: () => { player.maxHp += 1; player.hp += 1; } });
+}
+
+// ===== FADE =====
+function startFade(dir, cb) { fadeDir = dir; fadeAlpha = dir === 1 ? 0 : 1; fadeCallback = cb; }
+function updateFade(dt) {
+  if (fadeDir === 0) return;
+  fadeAlpha += fadeDir * dt * 3;
+  if (fadeDir === 1 && fadeAlpha >= 1) { fadeAlpha = 1; fadeDir = 0; if (fadeCallback) { fadeCallback(); fadeCallback = null; } }
+  if (fadeDir === -1 && fadeAlpha <= 0) { fadeAlpha = 0; fadeDir = 0; }
+}
+
+// ===== GAME FLOW =====
+function startFloor() {
+  rng = mulberry32(Date.now() + floor);
+  roomSpikes = []; roomMap = generateRoom(floor);
+  if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;
+    // Boss entrance dialog
+    const bossLines = {
+      'queen_hornet': ['ブンブンブン…… ここはわたしの巣よ！', 'ミプリンなんかに まけないわ！'],
+      'fungus_king': ['フフフ…… キノコの胞子が おまえをつつむ……', 'ここから先は とおさないぞ！'],
+      'crystal_golem': ['…………ゴゴゴ……', 'このクリスタルのかたさ、ためしてみるか？'],
+      'shadow_moth': ['ヒラヒラ…… やみのなかへ おいで……', 'わたしの はやさに ついてこれるかしら？']
+    };
+    if (boss) {
+      gameState = 'dialog';
+      const bl = bossLines[boss.id] || [boss.name + ' があらわれた！'];
+      showDialog(boss.name, bl, function() { gameState = 'playing'; });
+    }
+  }
+  else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
+  player.x = TILE * 10; player.y = TILE * 7;
+  player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
+  player.dashing = false; player.dashCooldown = 0;
+  dmgNumbers.length = 0; particles.length = 0;
+  gameState = 'playing'; clearTimer = 0; deadTimer = 0;
+  if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
+  else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
+  const floorTheme = getTheme(floor);
+  if (floorTheme.bgm) playBGM(floorTheme.bgm);
+  if (isBossFloor()) playBGM('boss');
+  startFade(-1, null);
+}
+
+function nextFloor() { floor++; startFade(1, () => startFloor()); }
+
+const mipurinImg = new Image(); mipurinImg.src = 'assets/mipurin.png';
+let mipurinReady = false; mipurinImg.onload = () => { mipurinReady = true; console.log('mipurin.png loaded'); };
+
+// ===== SPRITE ENGINE (Individual PNG) =====
+const SPRITE_MAP = {
+  // Enemies
+  mushroom: 'assets/sprites/enemy_mushroom.png',
+  slime: 'assets/sprites/enemy_slime.png',
+  spider: 'assets/sprites/enemy_spider.png',
+  bat: 'assets/sprites/enemy_bat.png',
+  beetle: 'assets/sprites/enemy_beetle.png',
+  wasp: 'assets/sprites/enemy_wasp.png',
+  flower: 'assets/sprites/enemy_flower.png',
+  worm: 'assets/sprites/enemy_worm.png',
+  ghost: 'assets/sprites/enemy_ghost.png',
+  golem: 'assets/sprites/enemy_golem.png',
+  vine: 'assets/sprites/enemy_vine.png',
+  darkbee: 'assets/sprites/enemy_darkbee.png',
+  // Bosses
+  queen_hornet: 'assets/sprites/boss_queen_hornet.png',
+  fungus_king: 'assets/sprites/boss_fungus_king.png',
+  crystal_golem: 'assets/sprites/boss_crystal_golem.png',
+  shadow_moth: 'assets/sprites/boss_shadow_moth.png',
+  // Items & drops
+  drop_pollen: 'assets/sprites/drop_pollen.png',
+  drop_heal: 'assets/sprites/drop_heal.png',
+  // Consumables
+  consumable_honey: 'assets/sprites/consumable_honey.png',
+  consumable_spicy: 'assets/sprites/consumable_spicy.png',
+  consumable_royal: 'assets/sprites/consumable_royal.png',
+  // Weapons
+  weapon_needle: 'assets/sprites/weapon_needle.png',
+  weapon_honey_cannon: 'assets/sprites/weapon_honey_cannon.png',
+  weapon_pollen_shield: 'assets/sprites/weapon_pollen_shield.png',
+  weapon_vine_whip: 'assets/sprites/weapon_vine_whip.png',
+  weapon_feather_shuriken: 'assets/sprites/weapon_feather_shuriken.png',
+  weapon_queen_staff: 'assets/sprites/weapon_queen_staff.png'
+};
+
+const spriteCache = {};
+let spritesLoaded = 0;
+let spritesTotal = 0;
+
+function loadAllSprites() {
+  const keys = Object.keys(SPRITE_MAP);
+  spritesTotal = keys.length;
+  keys.forEach(id => {
+    const img = new Image();
+    img.onload = () => {
+      spriteCache[id] = img;
+      spritesLoaded++;
+      if (spritesLoaded >= spritesTotal) console.log('All ' + spritesTotal + ' sprites loaded!');
+    };
+    img.onerror = () => {
+      spritesLoaded++;
+    };
+    img.src = SPRITE_MAP[id];
+  });
+}
+
+function hasSprite(id) { return !!spriteCache[id]; }
+
+function drawSpriteImg(id, x, y, w, h) {
+  const img = spriteCache[id];
+  if (!img) return false;
+  ctx.drawImage(img, x, y, w, h);
+  return true;
+}
+
+// Enemy idle bob animation (code-based)
+function getEnemyBob(e) {
+  if (!e._bobOffset) e._bobOffset = Math.random() * Math.PI * 2;
+  return Math.sin(Date.now() / 400 + e._bobOffset) * 2;
+}
+
+// Boss phase visual effects (code-based)
+function drawBossPhaseEffect(b) {
+  if (b.phase >= 2) {
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = b.phase >= 3 ? '#ff0000' : '#ff6600';
+    ctx.beginPath(); ctx.arc(b.x + b.w/2, b.y + b.h/2, b.w * 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+loadAllSprites();
+// ===== END SPRITE ENGINE =====
+
+const MIPURIN_FRAMES = {
+  down:  { sx: 0,   sy: 0,   sw: 250, sh: 250 },
+  up:    { sx: 250, sy: 0,   sw: 250, sh: 250 },
+  left:  { sx: 250, sy: 250, sw: 250, sh: 250 },
+  right: { sx: 0,   sy: 250, sw: 250, sh: 250 }
+};
+function getPlayerDir() {
+  const ax = player.atkDir.x, ay = player.atkDir.y;
+  if (Math.abs(ax) > Math.abs(ay)) return ax > 0 ? 'right' : 'left';
+  return ay < 0 ? 'up' : 'down';
+}
+
+
+// ===== PROLOGUE (OPENING) =====
+const prologueImages = [];
+let prologueLoaded = 0;
+for (let i = 1; i <= 10; i++) {
+  const img = new Image();
+  img.onload = () => { prologueLoaded++; };
+  img.src = 'assets/prologue/prologue_' + String(i).padStart(2, '0') + '.webp';
+  prologueImages.push(img);
+}
+const prologueTexts = [
+  'ある日、花の国に異変が起きた…',
+  '花粉が枯れ、虫たちは元気をなくしていった',
+  '小さなミツバチのミプリンは決意した',
+  '「わたしが花粉を取り戻す！」',
+  '冒険の旅が、今はじまる──',
+  ''
+];
+let prologuePage = 0, prologueTimer = 0, prologueFade = 0, prologueGuard = 0;
+
+function drawPrologue() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, CW, CH);
+  const img = prologueImages[prologuePage];
+  if (img && img.complete) {
+    const scale = Math.min(CW / img.width, CH / img.height) * 0.75;
+    const iw = img.width * scale, ih = img.height * scale;
+    ctx.globalAlpha = Math.min(prologueFade, 1);
+    ctx.drawImage(img, (CW - iw) / 2, (CH - ih) / 2 - 60, iw, ih);
+    ctx.globalAlpha = 1;
+  }
+  const txt = prologueTexts[prologuePage] || '';
+  if (txt) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, CH - 160, CW, 160);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(txt, CW / 2, CH - 80);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Zキーで次へ  /  Xキーでスキップ', CW / 2, CH - 20);
+  ctx.textAlign = 'left';
+}
+
+function updatePrologue(dt) {
+  prologueFade += dt * 2;
+  prologueTimer += dt;
+  if (prologueGuard > 0) { prologueGuard -= dt; wasPressed('KeyZ'); wasPressed('KeyX'); return; }
+  if (wasPressed('KeyX')) {
+    stopBGM();
+    resetGame();
+    return;
+  }
+  if (wasPressed('KeyZ') || prologueTimer > 6) {
+    prologuePage++;
+    prologueFade = 0;
+    prologueTimer = 0;
+    if (prologuePage >= prologueTexts.length) {
+      stopBGM();
+      resetGame();
+    }
+  }
+}
+
+function resetGame() {
+  floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
+  player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
+  player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
+  player.weapon = WEAPON_DEFS[0]; player.weapons = [WEAPON_DEFS[0], null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
+  activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
+  applyGardenBonuses();
+  startFade(1, () => startFloor());
+}
+
+// ===== COLLISION =====
+function moveWithCollision(ent, dx, dy) {
+  let nx = ent.x + dx, bl = false;
+  let c0 = Math.floor(nx / TILE), c1 = Math.floor((nx + ent.w - 1) / TILE);
+  let r0 = Math.floor(ent.y / TILE), r1 = Math.floor((ent.y + ent.h - 1) / TILE);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(roomMap, c, r) === 1) bl = true;
+  if (!bl) ent.x = nx;
+  let ny = ent.y + dy; bl = false;
+  let c2 = Math.floor(ent.x / TILE), c3 = Math.floor((ent.x + ent.w - 1) / TILE);
+  let r2 = Math.floor(ny / TILE), r3 = Math.floor((ny + ent.h - 1) / TILE);
+  for (let r = r2; r <= r3; r++) for (let c = c2; c <= c3; c++) if (tileAt(roomMap, c, r) === 1) bl = true;
+  if (!bl) ent.y = ny;
+}
+
+function getAttackBox() {
+  const range = (player.weapon.range || 44) + (player.atkRangeBonus || 0);
+  const ax = player.atkDir.x, ay = player.atkDir.y;
+  return { x: player.x + player.w / 2 + ax * 24 - range / 2, y: player.y + player.h / 2 + ay * 24 - range / 2, w: range, h: range };
+}
+
+// ===== UPDATE =====
+function update(dt) {
+  updateFade(dt);
+  updateMessages(dt);
+
+  if (gameState === 'ending') {
+    if (wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    return;
+  }
+  if (gameState === 'title') { titleBlink += dt;
+    if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
+    if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; playSE('menu_select'); }
+    return; }
+  if (gameState === 'garden') {
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { gardenCursor = Math.max(0, gardenCursor - 1); playSE('menu_move'); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { gardenCursor = Math.min(GARDEN_DEFS.length - 1, gardenCursor + 1); playSE('menu_move'); }
+    if (wasPressed('KeyZ')) {
+      const def = GARDEN_DEFS[gardenCursor];
+      const cost = getGardenCost(def.id);
+      if (cost > 0 && nectar >= cost) { nectar -= cost; gardenUpgrades[def.id] = (gardenUpgrades[def.id]||0) + 1; saveMeta(); playSE('level_up'); }
+      else { playSE('hit'); }
+    }
+    if (wasPressed('KeyX') || wasPressed('Escape')) { gameState = 'title'; playSE('menu_select'); }
+    return; }
+  if (gameState === 'prologue') { updatePrologue(dt); return; }
+  // Inventory toggle
+  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; }
+  if (inventoryOpen) {
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) inventoryTab = 0;
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) inventoryTab = 1;
+    return;
+  }
+  // Dialog state - pause game, Z to advance
+  if (gameState === 'dialog') {
+    if (wasPressed('KeyZ') || wasPressed('Enter')) { advanceDialog(); }
+    return;
+  }
+  if (gameState === 'blessing') {
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; playSE('menu_move'); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; playSE('menu_move'); }
+    if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
+    if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
+    if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
+    if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
+      const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); playSE('level_up'); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); nextFloor(); }
+    return;
+  }
+  if (gameState === 'shop') {
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); playSE('menu_move'); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); playSE('menu_move'); }
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); playSE('menu_move'); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { selectCursor = Math.min(shopItems.length, selectCursor + 3); playSE('menu_move'); }
+    for (let i = 0; i < shopItems.length; i++) {
+      if (wasPressed('Digit' + (i + 1))) { selectCursor = i; }
+    }
+    if ((wasPressed('KeyZ') || wasPressed('Enter')) && selectCursor < shopItems.length && pollen >= shopItems[selectCursor].cost) {
+      pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); playSE('menu_select'); shopItems.splice(selectCursor, 1);
+      selectCursor = Math.min(selectCursor, shopItems.length); }
+    if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
+      blessingChoices = pickBlessings(); selectCursor = 0;
+      gameState = 'dialog';
+      showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { gameState = 'blessing'; });
+    }
+    return;
+  }
+  if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
+  if (gameState === 'floorClear') { clearTimer += dt; if (clearTimer > 1.5) {
+      if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
+    if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
+  } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); gameState = 'title'; floor = 1; resetGame(); } return; }
+    if (gameState === 'weaponDrop' && weaponPopup.active) {
+      // Z: equip as main
+      if (wasPressed('KeyZ')) {
+        const w = {...weaponPopup.weapon};
+        if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
+        player.weapons[player.weaponIdx] = w; player.weapon = w;
+        if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
+        saveCollection();
+        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+      }
+      // Q: put in sub slot
+      if (wasPressed('KeyQ')) {
+        const w = {...weaponPopup.weapon};
+        if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
+        const subIdx = 1 - player.weaponIdx;
+        player.weapons[subIdx] = w;
+        if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
+        saveCollection();
+        showFloat(w.name + ' をサブにセット！ Qで持ちかえ！', 2.5, MSG_COLORS.buff);
+        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+      }
+      // X: discard
+      if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
+      return;
+    }
+
+  // === Consumable use (1/2/3) ===
+  for (let ci = 0; ci < 3; ci++) {
+    if (wasPressed('Digit' + (ci + 1)) && player.consumables[ci]) {
+      const item = player.consumables[ci];
+      item.apply();
+      showFloat(item.msg, 2.5, MSG_COLORS.info);
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#fff', 6, 60, 0.3);
+      playSE('item_get');
+      player.consumables[ci] = null;
+    }
+  }
+
+  // === Weapon swap (Q key) ===
+  if (wasPressed('KeyQ') && player.weapons[1] !== null) {
+    player.weaponIdx = 1 - player.weaponIdx;
+    player.weapon = player.weapons[player.weaponIdx];
+    playSE('menu_select');
+    spawnDmg(player.x + player.w/2, player.y - 10, 0, '#ffd700');
+    showFloat('ぶんぶん♪ ' + player.weapon.name, 1.5, MSG_COLORS.info);
+  }
+
+  // === Player movement ===
+  let mx = 0, my = 0;
+  if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
+  if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
+  if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
+  if (isDown('ArrowDown') || isDown('KeyS')) my += 1;
+  if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
+  if (mx !== 0 || my !== 0) {
+    player.atkDir.x = Math.sign(mx || 0); player.atkDir.y = Math.sign(my || 0);
+    if (mx !== 0) player.atkDir.y = 0; if (my !== 0 && mx === 0) player.atkDir.x = 0;
+  }
+
+  player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+  // Spike damage (トゲ床) - dash makes you immune
+  if (!player.dashing && player.invTimer <= 0) {
+    const spc = Math.floor((player.x + player.w/2) / TILE);
+    const spr = Math.floor((player.y + player.h/2) / TILE);
+    if (spc >= 0 && spc < COLS && spr >= 0 && spr < ROWS && roomMap[spr * COLS + spc] === 2) {
+      player.hp -= 1; player.invTimer = player.invDuration;
+      playSE('player_hurt');
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
+      showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
+      if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
+    }
+  }
+  if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
+    else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
+  else {
+    if (wasPressed('KeyX') && player.dashCooldown <= 0) {
+      player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
+      player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
+      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; playSE('needle');
+      emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
+    }
+    if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
+  }
+
+  // === Attack ===
+  player.atkCooldown = Math.max(0, player.atkCooldown - dt);
+  if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
+    player.attacking = true; player.atkTimer = player.weapon.dur; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
+    const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
+    const wfx = player.weapon.fx || 'none';
+    // 360 whip: hit all around
+    const box = wfx === '360' ? {x: player.x + player.w/2 - 40, y: player.y + player.h/2 - 40, w: 80, h: 80} : getAttackBox();
+    // AOE hammer: larger box + shockwave
+    const hitBox = wfx === 'aoe' ? {x: box.x - 16, y: box.y - 16, w: box.w + 32, h: box.h + 32} : box;
+    if (wfx === 'aoe') { shakeTimer = 0.1; shakeIntensity = 6; emitParticles(box.x + box.w/2, box.y + box.h/2, '#b97', 10, 100, 0.3); }
+    // Double dagger: schedule second hit
+    if (wfx === 'double') { setTimeout(() => { if (gameState !== 'playing') return;
+      for (const en2 of enemies) { if (en2.hp <= 0) continue;
+        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); playSE('hit'); }}
+      if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); playSE('hit'); }
+    }, 80); }
+    const hitEnList = [];
+    // Hit enemies
+    for (const en of enemies) { if (en.hp <= 0) continue;
+      if (rectOverlap(hitBox, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; hitStopTimer = 0.05; const kb2 = 16; const ka2 = Math.atan2(en.y - player.y, en.x - player.x); moveWithCollision(en, Math.cos(ka2)*kb2, Math.sin(ka2)*kb2); emitParticles(en.x+en.w/2, en.y+en.h/2, '#fff', 5, 80, 0.2); spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
+        shakeTimer = 0.05; shakeIntensity = 3; playSE('hit');
+        emitParticles(en.x + en.w / 2, en.y + en.h / 2, player.weapon.color, 3, 60, 0.2);
+        const angle = Math.atan2(en.y - player.y, en.x - player.x);
+        moveWithCollision(en, Math.cos(angle) * (wfx === 'pierce' ? 8 : 20), Math.sin(angle) * (wfx === 'pierce' ? 8 : 20));
+        hitEnList.push(en); } }
+    // Hit boss
+    if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
+      boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
+      shakeTimer = 0.06; shakeIntensity = 4; playSE('hit');
+      emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, player.weapon.color, 5, 80, 0.3);
+    }
+  }
+  if (player.attacking) { player.atkTimer -= dt; if (player.atkTimer <= 0) player.attacking = false; }
+  player.invTimer = Math.max(0, player.invTimer - dt);
+  player.animTimer += dt; if (player.animTimer > 0.15) { player.animTimer = 0; player.frame = (player.frame + 1) % 4; }
+
+  // === Enemy AI ===
+  for (const en of enemies) {
+    if (en.hp <= 0) continue;
+    en.hitFlash = Math.max(0, en.hitFlash - dt); en.stateTimer += dt;
+    const dx = player.x - en.x, dy = player.y - en.y, d = Math.hypot(dx, dy) || 1;
+
+    if (en.pattern === 'wander') {
+      en.wanderTimer -= dt; if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2;
+        en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1 + Math.random() * 2; }
+      moveWithCollision(en, en.wanderDir.x * en.speed * dt, en.wanderDir.y * en.speed * dt);
+    }
+    if (en.pattern === 'chase' && d > 0) moveWithCollision(en, (dx / d) * en.speed * dt, (dy / d) * en.speed * dt);
+    if (en.pattern === 'charge') {
+      if (en.state === 'idle') { en.wanderTimer -= dt;
+        if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2; en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1.5 + Math.random(); }
+        moveWithCollision(en, en.wanderDir.x * 30 * dt, en.wanderDir.y * 30 * dt);
+        if (d < 250) { en.state = 'telegraph'; en.telegraphTimer = en.telegraphTime || 0.6; en.chargeDir = { x: dx / d, y: dy / d }; } }
+      if (en.state === 'telegraph') { en.telegraphTimer -= dt; if (en.telegraphTimer <= 0) { en.state = 'charging'; en.stateTimer = 0; } }
+      if (en.state === 'charging') { moveWithCollision(en, en.chargeDir.x * (en.chargeSpeed || 300) * dt, en.chargeDir.y * (en.chargeSpeed || 300) * dt);
+        if (en.stateTimer > (en.chargeTime || 0.3)) { en.state = 'cooldown'; en.stateTimer = 0; } }
+      if (en.state === 'cooldown' && en.stateTimer > 0.8) { en.state = 'idle'; en.stateTimer = 0; en.wanderTimer = 0; }
+    }
+    if (en.pattern === 'shoot') {
+      en.shootTimer -= dt;
+      if (en.shootTimer <= 0) { en.shootTimer = en.shootInterval || 2; spawnProjectile(en.x + en.w / 2, en.y + en.h / 2, dx, dy, 100, en.dmg, false); }
+    }
+    if (en.pattern === 'teleport') {
+      en.wanderTimer -= dt;
+      if (en.wanderTimer <= 0) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4)));
+      while (tileAt(roomMap, Math.floor(en.x / TILE), Math.floor(en.y / TILE)) === 1) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4))); }
+        emitParticles(en.x + en.w / 2, en.y + en.h / 2, en.color, 6, 60, 0.3); en.wanderTimer = 2 + Math.random() * 2; }
+      if (d < 200 && d > 0) moveWithCollision(en, (dx / d) * en.speed * 0.5 * dt, (dy / d) * en.speed * 0.5 * dt);
+    }
+
+    // Contact damage
+    if (player.invTimer <= 0 && !player.dashing) {
+      if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
+        player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
+        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); playSE('player_hurt');
+        emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
+        const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
+        if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
+        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
+      }
+    }
+  }
+
+  // Boss update
+  updateBoss(dt);
+
+  // Remove dead enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (enemies[i].hp <= 0) {
+      score += enemies[i].score;
+      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 15, 120, 0.5);
+      playSE('enemy_die');
+      if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
+      // Drops
+      if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
+      if (Math.random() < 0.15) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+      recordEnemy(enemies[i].name || enemies[i].type, true);
+      enemies.splice(i, 1);
+    }
+  }
+
+  // Boss death
+  if (boss && boss.hp <= 0) {
+    score += boss.score || 200; playSE('door_open');
+    emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
+    for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
+    boss = null; gameState = 'floorClear'; clearTimer = 0;
+  }
+
+  // Wave clear
+  if (!boss && enemies.length === 0 && gameState === 'playing') {
+    wave++;
+    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; playSE('door_open'); }
+    else { gameState = 'waveWait'; clearTimer = 0; }
+  }
+
+  // Projectiles, drops, particles, dmg numbers
+  updateProjectiles(dt); updateDrops(dt); updateParticles(dt);
+  for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
+  shakeTimer = Math.max(0, shakeTimer - dt);
+}
+
+// ===== DRAWING =====
+function drawRoom() {
+  const th = getTheme(floor);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (tileAt(roomMap, c, r) === 1) {
+      ctx.fillStyle = th.wall; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.fillStyle = th.wallTop; ctx.fillRect(c * TILE, r * TILE, TILE, 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(c * TILE, r * TILE + TILE - 4, TILE, 4);
+    } else if (tileAt(roomMap, c, r) === 2) {
+      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.fillStyle = 'rgba(180,60,60,0.45)';
+      const sx = c * TILE, sy = r * TILE;
+      for (let si = 0; si < 3; si++) for (let sj = 0; sj < 3; sj++) {
+        const tx = sx + 8 + si * 18, ty = sy + 8 + sj * 18;
+        ctx.beginPath(); ctx.moveTo(tx, ty+10); ctx.lineTo(tx+5, ty); ctx.lineTo(tx+10, ty+10); ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+    }
+  }
+}
+
+function drawEnemyShape(e, color) {
+  const cx = e.x + e.w/2, cy = e.y + e.h/2, hw = e.w/2, hh = e.h/2;
+  ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+  const s = e.shape || 'default';
+  if (s === 'mushroom') {
+    // Cap (half circle)
+    ctx.beginPath(); ctx.arc(cx, cy - hh*0.15, hw, Math.PI, 0); ctx.fill(); ctx.stroke();
+    // Stem
+    ctx.fillRect(cx - hw*0.35, cy - hh*0.15, hw*0.7, hh*0.8);
+    ctx.strokeRect(cx - hw*0.35, cy - hh*0.15, hw*0.7, hh*0.8);
+    // Spots
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx - hw*0.3, cy - hh*0.4, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + hw*0.2, cy - hh*0.55, 2.5, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'blob') {
+    ctx.beginPath(); ctx.ellipse(cx, cy + hh*0.15, hw, hh*0.75, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(cx - hw*0.3, cy - hh*0.1, hw*0.25, hh*0.2, -0.3, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'spider') {
+    // Body
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw*0.7, hh*0.6, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // Legs (4 pairs)
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i += 2) {
+      for (let j = 0; j < 4; j++) {
+        const lx = cx + i * hw * (0.4 + j*0.15), ly = cy - hh*0.2 + j*hh*0.2;
+        ctx.beginPath(); ctx.moveTo(cx + i*hw*0.4, cy - hh*0.1 + j*hh*0.15);
+        ctx.lineTo(lx + i*8, ly + 6); ctx.stroke();
+      }
+    }
+  } else if (s === 'bat') {
+    // Body
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw*0.5, hh*0.5, 0, 0, Math.PI*2); ctx.fill();
+    // Wings
+    ctx.beginPath(); ctx.moveTo(cx - hw*0.4, cy); ctx.quadraticCurveTo(cx - hw, cy - hh, cx - hw*0.2, cy - hh*0.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + hw*0.4, cy); ctx.quadraticCurveTo(cx + hw, cy - hh, cx + hw*0.2, cy - hh*0.3); ctx.fill();
+  } else if (s === 'beetle') {
+    // Shell
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw, hh*0.85, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#333'; ctx.beginPath(); ctx.moveTo(cx, cy - hh*0.85); ctx.lineTo(cx, cy + hh*0.85); ctx.stroke();
+    // Horn
+    ctx.fillStyle = '#555'; ctx.beginPath(); ctx.moveTo(cx - 4, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 4, e.y); ctx.fill();
+  } else if (s === 'wasp') {
+    // Body segments
+    ctx.beginPath(); ctx.ellipse(cx, cy - hh*0.2, hw*0.5, hh*0.4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, cy + hh*0.3, hw*0.6, hh*0.45, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // Stripes
+    ctx.fillStyle = '#333'; ctx.fillRect(cx - hw*0.5, cy + hh*0.15, hw, 3);
+    ctx.fillRect(cx - hw*0.5, cy + hh*0.35, hw, 3);
+    // Wings
+    ctx.fillStyle = 'rgba(200,230,255,0.5)';
+    ctx.beginPath(); ctx.ellipse(cx - hw*0.6, cy - hh*0.3, hw*0.5, hh*0.25, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + hw*0.6, cy - hh*0.3, hw*0.5, hh*0.25, 0.3, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'flower') {
+    // Petals
+    for (let i = 0; i < 5; i++) { const a = i * Math.PI*2/5 - Math.PI/2;
+      ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+      ctx.beginPath(); ctx.ellipse(cx + Math.cos(a)*hw*0.5, cy + Math.sin(a)*hh*0.5, hw*0.35, hh*0.2, a, 0, Math.PI*2); ctx.fill(); }
+    // Center
+    ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(cx, cy, hw*0.3, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'worm') {
+    // Segments
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = e.hitFlash > 0 ? '#fff' : (i%2===0 ? color : '#8B4513');
+      ctx.beginPath(); ctx.ellipse(cx - hw*0.5 + i*hw*0.35, cy, hw*0.28, hh*0.45, 0, 0, Math.PI*2); ctx.fill(); }
+  } else if (s === 'ghost') {
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(cx, cy - hh*0.2, hw*0.7, Math.PI, 0); ctx.lineTo(cx + hw*0.7, cy + hh*0.4);
+    for (let i = 3; i >= 0; i--) { ctx.lineTo(cx - hw*0.7 + i*hw*0.35, cy + hh*(i%2===0 ? 0.2 : 0.5)); }
+    ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+  } else if (s === 'golem') {
+    // Blocky body
+    ctx.fillRect(e.x + 4, e.y + 4, e.w - 8, e.h - 8); ctx.strokeRect(e.x + 4, e.y + 4, e.w - 8, e.h - 8);
+    // Cracks
+    ctx.strokeStyle = '#555'; ctx.beginPath(); ctx.moveTo(cx - 6, e.y + 8); ctx.lineTo(cx - 2, cy); ctx.lineTo(cx + 5, cy + 5); ctx.stroke();
+  } else if (s === 'vine') {
+    // Stem
+    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : '#2d6b1e'; ctx.fillRect(cx - 3, cy - hh*0.2, 6, hh*0.8);
+    // Leaves
+    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+    ctx.beginPath(); ctx.ellipse(cx - hw*0.4, cy - hh*0.1, hw*0.4, hh*0.25, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + hw*0.4, cy + hh*0.1, hw*0.4, hh*0.25, 0.4, 0, Math.PI*2); ctx.fill();
+    // Flower bud
+    ctx.fillStyle = '#e84393'; ctx.beginPath(); ctx.arc(cx, cy - hh*0.5, hw*0.25, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'darkbee') {
+    // Like wasp but darker
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw*0.6, hh*0.7, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#111'; ctx.fillRect(cx - hw*0.5, cy - 2, hw, 4); ctx.fillRect(cx - hw*0.5, cy + hh*0.25, hw, 4);
+    ctx.fillStyle = 'rgba(150,150,200,0.4)';
+    ctx.beginPath(); ctx.ellipse(cx - hw*0.5, cy - hh*0.4, hw*0.5, hh*0.2, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + hw*0.5, cy - hh*0.4, hw*0.5, hh*0.2, 0.3, 0, Math.PI*2); ctx.fill();
+  } else {
+    // Default rounded rect
+    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
+    ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+    ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h); ctx.lineTo(e.x+rr,e.y+e.h);
+    ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr); ctx.lineTo(e.x,e.y+rr);
+    ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+
+function drawEntity(e, color, isP) {
+  const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Invincibility blink
+  if (isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) ctx.globalAlpha = 0.4;
+  // Hit flash
+  if (!isP && e.hitFlash > 0) ctx.globalAlpha = 0.6;
+
+  // === PLAYER ===
+  if (isP) {
+    if (mipurinReady) {
+      const dir = getPlayerDir();
+      const mf = MIPURIN_FRAMES[dir];
+      const drawSz = e.w + 24;
+      // Code animation: bob when moving
+      const isMoving = keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD'] ||
+                       keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
+      const bob = isMoving ? Math.sin(Date.now() / 100) * 2 : 0;
+      const squash = isMoving ? 1 + Math.sin(Date.now() / 120) * 0.03 : 1;
+      ctx.save();
+      ctx.translate(cx, e.y + e.h / 2 + bob);
+      ctx.scale(squash, 2 - squash);
+      ctx.translate(-cx, -(e.y + e.h / 2));
+      ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      return;
+    }
+    // Fallback canvas player
+    ctx.fillStyle = COL.player;
+    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
+    ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+    ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h); ctx.lineTo(e.x+rr,e.y+e.h);
+    ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr); ctx.lineTo(e.x,e.y+rr);
+    ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  // === ENEMY with sprite ===
+  const spriteId = e.shape || e.id || 'default';
+  if (hasSprite(spriteId)) {
+    const bob = getEnemyBob(e);
+    drawSpriteImg(spriteId, e.x, e.y + bob, e.w, e.h);
+    if (e.hitFlash > 0) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(e.x, e.y + bob, e.w, e.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  // === Fallback: canvas enemy shape ===
+  if (e.shape) {
+    drawEnemyShape(e, color);
+  } else {
+    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
+    ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+    ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h); ctx.lineTo(e.x+rr,e.y+e.h);
+    ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr); ctx.lineTo(e.x,e.y+rr);
+    ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // Eyes for canvas enemies
+  const eyeY = cy - 2, eyeOff = e.w * 0.18; ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawHPBar(e, yOff) {
+  const bW = e.w + 4, bH = 5, bx = e.x - 2, by = e.y + yOff;
+  ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bW, bH);
+  const ratio = Math.max(0, e.hp / e.maxHp);
+  ctx.fillStyle = ratio > 0.5 ? COL.hp : ratio > 0.25 ? '#f39c12' : COL.hpLost; ctx.fillRect(bx, by, bW * ratio, bH);
+}
+
+function drawEnding() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+  ctx.save(); ctx.globalAlpha = 0.8;
+  if (mipurinReady) {
+    const sz = 200;
+    ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
+  }
+  ctx.restore();
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('花の国に平和が戻った！', CW/2, 380);
+  ctx.fillStyle = '#fff'; ctx.font = '22px sans-serif';
+  ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
+  ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
+  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
+  ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW/2, 580);
+  ctx.fillText('祝福: ' + activeBlessings.length + '  共鳴: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), CW/2, 550);
+  ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+  const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+  if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
+  ctx.textAlign = 'left';
+  // Consumable use message
+  // [REMOVED] old consumableMsg draw - replaced by drawFloatMessages()
+  // Weapon swap message
+  // drawFloatMessages(); ← moved to draw() end
+  // drawDialogWindow(); ← moved to draw() end
+  // Fade overlay
+  if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+}
+
+function drawAttackEffect() {
+  if (!player.attacking) return;
+  const box = getAttackBox();
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  const ba = Math.atan2(player.atkDir.y, player.atkDir.x);
+  const wc = player.weapon.color || '#fff';
+  const progress = 1 - (player.atkTimer / player.atkDuration);
+  ctx.save();
+  // Dark outline for contrast on any background
+  ctx.globalAlpha = 0.5 * (1 - progress);
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.1, ba + 1.1); ctx.stroke();
+  // Main slash arc (bright)
+  ctx.globalAlpha = 0.9 * (1 - progress);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.0, ba + 1.0); ctx.stroke();
+  // Weapon color arc
+  ctx.strokeStyle = wc; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, 22 + progress * 10, ba - 0.8, ba + 0.8); ctx.stroke();
+  // Bright flash at start
+  if (progress < 0.3) {
+    ctx.globalAlpha = 0.4 * (1 - progress / 0.3);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  emitParticles(cx, cy, wc, 1, 50, 0.18);
+}
+
+function drawDashTrail() {
+  if (!player.dashing) return;
+  ctx.fillStyle = COL.dash; ctx.beginPath(); ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 24, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawTelegraph(en) {
+  if (en.state !== 'telegraph' || !en.chargeDir) return;
+  const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
+  ctx.fillStyle = COL.telegraph; ctx.beginPath();
+  ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
+  ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
+  ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ff0'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+}
+
+function drawBoss() {
+  if (!boss || boss.hp <= 0) return;
+  // Telegraph
+  if (boss.state === 'telegraph' && boss.chargeDir) {
+    const cx = boss.x + boss.w / 2, cy = boss.y + boss.h / 2;
+    ctx.fillStyle = 'rgba(255,0,0,0.3)'; ctx.beginPath();
+    ctx.moveTo(cx - boss.chargeDir.y * 30, cy + boss.chargeDir.x * 30);
+    ctx.lineTo(cx + boss.chargeDir.x * 300, cy + boss.chargeDir.y * 300);
+    ctx.lineTo(cx + boss.chargeDir.y * 30, cy - boss.chargeDir.x * 30); ctx.closePath(); ctx.fill();
+  }
+  if (boss.pattern === 'boss_slam' && boss.state === 'telegraph') {
+    ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.beginPath(); ctx.arc(boss.x + boss.w / 2, boss.y + boss.h / 2, 100, 0, Math.PI * 2); ctx.fill();
+  }
+  // Try boss sprite
+  const bossId = boss.id || 'default';
+  if (hasSprite(bossId)) {
+    drawBossPhaseEffect(boss);
+    const bob = getEnemyBob(boss);
+    drawSpriteImg(bossId, boss.x, boss.y + bob, boss.w, boss.h);
+    if (boss.hitFlash > 0) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(boss.x, boss.y + bob, boss.w, boss.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    drawEntity(boss, boss.hitFlash > 0 ? '#fff' : boss.color, false);
+  }
+  // Boss HP bar (top of screen)
+  const bw = 300, bh = 12, bx = CW / 2 - bw / 2, by = 8;
+  ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = COL.hpLost; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp / boss.maxHp), bh);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = COL.text; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(boss.name + ' P' + boss.phase, CW / 2, by + bh + 12); ctx.textAlign = 'left';
+}
+
+function drawHUD() {
+  // HP
+  const hs = 20;
+  for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
+  // Score & pollen
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
+  ctx.fillStyle = COL.pollen; ctx.font = '13px sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
+  // Floor & wave (centered, no overlap)
+  ctx.textAlign = 'center';
+  if (!isBossFloor() || !boss) {
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 20);
+  } else {
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 20);
+  }
+  ctx.textAlign = 'left';
+  // Weapon
+  ctx.fillStyle = player.weapon.color; ctx.font = '12px sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
+  ctx.fillStyle = COL.text; ctx.font = '12px sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
+  // Blessings
+  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
+    for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
+  // Controls
+  // Consumable slots
+    // Item slots with clear labels
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 50, 170, 55);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('アイテム', CW - 178, 62);
+    for (let i = 0; i < 3; i++) {
+      const sx = CW - 160 + i * 52, sy = 80;
+      // Slot background
+      ctx.fillStyle = player.consumables[i] ? 'rgba(50,40,80,0.9)' : 'rgba(0,0,0,0.4)';
+      ctx.fillRect(sx - 20, sy - 16, 40, 32);
+      ctx.strokeStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+      ctx.strokeRect(sx - 20, sy - 16, 40, 32);
+      if (player.consumables && player.consumables[i]) {
+        ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left';
+      }
+      // Key number (always visible)
+      ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
+      ctx.font = 'bold 12px sans-serif'; ctx.fillText((i + 1), sx - 16, sy + 20);
+    }
+    // Sub weapon indicator
+    if (player.weapons[1] !== null) {
+      const subW = player.weapons[1 - player.weaponIdx];
+      if (subW) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160, 30);
+        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160, 30);
+        ctx.fillStyle = '#aaa'; ctx.font = '11px sans-serif'; ctx.fillText('もうひとつ', 14, CH - 52);
+        ctx.fillStyle = subW.color || '#fff'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('Q: ' + subW.name, 14, CH - 38);
+      }
+    }
+    // Controls help (context-sensitive)
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    let helpText = 'WASD:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+    if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
+    if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
+    ctx.fillText(helpText, CW / 2, CH - 6); ctx.textAlign = 'left';
+}
+
+function drawBlessing() {
+  if (gameState !== 'blessing') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
+  for (let i = 0; i < blessingChoices.length; i++) {
+    const b = blessingChoices[i], bx = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
+    const sel = i === selectCursor;
+    ctx.fillStyle = sel ? 'rgba(50,50,80,0.95)' : COL.blessBox; ctx.fillRect(bx, by, bw, bh);
+    const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
+    ctx.strokeStyle = sel ? '#fff' : rCol; ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(bx, by, bw, bh);
+    if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, by, bw, bh); }
+    ctx.fillStyle = COL.text; ctx.font = 'bold 36px sans-serif'; ctx.fillText(b.icon, bx + bw / 2, by + 55);
+    ctx.fillStyle = rCol; ctx.font = '11px sans-serif'; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, by + 80);
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 18px sans-serif'; ctx.fillText(b.name, bx + bw / 2, by + 105);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '13px sans-serif'; ctx.fillText(b.desc, bx + bw / 2, by + 135);
+    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, by + 195);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawShop() {
+  if (gameState !== 'shop') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, CW, CH);
+  // Title
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('🌸 はなの市場 🌸', CW / 2, 55);
+  ctx.fillStyle = '#ddd'; ctx.font = '16px sans-serif';
+  ctx.fillText('いらっしゃい！ なにがほしいの？', CW / 2, 82);
+  ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
+  // Layout: 2 rows x 3 cols (or fewer)
+  const cols = 3;
+  const cardW = 200, cardH = 160, padX = 20, padY = 16;
+  const totalW = cols * cardW + (cols - 1) * padX;
+  const startX = CW / 2 - totalW / 2;
+  const startY = 130;
+  for (let i = 0; i < shopItems.length; i++) {
+    const s = shopItems[i];
+    const row = Math.floor(i / cols), col = i % cols;
+    const sx = startX + col * (cardW + padX);
+    const sy = startY + row * (cardH + padY);
+    const sel = i === selectCursor;
+    const canBuy = pollen >= s.cost;
+    // Card background
+    ctx.fillStyle = canBuy ? (sel ? 'rgba(60,50,90,0.95)' : 'rgba(30,30,50,0.85)') : 'rgba(60,30,30,0.8)';
+    ctx.fillRect(sx, sy, cardW, cardH);
+    // Border
+    ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
+    ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
+    // Icon
+    ctx.fillStyle = '#fff'; ctx.font = '32px sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
+    // Name
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(s.name, sx + cardW / 2, sy + 70);
+    // Desc
+    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
+    // Cost
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
+    // Select indicator
+    if (sel) {
+      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 145);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif';
+      ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 145);
+    }
+  }
+  // Skip button
+  const skipRow = Math.floor(shopItems.length / cols) + 1;
+  const skipY = startY + skipRow * (cardH + padY) + 10;
+  const skipSel = selectCursor >= shopItems.length;
+  ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.4)';
+  ctx.font = (skipSel ? 'bold 18px' : '16px') + ' sans-serif';
+  ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Xキー / Escでつぎへ', CW / 2, skipY);
+  ctx.textAlign = 'left';
+}
+
+function drawGarden() {
+  ctx.fillStyle = '#1a0a2e'; ctx.fillRect(0, 0, CW, CH);
+  // Stars
+  for (let i = 0; i < 30; i++) {
+    const sx = (i * 137 + 50) % CW, sy = (i * 97 + 30) % (CH - 200) + 50;
+    ctx.fillStyle = 'rgba(255,255,200,' + (0.3 + Math.sin(Date.now()/1000 + i) * 0.2) + ')';
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 60);
+  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
+  for (let i = 0; i < GARDEN_DEFS.length; i++) {
+    const def = GARDEN_DEFS[i];
+    const lv = gardenUpgrades[def.id] || 0;
+    const cost = getGardenCost(def.id);
+    const y = 150 + i * 100;
+    const selected = i === gardenCursor;
+    // Box
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.05)';
+    ctx.fillRect(CW/2 - 250, y, 500, 80);
+    if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(CW/2 - 250, y, 500, 80); }
+    // Icon + Name
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(def.icon + ' ' + def.name, CW/2 - 230, y + 30);
+    // Desc
+    ctx.fillStyle = '#ccc'; ctx.font = '16px sans-serif';
+    ctx.fillText(def.desc, CW/2 - 230, y + 55);
+    // Level
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'right';
+    let lvText = 'Lv.' + lv + ' / ' + def.max;
+    if (lv >= def.max) lvText += ' (MAX)';
+    ctx.fillText(lvText, CW/2 + 230, y + 30);
+    // Cost
+    if (cost > 0) {
+      ctx.fillStyle = nectar >= cost ? '#8f8' : '#f88';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('コスト: ' + cost + ' ネクター', CW/2 + 230, y + 55);
+    } else {
+      ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+      ctx.fillText('✅ 最大強化済', CW/2 + 230, y + 55);
+    }
+  }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '14px sans-serif';
+  ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 40);
+  ctx.textAlign = 'left';
+}
+
+function drawTitle() {
+  if (currentBGM !== 'title') playBGM('title');
+  ctx.fillStyle = '#fffde7';
+  ctx.fillRect(0, 0, CW, CH);
+  // Draw cute mipurin
+  if (mipurinReady) {
+    const f = MIPURIN_FRAMES.down;
+    const sz = 240;
+    ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, CW / 2 - sz / 2, 120, sz, sz);
+  }
+  // Title text
+  ctx.fillStyle = '#ff9800';
+  ctx.font = 'bold 64px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ミプリンの冒険', CW / 2, 440);
+  ctx.fillStyle = '#795548';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('v5.0', CW / 2, 480);
+  // Blink
+  titleBlink += 1 / 60;
+  if (Math.sin(titleBlink * 3) > -0.3) {
+    ctx.fillStyle = '#e65100';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.fillText('Zキーでスタート', CW / 2, 560);
+    ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif'; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
+    ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 625);
+  }
+  ctx.fillStyle = '#888';
+  ctx.font = '20px sans-serif';
+  ctx.fillText('移動: WASD  攻撃: Z  ダッシュ: X', CW / 2, 640);
+  ctx.fillText('アイテム: 1/2/3', CW / 2, 670);
+  ctx.textAlign = 'left';
+}
+
+function drawGameState() {
+  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = COL.clear; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'weaponDrop' && weaponPopup.active) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
+      ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+      ctx.fillText('ATK: ' + weaponPopup.weapon.atk + '  ' + (weaponPopup.weapon.desc || ''), CW / 2, CH / 2);
+      ctx.fillText('Z: おきにいりに  Q: もうひとつに  X: すてる', CW / 2, CH / 2 + 40);
+      ctx.textAlign = 'left';
+    }
+    if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
+    // Mipurin fallen
+    if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
+    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
+    ctx.fillStyle = '#ddd'; ctx.font = '20px sans-serif';
+    ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
+    ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
+    ctx.fillStyle = '#aaa'; ctx.font = '16px sans-serif';
+    if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
+    else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
+    ctx.fillStyle = COL.text; ctx.font = '20px sans-serif'; ctx.fillText('Floor ' + floor + '  Score: ' + score, CW / 2, CH / 2 + 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.fillText('Z: Title', CW / 2, CH / 2 + 50); ctx.textAlign = 'left'; }
+}
+
+function drawDmgNumbers() {
+  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+}
+
+function draw() {
+  if (gameState === 'ending') { drawEnding(); return; }
+  if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'garden') { drawGarden(); return; }
+  if (gameState === 'title') { drawTitle(); return; }
+
+  ctx.save();
+  if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
+
+  const th = getTheme(floor); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
+  drawRoom(); drawDashTrail(); drawDrops();
+  for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
+  for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
+  drawBoss(); drawProjectiles(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
+
+  ctx.restore();
+  drawGameState(); drawBlessing(); drawShop();
+
+  drawInventory();
+  // Fade overlay
+  if (fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+  drawFloatMessages();
+  drawDialogWindow();
+}
+
+// ===== MAIN LOOP =====
+let lastTime = 0;
+function loop(time) {
+  const rawDt = (time - lastTime) / 1000; lastTime = time;
+  const dt = Math.min(rawDt, 0.05);
+  if (hitStopTimer > 0) { hitStopTimer -= dt; draw(); } else { update(dt); draw(); }
+  for (const k in pressed) pressed[k] = false;
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
-
-
-
-
-
-
-
-
+requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(loop); });

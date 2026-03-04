@@ -156,15 +156,30 @@ function drawInventoryItems() {
 }
 function drawCollectionTab() {
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
-  ctx.fillText('モンスター図鑑', 120, 140);
+  ctx.fillText('🌸 花の国のいきもの図鑑', 120, 140);
   const names = Object.keys(collection);
-  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px sans-serif'; ctx.fillText('まだ敵に遭遇していません', 140, 190); return; }
+  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px sans-serif'; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 200); return; }
+  // 敵定義からloreを引く
+  const allDefs = Object.values(ENEMY_DEFS);
   for (let i = 0; i < names.length; i++) {
     const c = collection[names[i]];
-    const col = i % 2, row = Math.floor(i / 2);
-    const ex = 140 + col * 500, ey = 180 + row * 50;
-    ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(names[i], ex, ey);
-    ctx.fillStyle = '#aaa'; ctx.font = '13px sans-serif'; ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, ex + 160, ey);
+    const row = i;
+    const ey = 180 + row * 70;
+    if (ey > CH - 80) break; // 画面外防止
+    // 敵の色を探す
+    const def = allDefs.find(d => d.name === names[i]) || {};
+    ctx.fillStyle = def.color || '#fff';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(names[i], 140, ey);
+    ctx.fillStyle = '#ccc'; ctx.font = '13px sans-serif';
+    ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, 340, ey);
+    if (def.lore && c.defeated > 0) {
+      ctx.fillStyle = '#999'; ctx.font = '12px sans-serif';
+      ctx.fillText(def.lore, 160, ey + 22);
+    } else if (c.defeated === 0) {
+      ctx.fillStyle = '#666'; ctx.font = '12px sans-serif';
+      ctx.fillText('??? （倒すと情報が解放されるよ）', 160, ey + 22);
+    }
   }
 }
 
@@ -243,16 +258,16 @@ function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
 
 // ===== WEAPONS =====
 const WEAPON_DEFS = [
-  { id: 'sword', name: '剣', dmgMul: 1, range: 96, speed: 0.3, dur: 0.15, desc: 'バランス型', color: '#aaa', fx: 'none' },
-  { id: 'spear', name: '槍', dmgMul: 0.8, range: 64, speed: 0.35, dur: 0.12, desc: '貫通する', color: '#8ad', fx: 'pierce' },
-  { id: 'axe', name: '斧', dmgMul: 1.8, range: 48, speed: 0.5, dur: 0.2, desc: '遅いが強力', color: '#d88', fx: 'none' },
-  { id: 'dagger', name: '短剣', dmgMul: 0.5, range: 32, speed: 0.12, dur: 0.06, desc: '2連撃', color: '#ccc', fx: 'double' },
-  { id: 'hammer', name: 'ハンマー', dmgMul: 2.0, range: 56, speed: 0.65, dur: 0.25, desc: '範囲衝撃波', color: '#b97', fx: 'aoe' },
-  { id: 'whip', name: 'ムチ', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: '全方位攻撃', color: '#c6a', fx: '360' }];
+  { id: 'needle', name: '🐝 蜂の針', dmgMul: 1, range: 48, speed: 0.2, dur: 0.1, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
+  { id: 'honey_cannon', name: '🍯 蜜砲', dmgMul: 1.5, range: 96, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
+  { id: 'pollen_shield', name: '🛡️ 花粉盾', dmgMul: 0.8, range: 40, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
+  { id: 'vine_whip', name: '🌿 蔦鞭', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
+  { id: 'feather_shuriken', name: '🪶 羽根手裏剣', dmgMul: 0.5, range: 64, speed: 0.12, dur: 0.06, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
+  { id: 'queen_staff', name: '👑 女王の杖', dmgMul: 2.0, range: 56, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
 
 // ===== DROPS =====
 const drops = [];
-function spawnDrop(x, y, type) { console.log("DROP:", type, x, y);
+function spawnDrop(x, y, type) {
   drops.push({ x, y, type, life: 8, bobTimer: 0 });
 }
 function updateDrops(dt) {
@@ -310,18 +325,18 @@ function spawnDmg(x, y, val, color) { dmgNumbers.push({ x, y, val: String(val), 
 const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#e67e22', '#3498db', '#1abc9c', '#e84393', '#d35400', '#2c3e50', '#c0392b', '#6c5ce7', '#00b894', '#fd79a8'];
 
 const ENEMY_DEFS = {
-  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom' },
-  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob' },
-  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider' },
-  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat' },
-  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
-  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp' },
-  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', shootInterval: 2.0 },
-  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm' },
-  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost' },
-  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
-  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', shootInterval: 1.5 },
-  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee' }
+  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom', name: 'どくキノコ', lore: '森にひっそり生える毒キノコ。近づくとふらふら歩いてくる' },
+  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob', name: 'はちみつスライム', lore: 'こぼれた蜜から生まれた。ぷるぷるしていてちょっとかわいい' },
+  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider', name: 'あみぐもちゃん', lore: '花の国の糸使い。すばしっこくて追いかけてくる！' },
+  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat', name: 'やみコウモリ', lore: '洞窟に住む小さなコウモリ。暗いところが大好き' },
+  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', name: 'かぶとむしナイト', lore: '立派なツノで突進してくる！赤く光ったら要注意', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
+  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp', name: 'わるいハチ', lore: 'ミプリンと違って意地悪なハチ。すごく速い！' },
+  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', name: 'パクパクフラワー', lore: '動けないけど花粉弾を飛ばしてくる。きれいだけど危険！', shootInterval: 2.0 },
+  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm', name: 'もぐもぐイモムシ', lore: 'のんびり屋だけど体が丈夫。踏まないように注意！' },
+  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost', name: 'ひとだまホタル', lore: '消えたり現れたり…幽霊みたいなホタル。つかまえられる？' },
+  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', name: 'いわいわゴーレム', lore: '岩でできた大きな番人。遅いけどパワーはすごい！', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
+  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', name: 'つるつるツタ', lore: '地面から生えたツタ。種を飛ばして攻撃してくる', shootInterval: 1.5 },
+  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee', name: 'ダークビー', lore: '闇に染まったミツバチ。かつては仲間だったのかも…' }
 };
 
 const THEME_ENEMIES = {
@@ -490,6 +505,19 @@ function updateBoss(dt) {
 
 // ===== BLESSINGS =====
 const BLESSING_POOL = [
+  { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
+  { id: 'lily_hp', name: '🤍 リリアの守り', desc: '最大HP +1 & 全回復', icon: '🤍', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
+  { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
+  { id: 'lotus_heal', name: '🌸 ハスミの癒し', desc: 'HPを全回復', icon: '🌸', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
+  { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown *= 0.6; } },
+  { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
+  { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; } },
+  { id: 'chrysanth_luck', name: '✨ キクネの幸運', desc: 'ドロップ率UP (磁力+80)', icon: '✨', rarity: 'rare', family: 'chrysanth', apply: () => { player.magnetRange += 80; } },
+  { id: 'lily_shield', name: '🛡️ リリアの結界', desc: '無敵時間 +50%', icon: '🛡️', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
+  { id: 'rose_vampire', name: '🩸 ローザの渇き', desc: '撃破時HP回復', icon: '🩸', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
+  { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
+  { id: 'lotus_regen', name: '💖 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '💖', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } }
+];nst BLESSING_POOL = [
   { id: 'atk_up', name: '攻撃力UP', desc: '攻撃力 +1', icon: '\u2694', rarity: 'common', apply: () => { player.atk += 1; } },
   { id: 'hp_up', name: '体力UP', desc: '最大HP +1 & 回復', icon: '\u2665', rarity: 'common', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
   { id: 'speed_up', name: '移動速度UP', desc: '移動速度 +15%', icon: '\u21E8', rarity: 'common', apply: () => { player.speed *= 1.15; } },
@@ -838,7 +866,7 @@ function update(dt) {
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
       if (Math.random() < 0.15) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
-      recordEnemy(enemies[i].name || 'enemy', true);
+      recordEnemy(enemies[i].name || enemies[i].type, true);
       enemies.splice(i, 1);
     }
   }

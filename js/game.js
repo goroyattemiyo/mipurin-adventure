@@ -432,7 +432,7 @@ function drawDrops() {
 
 // ===== STATE =====
 let roomMap = [], floor = 1, wave = 0, WAVES = [];
-let gameState = 'title', clearTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
+let gameState = 'title', clearTimer = 0, deadTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
 let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
 let titleBlink = 0;
 

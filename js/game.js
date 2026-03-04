@@ -41,7 +41,7 @@ const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
 
 // ===== INPUT =====
 const keys = {}, pressed = {};
-window.addEventListener('keydown', e => { if (!keys[e.code]) pressed[e.code] = true; keys[e.code] = true; e.preventDefault(); });
+window.addEventListener('keydown', e => { if (['F12','F5','F11'].includes(e.code) || e.ctrlKey || e.metaKey) return; if (!keys[e.code]) pressed[e.code] = true; keys[e.code] = true; e.preventDefault(); });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 function isDown(c) { return !!keys[c] }
 function wasPressed(c) { const v = !!pressed[c]; pressed[c] = false; return v }
@@ -544,7 +544,7 @@ function updatePrologue(dt) {
   prologueTimer += dt;
   if (wasPressed('KeyX')) {
     stopBGM();
-    gameState = 'title';
+    resetGame();
     return;
   }
   if (wasPressed('KeyZ') || prologueTimer > 6) {
@@ -553,7 +553,7 @@ function updatePrologue(dt) {
     prologueTimer = 0;
     if (prologuePage >= prologueTexts.length) {
       stopBGM();
-      gameState = 'title';
+      resetGame();
     }
   }
 }
@@ -592,7 +592,7 @@ function update(dt) {
   updateFade(dt);
 
   if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { Audio.blessing(); resetGame(); } return; }
-  if (gameState === 'prologue') { updatePrologue(dt); if (gameState === 'title') { /* skipped or done, now actually start */ resetGame(); } return; }
+  if (gameState === 'prologue') { updatePrologue(dt); return; }
   if (gameState === 'blessing') {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.shop(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.shop(); }
@@ -919,7 +919,25 @@ function drawEntity(e, color, isP) {
   ctx.beginPath(); ctx.arc(cx + eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
 
   // Player crown + direction
-  if (isP) { ctx.fillStyle = COL.player; ctx.beginPath(); ctx.moveTo(cx - 6, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 6, e.y); ctx.fill();
+  if (isP) {
+    // Mipurin sprite rendering
+    if (mipurinReady) {
+      const dir = getPlayerDir();
+      const mf = MIPURIN_FRAMES[dir];
+      const drawSz = e.w + 24;
+      ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
+      // Draw crown
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.moveTo(e.x + e.w/2 - 10, e.y - 14);
+      ctx.lineTo(e.x + e.w/2 - 6, e.y - 22);
+      ctx.lineTo(e.x + e.w/2, e.y - 16);
+      ctx.lineTo(e.x + e.w/2 + 6, e.y - 22);
+      ctx.lineTo(e.x + e.w/2 + 10, e.y - 14);
+      ctx.closePath(); ctx.fill();
+      return;
+    }
+ ctx.fillStyle = COL.player; ctx.beginPath(); ctx.moveTo(cx - 6, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 6, e.y); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill();
     const dirX = player.atkDir.x, dirY = player.atkDir.y;
     const indX = cx + dirX * (e.w / 2 + 8), indY = cy + dirY * (e.h / 2 + 8);

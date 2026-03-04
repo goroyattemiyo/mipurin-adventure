@@ -219,7 +219,7 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
   atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
   dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
-  weapon: WEAPON_DEFS[0], atkRangeBonus: 0, spriteData: null };
+  weapon: WEAPON_DEFS[0], atkRangeBonus: 0, spriteData: null, consumables: [null, null, null] };
 
 // ===== ENEMIES =====
 const enemies = [];
@@ -562,7 +562,7 @@ function resetGame() {
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
-  player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0; player.magnetRange = 0;
+  player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
   activeBlessings = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
   startFade(1, () => startFloor());
 }
@@ -1025,7 +1025,7 @@ function drawHUD() {
       const sx = CW - 160 + i * 48, sy = 50;
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-      if (player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left'; }
+      if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left'; }
       ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '10px sans-serif'; ctx.fillText((i + 1), sx - 4, sy + 28);
     }
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif'; ctx.fillText('WASD:いどう Z:こうげき X:ダッシュ 1/2/3:アイテム', CW / 2 - 120, CH - 6);
@@ -1034,8 +1034,8 @@ function drawHUD() {
 function drawBlessing() {
   if (gameState !== 'blessing') return;
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BLESSING', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('Choose (1, 2, 3)', CW / 2, 95);
+  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
   for (let i = 0; i < blessingChoices.length; i++) {
     const b = blessingChoices[i], bx = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
     const sel = i === selectCursor;

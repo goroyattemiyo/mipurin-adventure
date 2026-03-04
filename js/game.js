@@ -1027,7 +1027,13 @@ function hasSprite(id) { return !!spriteCache[id]; }
 function drawSpriteImg(id, x, y, w, h) {
   const img = spriteCache[id];
   if (!img) return false;
-  ctx.drawImage(img, x, y, w, h);
+  // Maintain aspect ratio: fit inside w x h, center, scale up 20%
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  const scale = Math.min(w / iw, h / ih) * 1.2;
+  const dw = iw * scale, dh = ih * scale;
+  const dx = x + (w - dw) / 2, dy = y + (h - dh) / 2;
+  ctx.drawImage(img, dx, dy, dw, dh);
   return true;
 }
 

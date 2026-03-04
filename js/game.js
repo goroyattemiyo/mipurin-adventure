@@ -978,6 +978,8 @@ const SPRITE_MAP = {
   golem: 'assets/sprites/enemy_golem.webp',
   vine: 'assets/sprites/enemy_vine.webp',
   darkbee: 'assets/sprites/enemy_darkbee.webp',
+  // Aliases (shape name -> sprite)
+  blob: 'assets/sprites/enemy_slime.webp',
   // Bosses
   queen_hornet: 'assets/sprites/boss_queen_hornet.webp',
   fungus_king: 'assets/sprites/boss_fungus_king.webp',

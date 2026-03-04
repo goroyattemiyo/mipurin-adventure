@@ -88,6 +88,30 @@ function stopBGM() {
   currentBGM = '';
 }
 
+
+// ===== SE SYSTEM (mp3) =====
+const SE = {};
+const SE_FILES = {
+  attack: 'attack.mp3', hit: 'hit.mp3', enemy_die: 'enemy_die.mp3',
+  player_hurt: 'player_hurt.mp3', item_get: 'item_get.mp3', level_up: 'level_up.mp3',
+  boss_appear: 'boss_appear.mp3', game_over: 'game_over.mp3', needle: 'needle.mp3',
+  menu_move: 'menu_move.mp3', menu_select: 'menu_select.mp3',
+  door_open: 'door_open.mp3', save: 'save.mp3'
+};
+for (const [k, v] of Object.entries(SE_FILES)) {
+  const a = new window.Audio('assets/se/' + v);
+  a.volume = 0.4;
+  SE[k] = a;
+}
+function playSE(name) {
+  const s = SE[name];
+  if (!s) return;
+  if (s.currentTime > 0) { s.currentTime = 0; }
+  s.play().catch(() => {});
+}
+
+// ===== HIT STOP SYSTEM =====
+let hitStopTimer = 0;
 // ===== COLLECTION (図鑑) =====
 const collection = {};
 function recordEnemy(name, defeated) {
@@ -283,7 +307,7 @@ function updateDrops(dt) {
     }
     const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
     if (rectOverlap(pb, db)) {
-      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); Audio.drop(); }
+      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); playSE('item_get'); }
       if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); }
       drops.splice(i, 1);
     }
@@ -363,10 +387,10 @@ function updateProjectiles(dt) {
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (player.invTimer <= 0 && !player.dashing && rectOverlap(pb, { x: p.x - p.size, y: p.y - p.size, w: p.size * 2, h: p.size * 2 })) {
         player.hp -= p.dmg; player.invTimer = player.invDuration;
-        shakeTimer = 0.1; shakeIntensity = 5; Audio.hurt();
+        shakeTimer = 0.1; shakeIntensity = 5; playSE('player_hurt');
         spawnDmg(player.x + player.w / 2, player.y, p.dmg, '#fff');
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
-        if (player.hp <= 0) gameState = 'dead';
+        if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
         projectiles.splice(i, 1);
       }
     }
@@ -434,7 +458,7 @@ const BOSS_DEFS = [
 
 function isBossFloor() { return floor % 3 === 0; }
 
-function spawnBoss() {
+function spawnBoss() { playSE('boss_appear');
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];
   const sc = 1 + floor * 0.12;
@@ -476,8 +500,8 @@ function updateBoss(dt) {
       shakeTimer = 0.3; shakeIntensity = 8;
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
-        player.hp -= boss.dmg; player.invTimer = player.invDuration; Audio.hurt();
-        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) gameState = 'dead'; }
+        player.hp -= boss.dmg; player.invTimer = player.invDuration; playSE('player_hurt');
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; } }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
     if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
   }
@@ -494,11 +518,11 @@ function updateBoss(dt) {
   // Boss contact damage
   if (player.invTimer <= 0 && !player.dashing) {
     if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: boss.x, y: boss.y, w: boss.w, h: boss.h })) {
-      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; Audio.hurt();
+      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; playSE('player_hurt');
       spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
       const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
       moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
-      if (player.hp <= 0) gameState = 'dead';
+      if (player.hp <= 0) { gameState = 'dead'; }
     }
   }
 }
@@ -699,23 +723,23 @@ function update(dt) {
     return;
   }
   if (gameState === 'blessing') {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.shop(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.shop(); }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; playSE('menu_move'); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; playSE('menu_move'); }
     if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-      blessingChoices[selectCursor].apply(); activeBlessings.push(blessingChoices[selectCursor]); Audio.blessing(); nextFloor(); }
+      blessingChoices[selectCursor].apply(); activeBlessings.push(blessingChoices[selectCursor]); playSE('level_up'); nextFloor(); }
     return;
   }
   if (gameState === 'shop') {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); Audio.shop(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); Audio.shop(); }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); playSE('menu_move'); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); playSE('menu_move'); }
     for (let i = 0; i < shopItems.length; i++) {
       if (wasPressed('Digit' + (i + 1))) { selectCursor = i; }
     }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && selectCursor < shopItems.length && pollen >= shopItems[selectCursor].cost) {
-      pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); Audio.buy(); shopItems.splice(selectCursor, 1);
+      pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); playSE('menu_select'); shopItems.splice(selectCursor, 1);
       selectCursor = Math.min(selectCursor, shopItems.length); }
     if (wasPressed('Escape') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
       gameState = 'blessing'; blessingChoices = pickBlessings(); selectCursor = 0; }
@@ -727,8 +751,8 @@ function update(dt) {
   } return; }
   if (gameState === 'dead') { if (wasPressed('KeyZ')) { gameState = 'title'; } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
-      if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; Audio.blessing(); weaponPopup.active = false; gameState = 'playing'; }
-      if (wasPressed('KeyX')) { Audio.shop(); weaponPopup.active = false; gameState = 'playing'; }
+      if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; playSE('level_up'); weaponPopup.active = false; gameState = 'playing'; }
+      if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
       return;
     }
 
@@ -751,7 +775,7 @@ function update(dt) {
     if (wasPressed('KeyX') && player.dashCooldown <= 0) {
       player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
       player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
-      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
+      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; playSE('needle');
       emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
     }
     if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
@@ -771,22 +795,22 @@ function update(dt) {
     // Double dagger: schedule second hit
     if (wfx === 'double') { setTimeout(() => { if (gameState !== 'playing') return;
       for (const en2 of enemies) { if (en2.hp <= 0) continue;
-        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); Audio.hit(); }}
-      if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); Audio.hit(); }
+        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); playSE('hit'); }}
+      if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); playSE('hit'); }
     }, 80); }
     const hitEnList = [];
     // Hit enemies
     for (const en of enemies) { if (en.hp <= 0) continue;
-      if (rectOverlap(hitBox, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
-        shakeTimer = 0.05; shakeIntensity = 3; Audio.hit();
+      if (rectOverlap(hitBox, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; hitStopTimer = 0.05; const kb2 = 16; const ka2 = Math.atan2(en.y - player.y, en.x - player.x); moveWithCollision(en, Math.cos(ka2)*kb2, Math.sin(ka2)*kb2); emitParticles(en.x+en.w/2, en.y+en.h/2, '#fff', 5, 80, 0.2); spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
+        shakeTimer = 0.05; shakeIntensity = 3; playSE('hit');
         emitParticles(en.x + en.w / 2, en.y + en.h / 2, player.weapon.color, 3, 60, 0.2);
         const angle = Math.atan2(en.y - player.y, en.x - player.x);
         moveWithCollision(en, Math.cos(angle) * (wfx === 'pierce' ? 8 : 20), Math.sin(angle) * (wfx === 'pierce' ? 8 : 20));
         hitEnList.push(en); } }
     // Hit boss
     if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
-      boss.hp -= atkDmg; boss.hitFlash = 0.1; spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
-      shakeTimer = 0.06; shakeIntensity = 4; Audio.hit();
+      boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
+      shakeTimer = 0.06; shakeIntensity = 4; playSE('hit');
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, player.weapon.color, 5, 80, 0.3);
     }
   }
@@ -832,11 +856,11 @@ function update(dt) {
     if (player.invTimer <= 0 && !player.dashing) {
       if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
         player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
-        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.hurt();
+        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); playSE('player_hurt');
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
-        if (player.hp <= 0) gameState = 'dead';
+        if (player.hp <= 0) { gameState = 'dead'; }
       }
     }
   }
@@ -848,8 +872,8 @@ function update(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].hp <= 0) {
       score += enemies[i].score;
-      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 8, 80, 0.4);
-      Audio.kill();
+      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 15, 120, 0.5);
+      playSE('enemy_die');
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
@@ -861,7 +885,7 @@ function update(dt) {
 
   // Boss death
   if (boss && boss.hp <= 0) {
-    score += boss.score || 200; Audio.clear();
+    score += boss.score || 200; playSE('door_open');
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
     boss = null; gameState = 'floorClear'; clearTimer = 0;
@@ -870,7 +894,7 @@ function update(dt) {
   // Wave clear
   if (!boss && enemies.length === 0 && gameState === 'playing') {
     wave++;
-    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; Audio.clear(); }
+    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; playSE('door_open'); }
     else { gameState = 'waveWait'; clearTimer = 0; }
   }
 
@@ -1265,7 +1289,7 @@ let lastTime = 0;
 function loop(time) {
   const rawDt = (time - lastTime) / 1000; lastTime = time;
   const dt = Math.min(rawDt, 0.05);
-  update(dt); draw();
+  if (hitStopTimer > 0) { hitStopTimer -= dt; draw(); } else { update(dt); draw(); }
   for (const k in pressed) pressed[k] = false;
   requestAnimationFrame(loop);
 }

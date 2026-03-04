@@ -591,7 +591,7 @@ function getAttackBox() {
 function update(dt) {
   updateFade(dt);
 
-  if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { Audio.blessing(); resetGame(); } return; }
+  if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; playBGM('forest_south'); gameState = 'prologue'; } return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
   if (gameState === 'blessing') {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.shop(); }

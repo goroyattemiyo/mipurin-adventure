@@ -145,7 +145,7 @@ function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
 
 // ===== WEAPONS =====
 const WEAPON_DEFS = [
-  { id: 'sword', name: 'Sword', dmgMul: 1, range: 44, speed: 0.3, dur: 0.15, desc: 'Balanced', color: '#aaa', fx: 'none' },
+  { id: 'sword', name: 'Sword', dmgMul: 1, range: 96, speed: 0.3, dur: 0.15, desc: 'Balanced', color: '#aaa', fx: 'none' },
   { id: 'spear', name: 'Spear', dmgMul: 0.8, range: 64, speed: 0.35, dur: 0.12, desc: 'Pierces through', color: '#8ad', fx: 'pierce' },
   { id: 'axe', name: 'Axe', dmgMul: 1.8, range: 48, speed: 0.5, dur: 0.2, desc: 'Slow, strong', color: '#d88', fx: 'none' },
   { id: 'dagger', name: 'Dagger', dmgMul: 0.5, range: 32, speed: 0.12, dur: 0.06, desc: '2-hit combo', color: '#ccc', fx: 'double' },
@@ -520,6 +520,11 @@ function update(dt) {
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
   if (gameState === 'dead') { if (wasPressed('KeyZ')) { gameState = 'title'; } return; }
+    if (gameState === 'weaponDrop' && weaponPopup.active) {
+      if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; Audio.blessing(); weaponPopup.active = false; gameState = 'playing'; }
+      if (wasPressed('KeyX')) { Audio.shop(); weaponPopup.active = false; gameState = 'playing'; }
+      return;
+    }
 
   // === Player movement ===
   let mx = 0, my = 0;
@@ -537,9 +542,10 @@ function update(dt) {
   if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
     else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
   else {
-    if (wasPressed('KeyX') && player.dashCooldown <= 0 && (mx !== 0 || my !== 0)) {
+    if (wasPressed('KeyX') && player.dashCooldown <= 0) {
       player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
-      player.dashDir.x = mx; player.dashDir.y = my; player.invTimer = player.dashDuration; Audio.dash();
+      player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
+      player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
       emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
     }
     if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
@@ -895,7 +901,15 @@ function drawHUD() {
   if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 68); }
   // Controls
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px sans-serif'; ctx.fillText('WASD:move Z:attack X:dash', CW / 2 - 80, CH - 6);
+  // Consumable slots
+    for (let i = 0; i < 3; i++) {
+      const sx = CW - 160 + i * 48, sy = 50;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+      if (player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left'; }
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '10px sans-serif'; ctx.fillText((i + 1), sx - 4, sy + 28);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif'; ctx.fillText('WASD:いどう Z:こうげき X:ダッシュ 1/2/3:アイテム', CW / 2 - 120, CH - 6);
 }
 
 function drawBlessing() {
@@ -969,7 +983,16 @@ function drawGameState() {
   if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = COL.clear; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
-  if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
+  if (gameState === 'weaponDrop' && weaponPopup.active) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
+      ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+      ctx.fillText('ATK: ' + weaponPopup.weapon.atk + '  ' + (weaponPopup.weapon.desc || ''), CW / 2, CH / 2);
+      ctx.fillText('Z: そうび  X: すてる', CW / 2, CH / 2 + 40);
+      ctx.textAlign = 'left';
+    }
+    if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', CW / 2, CH / 2 - 30);
     ctx.fillStyle = COL.text; ctx.font = '20px sans-serif'; ctx.fillText('Floor ' + floor + '  Score: ' + score, CW / 2, CH / 2 + 10);
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.fillText('Z: Title', CW / 2, CH / 2 + 50); ctx.textAlign = 'left'; }

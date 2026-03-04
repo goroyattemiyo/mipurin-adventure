@@ -1560,8 +1560,8 @@ function drawEnding() {
   // Consumable use message
   // [REMOVED] old consumableMsg draw - replaced by drawFloatMessages()
   // Weapon swap message
-  drawFloatMessages();
-  drawDialogWindow();
+  // drawFloatMessages(); ← moved to draw() end
+  // drawDialogWindow(); ← moved to draw() end
   // Fade overlay
   if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }
@@ -1903,6 +1903,8 @@ function draw() {
   drawInventory();
   // Fade overlay
   if (fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+  drawFloatMessages();
+  drawDialogWindow();
 }
 
 // ===== MAIN LOOP =====

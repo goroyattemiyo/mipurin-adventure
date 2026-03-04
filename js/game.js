@@ -775,7 +775,11 @@ function buildShop() {
   }
   // Random weapon
   const wep = WEAPON_DEFS[Math.floor(rng() * WEAPON_DEFS.length)];
-  shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '\u2694', desc: wep.desc, action: () => { player.weapon = wep; } });
+  shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {
+      player.weapons[player.weaponIdx] = {...wep}; player.weapon = player.weapons[player.weaponIdx];
+      if (typeof weaponCollection !== 'undefined') { weaponCollection.add(wep.id); saveCollection(); }
+      playSE('level_up');
+    } });
   // Max HP
   shopItems.push({ name: '最大HP +1', cost: 8 + floor * 2, icon: '\u2B06', action: () => { player.maxHp += 1; player.hp += 1; } });
 }
@@ -965,6 +969,8 @@ function update(dt) {
   if (gameState === 'shop') {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); playSE('menu_move'); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); playSE('menu_move'); }
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); playSE('menu_move'); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { selectCursor = Math.min(shopItems.length, selectCursor + 3); playSE('menu_move'); }
     for (let i = 0; i < shopItems.length; i++) {
       if (wasPressed('Digit' + (i + 1))) { selectCursor = i; }
     }
@@ -1551,27 +1557,59 @@ function drawBlessing() {
 
 function drawShop() {
   if (gameState !== 'shop') return;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.pollen; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SHOP', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('Pollen: ' + pollen + '  (Z or Esc to skip)', CW / 2, 95);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, CW, CH);
+  // Title
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('🌸 はなの市場 🌸', CW / 2, 55);
+  ctx.fillStyle = '#ddd'; ctx.font = '16px sans-serif';
+  ctx.fillText('いらっしゃい！ なにがほしいの？', CW / 2, 82);
+  ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
+  // Layout: 2 rows x 3 cols (or fewer)
+  const cols = 3;
+  const cardW = 200, cardH = 160, padX = 20, padY = 16;
+  const totalW = cols * cardW + (cols - 1) * padX;
+  const startX = CW / 2 - totalW / 2;
+  const startY = 130;
   for (let i = 0; i < shopItems.length; i++) {
-    const s = shopItems[i], sx = CW / 2 - 250 + i * 200, sy = 120, sw = 180, sh = 200;
+    const s = shopItems[i];
+    const row = Math.floor(i / cols), col = i % cols;
+    const sx = startX + col * (cardW + padX);
+    const sy = startY + row * (cardH + padY);
     const sel = i === selectCursor;
     const canBuy = pollen >= s.cost;
-    ctx.fillStyle = canBuy ? (sel ? 'rgba(50,50,80,0.95)' : COL.blessBox) : 'rgba(60,30,30,0.9)'; ctx.fillRect(sx, sy, sw, sh);
-    ctx.strokeStyle = sel ? '#fff' : (canBuy ? COL.pollen : '#555'); ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(sx, sy, sw, sh);
-    ctx.fillStyle = COL.text; ctx.font = '28px sans-serif'; ctx.fillText(s.icon, sx + sw / 2, sy + 50);
-    ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px sans-serif'; ctx.fillText(s.name, sx + sw / 2, sy + 85);
-    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '12px sans-serif'; ctx.fillText(s.desc, sx + sw / 2, sy + 105); }
-    ctx.fillStyle = COL.pollen; ctx.font = 'bold 14px sans-serif'; ctx.fillText(s.cost + ' pollen', sx + sw / 2, sy + 140);
-    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px sans-serif';
-    ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', sx + sw / 2, sy + 180);
+    // Card background
+    ctx.fillStyle = canBuy ? (sel ? 'rgba(60,50,90,0.95)' : 'rgba(30,30,50,0.85)') : 'rgba(60,30,30,0.8)';
+    ctx.fillRect(sx, sy, cardW, cardH);
+    // Border
+    ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
+    ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
+    // Icon
+    ctx.fillStyle = '#fff'; ctx.font = '32px sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
+    // Name
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(s.name, sx + cardW / 2, sy + 70);
+    // Desc
+    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
+    // Cost
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
+    // Select indicator
+    if (sel) {
+      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 145);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif';
+      ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 145);
+    }
   }
   // Skip button
+  const skipRow = Math.floor(shopItems.length / cols) + 1;
+  const skipY = startY + skipRow * (cardH + padY) + 10;
   const skipSel = selectCursor >= shopItems.length;
-  const skx = CW / 2, sky = 350;
-  ctx.fillStyle = skipSel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = (skipSel ? 'bold ' : '') + '16px sans-serif';
-  ctx.fillText(skipSel ? '> SKIP (Z) <' : 'SKIP (Esc)', skx, sky);
+  ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.4)';
+  ctx.font = (skipSel ? 'bold 18px' : '16px') + ' sans-serif';
+  ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Escでつぎへ', CW / 2, skipY);
   ctx.textAlign = 'left';
 }
 

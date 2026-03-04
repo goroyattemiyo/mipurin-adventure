@@ -171,7 +171,7 @@ const WEAPON_DEFS = [
 
 // ===== DROPS =====
 const drops = [];
-function spawnDrop(x, y, type) {
+function spawnDrop(x, y, type) { console.log("DROP:", type, x, y);
   drops.push({ x, y, type, life: 8, bobTimer: 0 });
 }
 function updateDrops(dt) {
@@ -645,7 +645,7 @@ function update(dt) {
     else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
   else {
     if (wasPressed('KeyX') && player.dashCooldown <= 0) {
-      player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
+      console.log("DASH!", player.dashDir); player.dashing = true; player.dashTimer = player.dashDuration; player.dashCooldown = 0.5;
       player.dashDir.x = (mx !== 0 || my !== 0) ? mx : player.atkDir.x;
       player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
       emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);

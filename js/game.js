@@ -444,6 +444,11 @@ function drawDrops() {
   for (const d of drops) {
     const bob = Math.sin(d.bobTimer * 4) * 3;
     ctx.globalAlpha = d.life < 2 ? d.life / 2 : 1;
+    // Try sprite icon first
+    if (spriteImages.icons && drawSprite('icons', d.type, d.x - 12, d.y + bob - 12, 24, 24)) {
+      ctx.globalAlpha = 1; continue;
+    }
+    // Fallback canvas shapes
     if (d.type === 'pollen') {
       ctx.fillStyle = COL.pollen; ctx.beginPath(); ctx.arc(d.x, d.y + bob, 6, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(d.x - 2, d.y + bob - 2, 2, 0, Math.PI * 2); ctx.fill();
@@ -957,6 +962,82 @@ function nextFloor() { floor++; startFade(1, () => startFloor()); }
 
 const mipurinImg = new Image(); mipurinImg.src = 'assets/mipurin.png';
 let mipurinReady = false; mipurinImg.onload = () => { mipurinReady = true; console.log('mipurin.png loaded'); };
+
+// ===== SPRITE ENGINE =====
+const SPRITE_SHEETS = {
+  enemies: { src: 'assets/sprites/enemies_sheet.png', cols: 4, rows: 3, frameW: 48, frameH: 48,
+    map: { mushroom:0, slime:1, spider:2, bat:3, beetle:4, wasp:5, flower:6, worm:7, ghost:8, golem:9, vine:10, darkbee:11 }},
+  bosses: { src: 'assets/sprites/bosses_sheet.png', cols: 2, rows: 2, frameW: 64, frameH: 64,
+    map: { queen_hornet:0, fungus_king:1, crystal_golem:2, shadow_moth:3 }},
+  icons: { src: 'assets/sprites/icons_sheet.png', cols: 4, rows: 3, frameW: 32, frameH: 32,
+    map: { needle:0, honey_cannon:1, pollen_shield:2, vine_whip:3, feather_shuriken:4, queen_staff:5,
+           pollen:6, heal:7, honey:8, spicy_pollen:9, royal_jelly:10 }},
+  mipurin: { src: 'assets/sprites/mipurin_sheet.png', cols: 3, rows: 4, frameW: 64, frameH: 64,
+    map: { down_idle:0, down_walk1:1, down_walk2:2, up_idle:3, up_walk1:4, up_walk2:5,
+           left_idle:6, left_walk1:7, left_walk2:8, right_idle:9, right_walk1:10, right_walk2:11 }}
+};
+
+const spriteImages = {};
+let spritesReady = false;
+let spritesLoading = false;
+
+function loadAllSprites() {
+  if (spritesLoading) return;
+  spritesLoading = true;
+  const keys = Object.keys(SPRITE_SHEETS);
+  let loaded = 0;
+  const total = keys.length;
+  keys.forEach(key => {
+    const sheet = SPRITE_SHEETS[key];
+    const img = new Image();
+    img.onload = () => {
+      spriteImages[key] = img;
+      loaded++;
+      console.log('Sprite loaded: ' + key + ' (' + loaded + '/' + total + ')');
+      if (loaded >= total) { spritesReady = true; console.log('All sprites ready!'); }
+    };
+    img.onerror = () => {
+      loaded++;
+      console.warn('Sprite not found: ' + sheet.src + ' (using canvas fallback)');
+      if (loaded >= total && Object.keys(spriteImages).length > 0) spritesReady = true;
+    };
+    img.src = sheet.src;
+  });
+}
+
+function drawSprite(sheetKey, frameId, x, y, w, h) {
+  const img = spriteImages[sheetKey];
+  const sheet = SPRITE_SHEETS[sheetKey];
+  if (!img || !sheet) return false;
+  const idx = sheet.map[frameId];
+  if (idx === undefined) return false;
+  const col = idx % sheet.cols;
+  const row = Math.floor(idx / sheet.cols);
+  const sx = col * sheet.frameW;
+  const sy = row * sheet.frameH;
+  ctx.drawImage(img, sx, sy, sheet.frameW, sheet.frameH, x, y, w, h);
+  return true;
+}
+
+function getEnemySpriteId(enemy) {
+  // For enemies, use shape as sprite ID
+  return enemy.shape || enemy.id || 'default';
+}
+
+function getBossSpriteId(boss) {
+  return boss.id || 'default';
+}
+
+function getMipurinFrame(dir, moving) {
+  if (!moving) return dir + '_idle';
+  const walkFrame = Math.floor(Date.now() / 150) % 2;
+  return dir + (walkFrame === 0 ? '_walk1' : '_walk2');
+}
+
+// Start loading sprites immediately
+loadAllSprites();
+// ===== END SPRITE ENGINE =====
+
 const MIPURIN_FRAMES = {
   down:  { sx: 0,   sy: 0,   sw: 250, sh: 250 },
   up:    { sx: 250, sy: 0,   sw: 250, sh: 250 },
@@ -1471,67 +1552,77 @@ function drawEntity(e, color, isP) {
   const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Invincibility blink
   if (isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) ctx.globalAlpha = 0.4;
+  // Hit flash
+  if (!isP && e.hitFlash > 0) ctx.globalAlpha = 0.6;
 
-  // Player with sprite: skip canvas shapes entirely
-  if (isP && mipurinReady) {
-    ctx.globalAlpha = 1;
-    const dir = getPlayerDir();
-    const mf = MIPURIN_FRAMES[dir];
-    const drawSz = e.w + 24;
-    ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
-    return;
-  }
-
-  if (!isP && e.shape) {
-    drawEnemyShape(e, color);
-  } else {
-    // Fallback body (player without sprite, or shapeless enemy)
-    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
-    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x + rr, e.y); ctx.lineTo(e.x + e.w - rr, e.y);
-    ctx.quadraticCurveTo(e.x + e.w, e.y, e.x + e.w, e.y + rr); ctx.lineTo(e.x + e.w, e.y + e.h - rr);
-    ctx.quadraticCurveTo(e.x + e.w, e.y + e.h, e.x + e.w - rr, e.y + e.h); ctx.lineTo(e.x + rr, e.y + e.h);
-    ctx.quadraticCurveTo(e.x, e.y + e.h, e.x, e.y + e.h - rr); ctx.lineTo(e.x, e.y + rr);
-    ctx.quadraticCurveTo(e.x, e.y, e.x + rr, e.y); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = isP ? COL.playerOutline : '#333'; ctx.lineWidth = 2; ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Eyes (enemies and fallback player only)
-  const eyeY = cy - 2, eyeOff = e.w * 0.18; ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#222'; const lx = isP ? player.atkDir.x * 1.5 : 0, ly = isP ? player.atkDir.y * 1.5 : 0;
-  ctx.beginPath(); ctx.arc(cx - eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
-
-  // Player fallback crown + direction
+  // === PLAYER SPRITE ===
   if (isP) {
-    // Mipurin sprite rendering
+    const dir = getPlayerDir();
+    const isMoving = keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD'] ||
+                     keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
+    // Try new sprite sheet first
+    const frameId = getMipurinFrame(dir, isMoving);
+    if (spriteImages.mipurin && drawSprite('mipurin', frameId, e.x - 6, e.y - 6, e.w + 12, e.h + 12)) {
+      ctx.globalAlpha = 1;
+      return;
+    }
+    // Fallback to old mipurin.png
     if (mipurinReady) {
-      const dir = getPlayerDir();
       const mf = MIPURIN_FRAMES[dir];
       const drawSz = e.w + 24;
       ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
-      // Draw crown
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.moveTo(e.x + e.w/2 - 10, e.y - 14);
-      ctx.lineTo(e.x + e.w/2 - 6, e.y - 22);
-      ctx.lineTo(e.x + e.w/2, e.y - 16);
-      ctx.lineTo(e.x + e.w/2 + 6, e.y - 22);
-      ctx.lineTo(e.x + e.w/2 + 10, e.y - 14);
-      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
       return;
     }
- ctx.fillStyle = COL.player; ctx.beginPath(); ctx.moveTo(cx - 6, e.y); ctx.lineTo(cx, e.y - 10); ctx.lineTo(cx + 6, e.y); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, e.y - 12, 3, 0, Math.PI * 2); ctx.fill();
-    const dirX = player.atkDir.x, dirY = player.atkDir.y;
-    const indX = cx + dirX * (e.w / 2 + 8), indY = cy + dirY * (e.h / 2 + 8);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath(); ctx.moveTo(indX + dirX * 6, indY + dirY * 6);
-    ctx.lineTo(indX - dirY * 4, indY + dirX * 4); ctx.lineTo(indX + dirY * 4, indY - dirX * 4);
-    ctx.closePath(); ctx.fill(); }
+    // Final fallback: canvas player shape
+    ctx.fillStyle = COL.player;
+    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
+    ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+    ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h); ctx.lineTo(e.x+rr,e.y+e.h);
+    ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr); ctx.lineTo(e.x,e.y+rr);
+    ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd700'; ctx.beginPath();
+    ctx.moveTo(cx-10, e.y-4); ctx.lineTo(cx-6, e.y-12); ctx.lineTo(cx, e.y-6);
+    ctx.lineTo(cx+6, e.y-12); ctx.lineTo(cx+10, e.y-4); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  // === ENEMY SPRITE ===
+  const spriteId = getEnemySpriteId(e);
+  if (spriteImages.enemies && drawSprite('enemies', spriteId, e.x, e.y, e.w, e.h)) {
+    if (e.hitFlash > 0) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(e.x, e.y, e.w, e.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  // Fallback: canvas enemy shape
+  if (e.shape) {
+    drawEnemyShape(e, color);
+  } else {
+    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
+    const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
+    ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
+    ctx.quadraticCurveTo(e.x+e.w,e.y+e.h,e.x+e.w-rr,e.y+e.h); ctx.lineTo(e.x+rr,e.y+e.h);
+    ctx.quadraticCurveTo(e.x,e.y+e.h,e.x,e.y+e.h-rr); ctx.lineTo(e.x,e.y+rr);
+    ctx.quadraticCurveTo(e.x,e.y,e.x+rr,e.y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // Eyes for canvas enemies
+  const eyeY = cy - 2, eyeOff = e.w * 0.18; ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 function drawHPBar(e, yOff) {
@@ -1628,7 +1719,17 @@ function drawBoss() {
   if (boss.pattern === 'boss_slam' && boss.state === 'telegraph') {
     ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.beginPath(); ctx.arc(boss.x + boss.w / 2, boss.y + boss.h / 2, 100, 0, Math.PI * 2); ctx.fill();
   }
-  drawEntity(boss, boss.hitFlash > 0 ? '#fff' : boss.color, false);
+  // Try boss sprite first
+  const bossId = getBossSpriteId(boss);
+  if (spriteImages.bosses && drawSprite('bosses', bossId, boss.x, boss.y, boss.w, boss.h)) {
+    if (boss.hitFlash > 0) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    drawEntity(boss, boss.hitFlash > 0 ? '#fff' : boss.color, false);
+  }
   // Boss HP bar (top of screen)
   const bw = 300, bh = 12, bx = CW / 2 - bw / 2, by = 8;
   ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bw, bh);

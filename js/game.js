@@ -1098,6 +1098,11 @@ function update(dt) {
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) inventoryTab = 1;
     return;
   }
+  // Dialog state - pause game, Z to advance
+  if (gameState === 'dialog') {
+    if (wasPressed('KeyZ') || wasPressed('Enter')) { advanceDialog(); }
+    return;
+  }
   if (gameState === 'blessing') {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; playSE('menu_move'); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; playSE('menu_move'); }

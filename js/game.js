@@ -69,7 +69,19 @@ const Audio = (() => {
     clear() { play(523, 0.15, 'square', 0.1); play(659, 0.15, 'square', 0.1); setTimeout(() => play(784, 0.3, 'square', 0.12), 150); },
     shop() { play(440, 0.1, 'sine', 0.08); },
     buy() { play(600, 0.08, 'sine', 0.1); play(800, 0.12, 'sine', 0.1); },
-    drop() { play(500, 0.06, 'triangle', 0.06); }
+    drop() { play(500, 0.06, 'triangle', 0.06); },
+    game_over() { play(150, 0.3, 'sawtooth', 0.15); setTimeout(() => play(80, 0.5, 'sawtooth', 0.12), 200); },
+    boss_appear() { play(80, 0.4, 'sawtooth', 0.12); setTimeout(() => play(60, 0.6, 'sawtooth', 0.1), 300); setTimeout(() => play(100, 0.3, 'square', 0.08), 500); },
+    item_get() { play(880, 0.08, 'sine', 0.1); setTimeout(() => play(1100, 0.12, 'sine', 0.12), 60); },
+    level_up() { play(523, 0.1, 'square', 0.1); setTimeout(() => play(659, 0.1, 'square', 0.1), 100); setTimeout(() => play(784, 0.1, 'square', 0.1), 200); setTimeout(() => play(1047, 0.2, 'square', 0.12), 300); },
+    door_open() { play(300, 0.15, 'triangle', 0.1); setTimeout(() => play(450, 0.2, 'triangle', 0.08), 100); },
+    menu_move() { play(600, 0.04, 'square', 0.06); },
+    menu_select() { play(800, 0.06, 'square', 0.08); play(1000, 0.08, 'square', 0.06); },
+    dialog_open() { play(400, 0.06, 'sine', 0.08); play(600, 0.08, 'sine', 0.06); },
+    dialog_close() { play(500, 0.05, 'sine', 0.06); play(300, 0.08, 'sine', 0.05); },
+    player_hurt() { play(100, 0.15, 'sawtooth', 0.15); },
+    enemy_die() { play(400, 0.1, 'square', 0.1); play(600, 0.15, 'square', 0.08); },
+    attack() { play(250, 0.06, 'square', 0.08); play(350, 0.04, 'sawtooth', 0.06); }
   };
 })();
 
@@ -86,28 +98,6 @@ function playBGM(name) {
 function stopBGM() {
   if (bgmAudio) { bgmAudio.pause(); bgmAudio.currentTime = 0; bgmAudio = null; }
   currentBGM = '';
-}
-
-
-// ===== SE SYSTEM (mp3) =====
-const SE = {};
-const SE_FILES = {
-  attack: 'attack.mp3', hit: 'hit.mp3', enemy_die: 'enemy_die.mp3',
-  player_hurt: 'player_hurt.mp3', item_get: 'item_get.mp3', level_up: 'level_up.mp3',
-  boss_appear: 'boss_appear.mp3', game_over: 'game_over.mp3', needle: 'needle.mp3',
-  menu_move: 'menu_move.mp3', menu_select: 'menu_select.mp3',
-  door_open: 'door_open.mp3', save: 'save.mp3'
-};
-for (const [k, v] of Object.entries(SE_FILES)) {
-  const a = new window.Audio('assets/se/' + v);
-  a.volume = 0.4;
-  SE[k] = a;
-}
-function playSE(name) {
-  const s = SE[name];
-  if (!s) return;
-  if (s.currentTime > 0) { s.currentTime = 0; }
-  s.play().catch(() => {});
 }
 
 // ===== HIT STOP SYSTEM =====
@@ -434,7 +424,7 @@ function updateDrops(dt) {
     }
     const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
     if (rectOverlap(pb, db)) {
-      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); playSE('item_get'); }
+      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); Audio.item_get(); }
       if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); }
       drops.splice(i, 1);
     }
@@ -483,7 +473,7 @@ function showDialog(speaker, lines, onDone) {
   if (typeof lines === 'string') lines = [lines];
   dialogMsg = { speaker: speaker, lines: lines, lineIdx: 0, charIdx: 0, charTimer: 0, done: false };
   dialogCallback = onDone || null;
-  playSE('dialog_open');
+  Audio.dialog_open();
 }
 
 function advanceDialog() {
@@ -494,7 +484,7 @@ function advanceDialog() {
   }
   dialogMsg.lineIdx++;
   if (dialogMsg.lineIdx >= dialogMsg.lines.length) {
-    playSE('dialog_close');
+    Audio.dialog_close();
     const cb = dialogCallback;
     dialogMsg = null; dialogCallback = null;
     if (cb) cb();
@@ -647,10 +637,10 @@ function updateProjectiles(dt) {
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (player.invTimer <= 0 && !player.dashing && rectOverlap(pb, { x: p.x - p.size, y: p.y - p.size, w: p.size * 2, h: p.size * 2 })) {
         player.hp -= p.dmg; player.invTimer = player.invDuration;
-        shakeTimer = 0.1; shakeIntensity = 5; playSE('player_hurt');
+        shakeTimer = 0.1; shakeIntensity = 5; Audio.player_hurt();
         spawnDmg(player.x + player.w / 2, player.y, p.dmg, '#fff');
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
-        if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
+        if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(); }
         projectiles.splice(i, 1);
       }
     }
@@ -719,7 +709,7 @@ const BOSS_DEFS = [
 const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }
 
-function spawnBoss() { playSE('boss_appear');
+function spawnBoss() { Audio.boss_appear();
   // Boss dialog will be triggered after spawn
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];
@@ -762,8 +752,8 @@ function updateBoss(dt) {
       shakeTimer = 0.3; shakeIntensity = 8;
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
-        player.hp -= boss.dmg; player.invTimer = player.invDuration; playSE('player_hurt');
-        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); } }
+        player.hp -= boss.dmg; player.invTimer = player.invDuration; Audio.player_hurt();
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); } }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
     if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
   }
@@ -780,11 +770,11 @@ function updateBoss(dt) {
   // Boss contact damage
   if (player.invTimer <= 0 && !player.dashing) {
     if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: boss.x, y: boss.y, w: boss.w, h: boss.h })) {
-      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; playSE('player_hurt');
+      player.hp -= boss.dmg; player.invTimer = player.invDuration; shakeTimer = 0.12; shakeIntensity = 6; Audio.player_hurt();
       spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
       const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
       moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
-      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
+      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); }
     }
   }
 }
@@ -870,7 +860,7 @@ function checkDuos() {
       duo.apply(); activeDuos.push(duo); showFloat('✨ ' + duo.name + ' はつどう！', 3.0, MSG_COLORS.duo);
       spawnDmg(player.x + player.w/2, player.y - 20, 0, '#ffd700');
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.5);
-      playSE('level_up');
+      Audio.level_up();
     }
   }
 }
@@ -902,7 +892,7 @@ function buildShop() {
     shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
       // Find empty consumable slot
       const slot = player.consumables.indexOf(null);
-      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); showFloat(cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', 2.5, MSG_COLORS.info); }
+      if (slot !== -1) { player.consumables[slot] = {...cdef}; Audio.item_get(); showFloat(cdef.icon + ' ゲット！ ' + (slot+1) + 'キーで使えるよ！', 2.5, MSG_COLORS.info); }
       else { showFloat('アイテム枠がいっぱい！', 2.0, MSG_COLORS.warn); }
     }});
   }
@@ -911,7 +901,7 @@ function buildShop() {
   shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {
       player.weapons[player.weaponIdx] = {...wep}; player.weapon = player.weapons[player.weaponIdx];
       if (typeof weaponCollection !== 'undefined') { weaponCollection.add(wep.id); saveCollection(); }
-      playSE('level_up');
+      Audio.level_up();
     } });
   // Max HP
   shopItems.push({ name: '最大HP +1', cost: 8 + floor * 2, icon: '\u2B06', action: () => { player.maxHp += 1; player.hp += 1; } });
@@ -1176,18 +1166,18 @@ function update(dt) {
   }
   if (gameState === 'title') { titleBlink += dt;
     if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
-    if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; playSE('menu_select'); }
+    if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; Audio.menu_select(); }
     return; }
   if (gameState === 'garden') {
-    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { gardenCursor = Math.max(0, gardenCursor - 1); playSE('menu_move'); }
-    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { gardenCursor = Math.min(GARDEN_DEFS.length - 1, gardenCursor + 1); playSE('menu_move'); }
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { gardenCursor = Math.max(0, gardenCursor - 1); Audio.menu_move(); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { gardenCursor = Math.min(GARDEN_DEFS.length - 1, gardenCursor + 1); Audio.menu_move(); }
     if (wasPressed('KeyZ')) {
       const def = GARDEN_DEFS[gardenCursor];
       const cost = getGardenCost(def.id);
-      if (cost > 0 && nectar >= cost) { nectar -= cost; gardenUpgrades[def.id] = (gardenUpgrades[def.id]||0) + 1; saveMeta(); playSE('level_up'); }
-      else { playSE('hit'); }
+      if (cost > 0 && nectar >= cost) { nectar -= cost; gardenUpgrades[def.id] = (gardenUpgrades[def.id]||0) + 1; saveMeta(); Audio.level_up(); }
+      else { Audio.hit(); }
     }
-    if (wasPressed('KeyX') || wasPressed('Escape')) { gameState = 'title'; playSE('menu_select'); }
+    if (wasPressed('KeyX') || wasPressed('Escape')) { gameState = 'title'; Audio.menu_select(); }
     return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
   // Inventory toggle
@@ -1203,25 +1193,25 @@ function update(dt) {
     return;
   }
   if (gameState === 'blessing') {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; playSE('menu_move'); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; playSE('menu_move'); }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
     if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-      const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); playSE('level_up'); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); nextFloor(); }
+      const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); Audio.level_up(); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); nextFloor(); }
     return;
   }
   if (gameState === 'shop') {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); playSE('menu_move'); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); playSE('menu_move'); }
-    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); playSE('menu_move'); }
-    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { selectCursor = Math.min(shopItems.length, selectCursor + 3); playSE('menu_move'); }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); Audio.menu_move(); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); Audio.menu_move(); }
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); Audio.menu_move(); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { selectCursor = Math.min(shopItems.length, selectCursor + 3); Audio.menu_move(); }
     for (let i = 0; i < shopItems.length; i++) {
       if (wasPressed('Digit' + (i + 1))) { selectCursor = i; }
     }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && selectCursor < shopItems.length && pollen >= shopItems[selectCursor].cost) {
-      pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); playSE('menu_select'); shopItems.splice(selectCursor, 1);
+      pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); Audio.menu_select(); shopItems.splice(selectCursor, 1);
       selectCursor = Math.min(selectCursor, shopItems.length); }
     if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) {
       blessingChoices = pickBlessings(); selectCursor = 0;
@@ -1235,7 +1225,7 @@ function update(dt) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
-  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); if (SE.game_over) { SE.game_over.pause(); SE.game_over.currentTime = 0; } gameState = 'title'; floor = 1; resetGame(); } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
       // Z: equip as main
       if (wasPressed('KeyZ')) {
@@ -1244,7 +1234,7 @@ function update(dt) {
         player.weapons[player.weaponIdx] = w; player.weapon = w;
         if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
         saveCollection();
-        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+        Audio.level_up(); weaponPopup.active = false; gameState = 'playing';
       }
       // Q: put in sub slot
       if (wasPressed('KeyQ')) {
@@ -1255,10 +1245,10 @@ function update(dt) {
         if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
         saveCollection();
         showFloat(w.name + ' をサブにセット！ Qで持ちかえ！', 2.5, MSG_COLORS.buff);
-        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+        Audio.level_up(); weaponPopup.active = false; gameState = 'playing';
       }
       // X: discard
-      if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
+      if (wasPressed('KeyX')) { Audio.menu_move(); weaponPopup.active = false; gameState = 'playing'; }
       return;
     }
 
@@ -1269,7 +1259,7 @@ function update(dt) {
       item.apply();
       showFloat(item.msg, 2.5, MSG_COLORS.info);
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#fff', 6, 60, 0.3);
-      playSE('item_get');
+      Audio.item_get();
       player.consumables[ci] = null;
     }
   }
@@ -1278,7 +1268,7 @@ function update(dt) {
   if (wasPressed('KeyQ') && player.weapons[1] !== null) {
     player.weaponIdx = 1 - player.weaponIdx;
     player.weapon = player.weapons[player.weaponIdx];
-    playSE('menu_select');
+    Audio.menu_select();
     spawnDmg(player.x + player.w/2, player.y - 10, 0, '#ffd700');
     showFloat('ぶんぶん♪ ' + player.weapon.name, 1.5, MSG_COLORS.info);
   }
@@ -1302,10 +1292,10 @@ function update(dt) {
     const spr = Math.floor((player.y + player.h/2) / TILE);
     if (spc >= 0 && spc < COLS && spr >= 0 && spr < ROWS && roomMap[spr * COLS + spc] === 2) {
       player.hp -= 1; player.invTimer = player.invDuration;
-      playSE('player_hurt');
+      Audio.player_hurt();
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
       showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
-      if (player.hp <= 0) { gameState = 'dead'; playSE('game_over'); stopBGM(); }
+      if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(); }
     }
   }
   if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
@@ -1334,14 +1324,14 @@ function update(dt) {
     // Double dagger: schedule second hit
     if (wfx === 'double') { setTimeout(() => { if (gameState !== 'playing') return;
       for (const en2 of enemies) { if (en2.hp <= 0) continue;
-        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); playSE('hit'); }}
-      if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); playSE('hit'); }
+        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); Audio.hit(); }}
+      if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); Audio.hit(); }
     }, 80); }
     const hitEnList = [];
     // Hit enemies
     for (const en of enemies) { if (en.hp <= 0) continue;
       if (rectOverlap(hitBox, en)) { en.hp -= atkDmg; en.hitFlash = 0.1; hitStopTimer = 0.05; const kb2 = 16; const ka2 = Math.atan2(en.y - player.y, en.x - player.x); moveWithCollision(en, Math.cos(ka2)*kb2, Math.sin(ka2)*kb2); emitParticles(en.x+en.w/2, en.y+en.h/2, '#fff', 5, 80, 0.2); spawnDmg(en.x + en.w / 2, en.y, atkDmg, COL.dmg);
-        shakeTimer = 0.05; shakeIntensity = 3; playSE('hit');
+        shakeTimer = 0.05; shakeIntensity = 3; Audio.hit();
         emitParticles(en.x + en.w / 2, en.y + en.h / 2, player.weapon.color, 3, 60, 0.2);
         const angle = Math.atan2(en.y - player.y, en.x - player.x);
         moveWithCollision(en, Math.cos(angle) * (wfx === 'pierce' ? 8 : 20), Math.sin(angle) * (wfx === 'pierce' ? 8 : 20));
@@ -1349,7 +1339,7 @@ function update(dt) {
     // Hit boss
     if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
       boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
-      shakeTimer = 0.06; shakeIntensity = 4; playSE('hit');
+      shakeTimer = 0.06; shakeIntensity = 4; Audio.hit();
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, player.weapon.color, 5, 80, 0.3);
     }
   }
@@ -1395,11 +1385,11 @@ function update(dt) {
     if (player.invTimer <= 0 && !player.dashing) {
       if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
         player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
-        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); playSE('player_hurt');
+        spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.player_hurt();
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
-        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; playSE('game_over'); stopBGM(); }
+        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); }
       }
     }
   }
@@ -1412,7 +1402,7 @@ function update(dt) {
     if (enemies[i].hp <= 0) {
       score += enemies[i].score;
       emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 15, 120, 0.5);
-      playSE('enemy_die');
+      Audio.enemy_die();
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
@@ -1424,7 +1414,7 @@ function update(dt) {
 
   // Boss death
   if (boss && boss.hp <= 0) {
-    score += boss.score || 200; playSE('door_open');
+    score += boss.score || 200; Audio.door_open();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
     boss = null; gameState = 'floorClear'; clearTimer = 0;
@@ -1433,7 +1423,7 @@ function update(dt) {
   // Wave clear
   if (!boss && enemies.length === 0 && gameState === 'playing') {
     wave++;
-    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; playSE('door_open'); }
+    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); }
     else { gameState = 'waveWait'; clearTimer = 0; }
   }
 

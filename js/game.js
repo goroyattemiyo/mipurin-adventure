@@ -1611,12 +1611,21 @@ function drawEntity(e, color, isP) {
   const spriteId = e.shape || e.id || 'default';
   if (hasSprite(spriteId)) {
     const bob = getEnemyBob(e);
-    drawSpriteImg(spriteId, e.x, e.y + bob, e.w, e.h);
+    // Code animation: bob + squash & stretch + tilt
+    const isMoving = Math.abs(e.vx || 0) > 5 || Math.abs(e.vy || 0) > 5;
+    const squash = isMoving ? 1 + Math.sin(Date.now() / 150) * 0.05 : 1 + Math.sin(Date.now() / 600) * 0.02;
+    const tilt = isMoving ? Math.sin(Date.now() / 200) * 0.06 : 0;
+    ctx.save();
+    ctx.translate(e.x + e.w / 2, e.y + e.h / 2 + bob);
+    ctx.rotate(tilt);
+    ctx.scale(squash, 2 - squash);
+    drawSpriteImg(spriteId, -e.w / 2, -e.h / 2, e.w, e.h);
     if (e.hitFlash > 0) {
       ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(e.x, e.y + bob, e.w, e.h);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-e.w / 2, -e.h / 2, e.w, e.h);
       ctx.globalCompositeOperation = 'source-over';
     }
+    ctx.restore();
     ctx.globalAlpha = 1;
     return;
   }

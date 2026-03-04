@@ -160,6 +160,16 @@ function drawInventoryItems() {
   ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif';
   ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
   ctx.fillText('射程: ' + player.weapon.range, wx + 20, wy + 85);
+    // Weapon slots
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('【おきにいり】', wx + 20, wy + 115);
+    const w0 = player.weapons[0];
+    if (w0) { ctx.fillStyle = w0.color; ctx.font = '14px sans-serif'; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + 135); }
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('【もうひとつ】', wx + 20, wy + 160);
+    const w1 = player.weapons[1];
+    if (w1) { ctx.fillStyle = w1.color; ctx.font = '14px sans-serif'; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + 180); }
+    else { ctx.fillStyle = '#666'; ctx.font = '14px sans-serif'; ctx.fillText('- なし -', wx + 30, wy + 180); }
   ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + 105);
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
   ctx.fillText('祝福', wx, wy + 150);
@@ -390,6 +400,22 @@ const WEAPON_DEFS = [
   { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
   { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
 
+
+// ===== WEAPON COLLECTION =====
+let weaponCollection = new Set();
+function saveCollection() { try { localStorage.setItem('mipurin_weaponcol', JSON.stringify([...weaponCollection])); } catch(e) {} }
+function loadCollection() { try { const d = localStorage.getItem('mipurin_weaponcol'); if (d) weaponCollection = new Set(JSON.parse(d)); } catch(e) {} }
+loadCollection();
+// Record initial weapon
+weaponCollection.add(WEAPON_DEFS[0].id); saveCollection();
+
+// ===== CONSUMABLES =====
+const CONSUMABLE_DEFS = [
+  { id: 'honey_drop', name: '🍯 はちみつドロップ', desc: 'HP+3', icon: '🍯', msg: 'あまくておいしい！', apply: () => { player.hp = Math.min(player.hp + 3, player.maxHp); } },
+  { id: 'spicy_pollen', name: '🌶️ ピリカラ花粉', desc: '8秒ATK+2', icon: '🌶️', msg: 'からい！でもちからがわく！', apply: () => { player.atk += 2; setTimeout(() => { player.atk = Math.max(1, player.atk - 2); }, 8000); } },
+  { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } }
+];
+let consumableMsg = null;
 // ===== DROPS =====
 const drops = [];
 function spawnDrop(x, y, type) {
@@ -432,6 +458,7 @@ function drawDrops() {
 
 // ===== STATE =====
 let roomMap = [], floor = 1, wave = 0, WAVES = [];
+let weaponSwapMsg = null;
 let gameState = 'title', clearTimer = 0, deadTimer = 0, shakeTimer = 0, shakeIntensity = 0, score = 0, pollen = 0;
 let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
 let titleBlink = 0;
@@ -440,7 +467,7 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
   atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
   dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
-  weapon: WEAPON_DEFS[0], atkRangeBonus: 0, spriteData: null, consumables: [null, null, null] };
+  weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
 
 // ===== ENEMIES =====
 const enemies = [];
@@ -675,7 +702,7 @@ const BLESSING_POOL = [
   { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
   { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
   { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.6); } },
-  { id: 'sunflower_atkspd', name: '🌻 ソーレの連撃', desc: '攻撃速度 +25%', icon: '🌻', rarity: 'rare', family: 'sunflower', apply: () => { player.weapon = {...player.weapon, speed: player.weapon.speed * 0.75}; } },
+  { id: 'sunflower_atkspd', name: '🌻 ソーレの連撃', desc: '攻撃速度 +25%', icon: '🌻', rarity: 'rare', family: 'sunflower', apply: () => { player.atkSpeedBonus += 0.25; } },
   { id: 'sunflower_burst', name: '☀️ ソーレの閃光', desc: '移動速度+30% & ダッシュCD-30%', icon: '☀️', rarity: 'legend', family: 'sunflower', apply: () => { player.speed *= 1.3; player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.7); } },
   { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'common', family: 'wisteria', apply: () => { player.atk += 1; } },
   { id: 'wisteria_slow', name: '💜 フジカの霧', desc: '攻撃力+1 & 範囲+10', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; player.atkRangeBonus += 10; } },
@@ -736,6 +763,16 @@ function buildShop() {
   shopItems = [];
   // Heal
   shopItems.push({ name: '回復 +2', cost: 3 + floor, icon: '\u2665', action: () => { player.hp = Math.min(player.hp + 2, player.maxHp); } });
+  // Consumable shop items
+  for (const cdef of CONSUMABLE_DEFS) {
+    const baseCost = cdef.id === 'honey_drop' ? 5 : cdef.id === 'spicy_pollen' ? 8 : 12;
+    shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
+      // Find empty consumable slot
+      const slot = player.consumables.indexOf(null);
+      if (slot !== -1) { player.consumables[slot] = {...cdef}; playSE('item_get'); }
+      else { consumableMsg = { text: 'アイテム枠がいっぱい！', timer: 0.8 }; }
+    }});
+  }
   // Random weapon
   const wep = WEAPON_DEFS[Math.floor(rng() * WEAPON_DEFS.length)];
   shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '\u2694', desc: wep.desc, action: () => { player.weapon = wep; } });
@@ -856,7 +893,7 @@ function resetGame() {
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
-  player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
+  player.weapon = WEAPON_DEFS[0]; player.weapons = [WEAPON_DEFS[0], null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
   activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();
   startFade(1, () => startFloor());
@@ -885,6 +922,8 @@ function getAttackBox() {
 // ===== UPDATE =====
 function update(dt) {
   updateFade(dt);
+  if (weaponSwapMsg) { weaponSwapMsg.timer -= dt; if (weaponSwapMsg.timer <= 0) weaponSwapMsg = null; }
+  if (consumableMsg) { consumableMsg.timer -= dt; if (consumableMsg.timer <= 0) consumableMsg = null; }
 
   if (gameState === 'ending') {
     if (wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
@@ -943,10 +982,50 @@ function update(dt) {
   } return; }
   if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); gameState = 'title'; floor = 1; resetGame(); } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
-      if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; playSE('level_up'); weaponPopup.active = false; gameState = 'playing'; }
+      // Z: equip as main
+      if (wasPressed('KeyZ')) {
+        const w = {...weaponPopup.weapon};
+        if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
+        player.weapons[player.weaponIdx] = w; player.weapon = w;
+        if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
+        saveCollection();
+        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+      }
+      // Q: put in sub slot
+      if (wasPressed('KeyQ')) {
+        const w = {...weaponPopup.weapon};
+        if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
+        const subIdx = 1 - player.weaponIdx;
+        player.weapons[subIdx] = w;
+        if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
+        saveCollection();
+        playSE('level_up'); weaponPopup.active = false; gameState = 'playing';
+      }
+      // X: discard
       if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
       return;
     }
+
+  // === Consumable use (1/2/3) ===
+  for (let ci = 0; ci < 3; ci++) {
+    if (wasPressed('Digit' + (ci + 1)) && player.consumables[ci]) {
+      const item = player.consumables[ci];
+      item.apply();
+      consumableMsg = { text: item.msg, timer: 0.8 };
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#fff', 6, 60, 0.3);
+      playSE('item_get');
+      player.consumables[ci] = null;
+    }
+  }
+
+  // === Weapon swap (Q key) ===
+  if (wasPressed('KeyQ') && player.weapons[1] !== null) {
+    player.weaponIdx = 1 - player.weaponIdx;
+    player.weapon = player.weapons[player.weaponIdx];
+    playSE('menu_select');
+    spawnDmg(player.x + player.w/2, player.y - 10, 0, '#ffd700');
+    weaponSwapMsg = { text: 'ぶんぶん♪ ' + player.weapon.name, timer: 0.6 };
+  }
 
   // === Player movement ===
   let mx = 0, my = 0;
@@ -987,7 +1066,7 @@ function update(dt) {
   // === Attack ===
   player.atkCooldown = Math.max(0, player.atkCooldown - dt);
   if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
-    player.attacking = true; player.atkTimer = player.weapon.dur; player.atkCooldown = player.weapon.speed;
+    player.attacking = true; player.atkTimer = player.weapon.dur; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';
     // 360 whip: hit all around
@@ -1325,6 +1404,20 @@ function drawEnding() {
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
   if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
   ctx.textAlign = 'left';
+  // Consumable use message
+  if (consumableMsg) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, consumableMsg.timer * 2);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(consumableMsg.text, CW / 2, CH / 2 - 110);
+    ctx.textAlign = 'left'; ctx.restore();
+  }
+  // Weapon swap message
+  if (weaponSwapMsg) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, weaponSwapMsg.timer * 2);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(weaponSwapMsg.text, CW / 2, CH / 2 - 80);
+    ctx.textAlign = 'left'; ctx.restore();
+  }
   // Fade overlay
   if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }
@@ -1422,7 +1515,16 @@ function drawHUD() {
       if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left'; }
       ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '10px sans-serif'; ctx.fillText((i + 1), sx - 4, sy + 28);
     }
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif'; ctx.fillText('WASD:いどう Z:こうげき X:ダッシュ 1/2/3:アイテム', CW / 2 - 120, CH - 6);
+    // Sub weapon indicator
+    if (player.weapons[1] !== null) {
+      const subW = player.weapons[1 - player.weaponIdx];
+      if (subW) {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(10, CH - 60, 140, 24);
+        ctx.fillStyle = subW.color || '#aaa'; ctx.font = '12px sans-serif';
+        ctx.fillText('Q: ' + subW.name, 16, CH - 44);
+      }
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif'; ctx.fillText('WASD:いどう Z:こうげき X:ダッシュ Q:もちかえ 1/2/3:アイテム', CW / 2 - 150, CH - 6);
 }
 
 function drawBlessing() {
@@ -1565,7 +1667,7 @@ function drawGameState() {
       ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
       ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
       ctx.fillText('ATK: ' + weaponPopup.weapon.atk + '  ' + (weaponPopup.weapon.desc || ''), CW / 2, CH / 2);
-      ctx.fillText('Z: そうび  X: すてる', CW / 2, CH / 2 + 40);
+      ctx.fillText('Z: おきにいりに  Q: もうひとつに  X: すてる', CW / 2, CH / 2 + 40);
       ctx.textAlign = 'left';
     }
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);

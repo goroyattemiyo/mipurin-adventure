@@ -1744,25 +1744,31 @@ function drawHUD() {
   const hs = 20;
   for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
   // Score & pollen
-  ctx.fillStyle = COL.text; ctx.font = '16px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 12, 28); ctx.textAlign = 'left';
-  ctx.fillStyle = COL.pollen; ctx.font = '14px sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 120, 48);
-  // Floor & wave
-  ctx.fillStyle = COL.bless; ctx.font = 'bold 14px sans-serif'; ctx.fillText('フロア ' + floor, CW / 2 - 50, 28);
-  if (!isBossFloor() || !boss) { ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2 - 20, 28); }
-  else { ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('ボス', CW / 2 - 20, 28); }
+  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
+  ctx.fillStyle = COL.pollen; ctx.font = '13px sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
+  // Floor & wave (centered, no overlap)
+  ctx.textAlign = 'center';
+  if (!isBossFloor() || !boss) {
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 20);
+  } else {
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 20);
+  }
+  ctx.textAlign = 'left';
   // Weapon
   ctx.fillStyle = player.weapon.color; ctx.font = '12px sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
   ctx.fillStyle = COL.text; ctx.font = '12px sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
   // Blessings
   if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
-    for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 68); }
+    for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
   // Controls
   // Consumable slots
     // Item slots with clear labels
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 32, 170, 55);
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('アイテム', CW - 178, 44);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 50, 170, 55);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('アイテム', CW - 178, 62);
     for (let i = 0; i < 3; i++) {
-      const sx = CW - 160 + i * 52, sy = 62;
+      const sx = CW - 160 + i * 52, sy = 80;
       // Slot background
       ctx.fillStyle = player.consumables[i] ? 'rgba(50,40,80,0.9)' : 'rgba(0,0,0,0.4)';
       ctx.fillRect(sx - 20, sy - 16, 40, 32);

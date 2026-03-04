@@ -34,7 +34,7 @@ const SpriteLoader = {
 };
 
 // ===== CONSTANTS =====
-const CW = 960, CH = 540, TILE = 48, COLS = 20, ROWS = 11;
+const CW = 1280, CH = 960, TILE = 64, COLS = 20, ROWS = 15;
 
 // ===== CANVAS =====
 const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
@@ -198,7 +198,7 @@ let gameState = 'title', clearTimer = 0, shakeTimer = 0, shakeIntensity = 0, sco
 let fadeAlpha = 0, fadeDir = 0, fadeCallback = null;
 let titleBlink = 0;
 
-const player = { x: TILE * 10, y: TILE * 5, w: 36, h: 36, speed: 200, hp: 5, maxHp: 5, atk: 1,
+const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, maxHp: 5, atk: 1,
   attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
   atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
   dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
@@ -212,18 +212,18 @@ function spawnDmg(x, y, val, color) { dmgNumbers.push({ x, y, val: String(val), 
 const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#e67e22', '#3498db', '#1abc9c', '#e84393', '#d35400', '#2c3e50', '#c0392b', '#6c5ce7', '#00b894', '#fd79a8'];
 
 const ENEMY_DEFS = {
-  mushroom:  { hp: 3, speed: 55, w: 36, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom' },
-  slime:     { hp: 4, speed: 45, w: 34, h: 28, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob' },
-  spider:    { hp: 4, speed: 90, w: 36, h: 36, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider' },
-  bat:       { hp: 3, speed: 110, w: 32, h: 32, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat' },
-  beetle:    { hp: 6, speed: 50, w: 44, h: 44, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
-  wasp:      { hp: 5, speed: 100, w: 36, h: 36, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp' },
-  flower:    { hp: 7, speed: 0, w: 40, h: 40, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', shootInterval: 2.0 },
-  worm:      { hp: 8, speed: 35, w: 44, h: 32, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm' },
-  ghost:     { hp: 5, speed: 70, w: 36, h: 36, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost' },
+  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom' },
+  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob' },
+  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider' },
+  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat' },
+  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
+  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp' },
+  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', shootInterval: 2.0 },
+  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm' },
+  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost' },
   golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
-  vine:      { hp: 6, speed: 0, w: 36, h: 36, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', shootInterval: 1.5 },
-  darkbee:   { hp: 8, speed: 95, w: 40, h: 40, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee' }
+  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', shootInterval: 1.5 },
+  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee' }
 };
 
 const THEME_ENEMIES = {
@@ -448,7 +448,7 @@ function startFloor() {
   roomMap = generateRoom(floor);
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0; }
   else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
-  player.x = TILE * 10; player.y = TILE * 5;
+  player.x = TILE * 10; player.y = TILE * 7;
   player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
   player.dashing = false; player.dashCooldown = 0;
   dmgNumbers.length = 0; particles.length = 0;
@@ -457,6 +457,29 @@ function startFloor() {
 }
 
 function nextFloor() { floor++; startFade(1, () => startFloor()); }
+
+let playerSpriteReady = false;
+let playerAnimState = { name: 'idle_down', frame: 0, timer: 0 };
+SpriteLoader.load('assets/sprites/player.json').then(() => { playerSpriteReady = true; console.log('Player sprite loaded'); }).catch(e => console.warn('Sprite load failed:', e));
+
+function getPlayerAnim() {
+  const ax = player.atkDir.x, ay = player.atkDir.y;
+  const moving = player.dashing || Math.abs(ax) > 0 || Math.abs(ay) > 0;
+  if (player.attacking) return 'attack_down';
+  if (player.hp <= 0) return 'dead';
+  const dir = Math.abs(ax) > Math.abs(ay) ? (ax > 0 ? 'right' : 'left') : (ay < 0 ? 'up' : 'down');
+  return moving ? 'walk_' + dir : 'idle_' + dir;
+}
+
+function updatePlayerAnim(dt) {
+  const want = getPlayerAnim();
+  if (want !== playerAnimState.name) { playerAnimState.name = want; playerAnimState.frame = 0; playerAnimState.timer = 0; }
+  const anim = SpriteLoader.getAnim('player', want);
+  if (!anim) return;
+  playerAnimState.timer += dt;
+  const spf = 1 / (anim.fps || 8);
+  if (playerAnimState.timer >= spf) { playerAnimState.timer -= spf; playerAnimState.frame = (playerAnimState.frame + 1) % anim.frames.length; }
+}
 
 function resetGame() {
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null;

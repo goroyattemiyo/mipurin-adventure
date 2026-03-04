@@ -630,6 +630,40 @@ function updateBoss(dt) {
 }
 
 // ===== BLESSINGS =====
+// ===== META PROGRESSION (Sprint 5) =====
+let nectar = 0;
+let gardenUpgrades = { hp: 0, atk: 0 };
+const GARDEN_DEFS = [
+  { id: 'hp', name: '🌱 生命の花壇', desc: '初期HP +1', cost: [10, 25, 50, 100, 200], max: 5, icon: '❤️' },
+  { id: 'atk', name: '🌹 力の花壇', desc: '初期ATK +1', cost: [15, 35, 70, 140, 250], max: 5, icon: '⚔️' }
+];
+let gardenCursor = 0;
+let runNectar = 0; // nectar earned this run
+
+function saveMeta() {
+  try { localStorage.setItem('mipurin_nectar', nectar); localStorage.setItem('mipurin_garden', JSON.stringify(gardenUpgrades)); } catch(e) {}
+}
+function loadMeta() {
+  try {
+    const n = localStorage.getItem('mipurin_nectar'); if (n !== null) nectar = parseInt(n) || 0;
+    const g = localStorage.getItem('mipurin_garden'); if (g) gardenUpgrades = JSON.parse(g);
+  } catch(e) {}
+}
+loadMeta();
+
+function getGardenCost(id) {
+  const def = GARDEN_DEFS.find(d => d.id === id);
+  const lv = gardenUpgrades[id] || 0;
+  if (lv >= def.max) return -1;
+  return def.cost[lv];
+}
+
+function applyGardenBonuses() {
+  player.maxHp = 5 + (gardenUpgrades.hp || 0);
+  player.hp = player.maxHp;
+  player.atk = 1 + (gardenUpgrades.atk || 0);
+}
+
 const BLESSING_POOL = [
   { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
   { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
@@ -819,11 +853,12 @@ function updatePrologue(dt) {
 }
 
 function resetGame() {
-  floor = 1; wave = 0; score = 0; pollen = 0; boss = null;
+  floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
   player.weapon = WEAPON_DEFS[0]; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
   activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
+  applyGardenBonuses();
   startFade(1, () => startFloor());
 }
 
@@ -852,10 +887,24 @@ function update(dt) {
   updateFade(dt);
 
   if (gameState === 'ending') {
-    if (wasPressed('KeyZ')) { stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    if (wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
     return;
   }
-  if (gameState === 'title') { titleBlink += dt; if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; } return; }
+  if (gameState === 'title') { titleBlink += dt;
+    if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
+    if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; playSE('menu_select'); }
+    return; }
+  if (gameState === 'garden') {
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { gardenCursor = Math.max(0, gardenCursor - 1); playSE('menu_move'); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { gardenCursor = Math.min(GARDEN_DEFS.length - 1, gardenCursor + 1); playSE('menu_move'); }
+    if (wasPressed('KeyZ')) {
+      const def = GARDEN_DEFS[gardenCursor];
+      const cost = getGardenCost(def.id);
+      if (cost > 0 && nectar >= cost) { nectar -= cost; gardenUpgrades[def.id] = (gardenUpgrades[def.id]||0) + 1; saveMeta(); playSE('level_up'); }
+      else { playSE('hit'); }
+    }
+    if (wasPressed('KeyX') || wasPressed('Escape')) { gameState = 'title'; playSE('menu_select'); }
+    return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
   // Inventory toggle
   if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; }
@@ -892,7 +941,7 @@ function update(dt) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (floor % 2 === 0) { gameState = 'shop'; buildShop(); } else { gameState = 'blessing'; blessingChoices = pickBlessings(); }
   } return; }
-  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { gameState = 'title'; floor = 1; resetGame(); } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); gameState = 'title'; floor = 1; resetGame(); } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
       if (wasPressed('KeyZ')) { const old = player.weapon; player.weapon = weaponPopup.weapon; if (weaponPopup.sparkle) player.weapon.dmgMul = (player.weapon.dmgMul || 1) + 0.2; playSE('level_up'); weaponPopup.active = false; gameState = 'playing'; }
       if (wasPressed('KeyX')) { playSE('menu_move'); weaponPopup.active = false; gameState = 'playing'; }
@@ -1270,6 +1319,7 @@ function drawEnding() {
   ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
   ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
   ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
+  ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW/2, 580);
   ctx.fillText('祝福: ' + activeBlessings.length + '  共鳴: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), CW/2, 550);
   ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
@@ -1423,6 +1473,54 @@ function drawShop() {
   ctx.textAlign = 'left';
 }
 
+function drawGarden() {
+  ctx.fillStyle = '#1a0a2e'; ctx.fillRect(0, 0, CW, CH);
+  // Stars
+  for (let i = 0; i < 30; i++) {
+    const sx = (i * 137 + 50) % CW, sy = (i * 97 + 30) % (CH - 200) + 50;
+    ctx.fillStyle = 'rgba(255,255,200,' + (0.3 + Math.sin(Date.now()/1000 + i) * 0.2) + ')';
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 60);
+  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
+  for (let i = 0; i < GARDEN_DEFS.length; i++) {
+    const def = GARDEN_DEFS[i];
+    const lv = gardenUpgrades[def.id] || 0;
+    const cost = getGardenCost(def.id);
+    const y = 150 + i * 100;
+    const selected = i === gardenCursor;
+    // Box
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.05)';
+    ctx.fillRect(CW/2 - 250, y, 500, 80);
+    if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(CW/2 - 250, y, 500, 80); }
+    // Icon + Name
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(def.icon + ' ' + def.name, CW/2 - 230, y + 30);
+    // Desc
+    ctx.fillStyle = '#ccc'; ctx.font = '16px sans-serif';
+    ctx.fillText(def.desc, CW/2 - 230, y + 55);
+    // Level
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'right';
+    let lvText = 'Lv.' + lv + ' / ' + def.max;
+    if (lv >= def.max) lvText += ' (MAX)';
+    ctx.fillText(lvText, CW/2 + 230, y + 30);
+    // Cost
+    if (cost > 0) {
+      ctx.fillStyle = nectar >= cost ? '#8f8' : '#f88';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('コスト: ' + cost + ' ネクター', CW/2 + 230, y + 55);
+    } else {
+      ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+      ctx.fillText('✅ 最大強化済', CW/2 + 230, y + 55);
+    }
+  }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '14px sans-serif';
+  ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 40);
+  ctx.textAlign = 'left';
+}
+
 function drawTitle() {
   if (currentBGM !== 'title') playBGM('title');
   ctx.fillStyle = '#fffde7';
@@ -1447,6 +1545,8 @@ function drawTitle() {
     ctx.fillStyle = '#e65100';
     ctx.font = 'bold 32px sans-serif';
     ctx.fillText('Zキーでスタート', CW / 2, 560);
+    ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif'; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
+    ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 625);
   }
   ctx.fillStyle = '#888';
   ctx.font = '20px sans-serif';
@@ -1474,6 +1574,7 @@ function drawGameState() {
     ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
     ctx.fillStyle = '#ddd'; ctx.font = '20px sans-serif';
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
+    ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
     ctx.fillStyle = '#aaa'; ctx.font = '16px sans-serif';
     if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
     else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
@@ -1487,7 +1588,8 @@ function drawDmgNumbers() {
 
 function draw() {
   if (gameState === 'ending') { drawEnding(); return; }
-  if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'title') { drawTitle(); return; }
+  if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'garden') { drawGarden(); return; }
+  if (gameState === 'title') { drawTitle(); return; }
 
   ctx.save();
   if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);

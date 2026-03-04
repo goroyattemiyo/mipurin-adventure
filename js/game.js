@@ -383,12 +383,12 @@ function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
 
 // ===== WEAPONS =====
 const WEAPON_DEFS = [
-  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 48, speed: 0.2, dur: 0.1, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
-  { id: 'honey_cannon', name: '\ud83c\udf6f 蜜砲', dmgMul: 1.5, range: 96, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
-  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 40, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
-  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 72, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
-  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 64, speed: 0.12, dur: 0.06, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
-  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 56, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
+  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 64, speed: 0.18, dur: 0.15, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
+  { id: 'honey_cannon', name: '\ud83c\udf6f 蜜砲', dmgMul: 1.5, range: 108, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
+  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 52, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
+  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 84, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
+  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
+  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
 
 // ===== DROPS =====
 const drops = [];
@@ -1145,10 +1145,20 @@ function drawEntity(e, color, isP) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
   if (isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) ctx.globalAlpha = 0.4;
 
+  // Player with sprite: skip canvas shapes entirely
+  if (isP && mipurinReady) {
+    ctx.globalAlpha = 1;
+    const dir = getPlayerDir();
+    const mf = MIPURIN_FRAMES[dir];
+    const drawSz = e.w + 24;
+    ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
+    return;
+  }
+
   if (!isP && e.shape) {
     drawEnemyShape(e, color);
   } else {
-    // Player or default body
+    // Fallback body (player without sprite, or shapeless enemy)
     ctx.fillStyle = e.hitFlash > 0 ? '#fff' : color;
     const rr = 6; ctx.beginPath(); ctx.moveTo(e.x + rr, e.y); ctx.lineTo(e.x + e.w - rr, e.y);
     ctx.quadraticCurveTo(e.x + e.w, e.y, e.x + e.w, e.y + rr); ctx.lineTo(e.x + e.w, e.y + e.h - rr);
@@ -1159,7 +1169,7 @@ function drawEntity(e, color, isP) {
   }
   ctx.globalAlpha = 1;
 
-  // Eyes (for all)
+  // Eyes (enemies and fallback player only)
   const eyeY = cy - 2, eyeOff = e.w * 0.18; ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(cx - eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + eyeOff, eyeY, 4, 0, Math.PI * 2); ctx.fill();
@@ -1167,7 +1177,7 @@ function drawEntity(e, color, isP) {
   ctx.beginPath(); ctx.arc(cx - eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + eyeOff + lx, eyeY + ly, 2, 0, Math.PI * 2); ctx.fill();
 
-  // Player crown + direction
+  // Player fallback crown + direction
   if (isP) {
     // Mipurin sprite rendering
     if (mipurinReady) {

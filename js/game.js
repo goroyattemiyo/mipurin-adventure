@@ -736,7 +736,7 @@ function spawnEnemy(type, col, row) {
   const def = ENEMY_DEFS[type]; if (!def) return;
   const sc = 1 + Math.log2(1 + floor) * 0.35;
   enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
-    hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (1 + floor * 0.1)),
+    hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (floor <= 1 ? 1 : (1 + floor * 0.06))),
     score: Math.ceil(def.score * (1 + floor * 0.05)),
     vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
     chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
@@ -751,7 +751,8 @@ function randEnemyPos() {
 
 function buildWaves() {
   const th = getTheme(floor);
-  const pool = THEME_ENEMIES[th.name] || THEME_ENEMIES.forest;
+  let pool = THEME_ENEMIES[th.name] || THEME_ENEMIES.forest;
+    if (floor <= 2) pool = ['mushroom', 'slime'];
   const waveCount = Math.min(2 + Math.floor(floor / 2), 5);
   const waves = [];
   for (let w = 0; w < waveCount; w++) {
@@ -883,9 +884,9 @@ function getGardenCost(id) {
 }
 
 function applyGardenBonuses() {
-  player.maxHp = 5 + (gardenUpgrades.hp || 0);
+  player.maxHp = 7 + (gardenUpgrades.hp || 0);
   player.hp = player.maxHp;
-  player.atk = 1 + (gardenUpgrades.atk || 0);
+  player.atk = 2 + (gardenUpgrades.atk || 0);
 }
 
 const BLESSING_POOL = [

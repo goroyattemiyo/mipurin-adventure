@@ -42,6 +42,7 @@ const EVENT_POOL = [
 let treeRows = [];       // [{nodes:[{type,x,y,conn:[]},...]},...] 2 rows
 let treeCursor = {row:0, col:0};
 let treeSelected = null;  // row0 selected node index
+let eliteNext = false;
 let currentEvent = null, eventPhase = 'choose';
 
 // ===== TREE GENERATION =====
@@ -212,11 +213,7 @@ function drawNodeCard(n, x, y, selected, done, dimmed) {
 
 // ===== NODE EXECUTION =====
 function executeNode(node) {
-  if (node.id === 'battle') {
-    blessingChoices = pickBlessings();
-    gameState = 'dialog';
-    showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { gameState = 'blessing'; });
-  } else if (node.id === 'elite') {
+  if (node.id === 'battle') { finishTree(); } else if (node.id === 'elite') {
     // Elite: filter rare+ blessings
     const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend');
     const picks = [];

@@ -1979,20 +1979,21 @@ function drawShop() {
     // Icon
     ctx.fillStyle = '#fff'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.icon, sx + cardW / 2, sy + 50);
     // Name
-    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(s.name, sx + cardW / 2, sy + 85);
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif";
+    const nm = s.name.length > 8 ? s.name.slice(0,8) + '..' : s.name;
+    ctx.fillText(nm, sx + cardW / 2, sy + 85);
     // Desc
-    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.desc, sx + cardW / 2, sy + 145); }
+    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.desc, sx + cardW / 2, sy + 140); }
     // Cost
     ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
     // Select indicator
     if (sel) {
       ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 178);
+      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '✖ 花粉不足', sx + cardW / 2, sy + 178);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 145);
+      ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 185);
     }
   }
   // Skip button

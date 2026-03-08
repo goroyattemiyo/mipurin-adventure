@@ -1,77 +1,54 @@
-# COUNCIL-SESSION-002: ゲームバランス設計
+# COUNCIL-SESSION-002: Game Balance & Display
 
-**ID**: COUNCIL-SESSION-002
-**Repository**: mipurin-adventure
-**Participants**: Claude Opus 4.6 / ChatGPT 5.4
-**Status**: RESOLVED
-**Date**: 2026-03-08
+## Status: PHASE 1 RESOLVED / PHASE 2 IN PROGRESS
 
 ---
 
-## 1. Question
+## Phase 1: Balance Hotfix (v6.3.1)
 
-序盤のバランスが崩壊している。ATK1 vs 被ダメ2〜4、HP5では2〜3発で死亡。ゲームループが回らない。
+- Initial ATK: 1 → 2
+- Initial HP: 5 → 7
+- F1 enemy DMG scale: fixed ×1.0
+- DMG scale coefficient: floor×0.1 → floor×0.06
+- F1-2 weak enemies only (mushroom, slime)
+- Heal drop rate: 15% → 20% (v6.3.2)
 
-## 2. Context
+## Phase 2: Font & Display (v6.3.2 - v6.4.1)
 
-- プレイヤー: HP 5, ATK 1, 武器速度 0.18s, DPS ≈ 5.5
-- 回復: ドロップ15%でHP+1のみ
-- 敵HPスケール: ceil(base × (1 + log2(1+floor) × 0.35))
-- 敵DMGスケール: ceil(base × (1 + floor × 0.1))
-- F1でbeetle(DMG3), golem(DMG4)が出現可能
-- 成長手段: 祝福（ランダム）のみ
+### Problem
+Canvas内部1280×960がCSS表示927×695に縮小（72%）、さらにdevicePixelRatio 1.25でHiDPI未対応。フォントが意図の50-70%サイズで表示。
 
-## 3. Claude Proposal (5点)
+### Resolution
+1. **v6.3.2**: M PLUS Rounded 1c導入、ドロップ名フロート表示
+2. **v6.3.7**: フォント5層階層システム（A:見出し B:選択 C:HUD D:フロート E:テキスト）
+3. **v6.3.8**: タイトル画面レイアウト修正（タイトル120px、ミプリン拡大）
+4. **v6.3.9**: CSS最大化（min(100vw,133.33vh) / min(75vw,100vh)）
+5. **v6.4.0**: Canvas ctx.fontのフォント名クォート修正（101箇所）
+6. **v6.4.1**: HiDPI対応（canvas解像度をCW×DPR、ctx.scale(DPR,DPR)）
 
-1. 初期ATK 1→2
-2. 初期HP 5→8
-3. F1の敵DMGスケール無効（×1.0固定）
-4. 敵DMGスケール緩和 floor×0.1 → floor×0.06
-5. F1〜F2は弱敵限定（mushroom, slime）
-6. 回復ドロップ率 15%→25%
+### Root Cause
+- CSS縮小: canvas表示が画面に収まるよう縮小
+- HiDPI未対応: devicePixelRatio=1.25でCanvasピクセルと物理ピクセル不一致
+- ctx.fontのフォント名にクォート不足でGoogle Font未適用
 
-## 4. ChatGPT 5.4 Judgment
+### Current Status
+- タイトル画面: OK（120px丸ゴシック表示確認）
+- 戦闘中HUD/ドロップ/ノード選択/ショップ: 試遊確認中
 
-### 採用（調整あり）
-- 初期ATK 1→2 ✅
-- 初期HP 5→7（8は甘すぎる） ✅ 修正
-- F1敵DMGスケール無効 ✅
-- DMGスケール 0.1→0.06 ✅
-- F1〜F2弱敵限定 ✅
+## Phase 3: Pending Investigation
 
-### 保留
-- 回復ドロップ率 → 入れるなら20%から。25%は飛びすぎ。
+- 祝福効果の反映確認（攻撃範囲拡大等）
+- ハート表示の重なり問題
+- 個別フォントサイズ微調整（試遊後）
 
-### 理由
-- 問題は「序盤の理不尽さ」であり終盤の厳しさではない
-- ATK2は序盤ストレス除去効果が大きい
-- HP8はATK2とセットだと序盤が緩すぎる → 7が安全
-- 回復率は他の調整を入れた後に判断すべき（何が効いたか分からなくなる）
+## Versions
 
-## 5. Implementation
-
-### v6.3.1 (Balance Hotfix)
-- 初期ATK 1→2
-- 初期HP 5→7
-- F1敵DMGスケール無効
-- DMGスケール 0.06
-- F1-2弱敵限定
-
-### v6.3.2 (Follow-up)
-- 試遊後「回復ないと続かない」→ 回復率 15→20% 採用
-- ドロップ名フロート表示追加
-- フォント M PLUS Rounded 1c 導入
-
-## 6. Result
-
-- 序盤生存率が大幅改善
-- F1-2が学習区間として機能
-- F3以降で緊張感が増す設計を維持
-- 回復率20%で適度な安心感
-
-## 7. Remaining
-
-- フォントサイズ調整（別コミット）
-- 中盤〜終盤バランス検証（F5以降）
-- 祝福による成長曲線の設計
-- レベルアップ時のHP/ATK上昇量の検討
+| Version | Change |
+|---------|--------|
+| v6.3.1 | Balance hotfix (ATK2, HP7, F1 DMG flat, scale 0.06) |
+| v6.3.2 | Heal drop 20%, drop name floats, M PLUS Rounded 1c |
+| v6.3.7 | Font hierarchy 5-layer system |
+| v6.3.8 | Title screen layout fix |
+| v6.3.9 | CSS maximize canvas display |
+| v6.4.0 | Fix canvas font quotes (101 declarations) |
+| v6.4.1 | HiDPI devicePixelRatio support |

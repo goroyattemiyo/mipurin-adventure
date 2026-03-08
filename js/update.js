@@ -76,11 +76,11 @@ function update(dt) {
   }
   if (gameState === 'event') {
     if (eventPhase === 'choose') {
-      if (wasPressed('ArrowUp') || wasPressed('KeyW')) { nodeCursor = 0; Audio.menu_move(); }
-      if (wasPressed('ArrowDown') || wasPressed('KeyS')) { nodeCursor = 1; Audio.menu_move(); }
+      if (wasPressed('ArrowUp') || wasPressed('KeyW')) { treeCursor.col = 0; Audio.menu_move(); }
+      if (wasPressed('ArrowDown') || wasPressed('KeyS')) { treeCursor.col = 1; Audio.menu_move(); }
       if (wasPressed('KeyZ')) {
         Audio.menu_select();
-        if (nodeCursor === 0) currentEvent.a.apply();
+        if (treeCursor.col === 0) currentEvent.a.apply();
         else currentEvent.b.apply();
         eventPhase = 'done';
       }
@@ -298,5 +298,6 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
+
 
 

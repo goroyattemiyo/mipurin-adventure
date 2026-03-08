@@ -348,11 +348,11 @@ function drawGameState() {
       const opts = [currentEvent.a.label, currentEvent.b.label];
       for (let i = 0; i < 2; i++) {
         const oy = 370 + i * 70;
-        ctx.fillStyle = nodeCursor === i ? 'rgba(52,152,219,0.4)' : 'rgba(255,255,255,0.1)';
+        ctx.fillStyle = treeCursor.col === i ? 'rgba(52,152,219,0.4)' : 'rgba(255,255,255,0.1)';
         ctx.fillRect(CW / 2 - 200, oy - 25, 400, 50);
-        ctx.strokeStyle = nodeCursor === i ? '#3498db' : 'rgba(255,255,255,0.3)';
+        ctx.strokeStyle = treeCursor.col === i ? '#3498db' : 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 2; ctx.strokeRect(CW / 2 - 200, oy - 25, 400, 50);
-        ctx.fillStyle = nodeCursor === i ? '#fff' : '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+        ctx.fillStyle = treeCursor.col === i ? '#fff' : '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
         ctx.fillText(opts[i], CW / 2, oy + 7);
       }
       ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
@@ -420,3 +420,4 @@ function loop(time) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(loop); });
+

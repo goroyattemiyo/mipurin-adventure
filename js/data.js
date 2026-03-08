@@ -6,6 +6,7 @@ function playBGM(name) {
   currentBGM = name;
   bgmAudio = new window.Audio('assets/music/' + name + '.mp3');
   bgmAudio.loop = true; bgmAudio.volume = 0.3;
+  bgmAudio.onerror = () => { bgmAudio = null; currentBGM = ''; };
   bgmAudio.play().catch(() => {});
 }
 function stopBGM() {

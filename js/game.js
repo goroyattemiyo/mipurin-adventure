@@ -62,18 +62,34 @@ function rectOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < 
 const Audio = (() => {
   let actx = null;
   function init() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} } if (actx && actx.state === 'suspended') actx.resume(); }
+  let masterVol = 0.7;
+  try { const sv = localStorage.getItem('mipurin_vol'); if (sv !== null) masterVol = parseFloat(sv); } catch(e) {}
+  function setVol(v) { masterVol = clamp(v, 0, 1); try { localStorage.setItem('mipurin_vol', masterVol); } catch(e) {} }
+  function getVol() { return masterVol; }
   function play(freq, dur, type, vol) {
-    init();
+    init(); if (!actx) return;
     const o = actx.createOscillator(), g = actx.createGain();
     o.type = type || 'square'; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol || 0.1, actx.currentTime);
+    g.gain.setValueAtTime((vol || 0.1) * masterVol, actx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
     o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
   }
+  function playNoise(dur, vol) {
+    init(); if (!actx) return;
+    const sr = actx.sampleRate, len = sr * dur;
+    const buf = actx.createBuffer(1, len, sr);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    const src = actx.createBufferSource(), g = actx.createGain();
+    src.buffer = buf;
+    g.gain.setValueAtTime((vol || 0.08) * masterVol, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    src.connect(g); g.connect(actx.destination); src.start(); src.stop(actx.currentTime + dur);
+  }
   return {
-    hit() { play(220, 0.1, 'square', 0.12); play(330, 0.08, 'sine', 0.1); play(440, 0.06, 'sine', 0.08); },
-    hurt() { play(100, 0.15, 'sawtooth', 0.15); },
-    kill() { play(400, 0.1, 'square', 0.1); play(600, 0.15, 'square', 0.08); },
+    hit() { play(220, 0.1, 'square', 0.12); play(330, 0.08, 'sine', 0.1); play(440, 0.06, 'sine', 0.08); playNoise(0.05, 0.1); },
+    hurt() { this.player_hurt(); },
+    kill() { this.enemy_die(); },
     dash() { play(300, 0.06, 'triangle', 0.08); },
     blessing() { play(523, 0.15, 'sine', 0.1); play(659, 0.15, 'sine', 0.08); play(784, 0.15, 'sine', 0.06); setTimeout(() => play(1047, 0.2, 'sine', 0.1), 120); setTimeout(() => play(1319, 0.15, 'sine', 0.07), 200); setTimeout(() => play(1568, 0.25, 'sine', 0.05), 300); },
     clear() { play(523, 0.12, 'square', 0.1); play(659, 0.12, 'sine', 0.08); setTimeout(() => play(784, 0.15, 'square', 0.1), 120); setTimeout(() => play(784, 0.15, 'sine', 0.06), 120); setTimeout(() => play(1047, 0.25, 'sine', 0.11), 260); setTimeout(() => play(1319, 0.2, 'sine', 0.07), 300); },
@@ -91,6 +107,7 @@ const Audio = (() => {
     dialog_close() { play(659, 0.08, 'sine', 0.07); play(523, 0.06, 'sine', 0.04); setTimeout(() => play(392, 0.1, 'sine', 0.06), 60); },
     player_hurt() { play(90, 0.2, 'sawtooth', 0.12); play(700, 0.05, 'sine', 0.1); setTimeout(() => play(500, 0.08, 'sine', 0.07), 50); setTimeout(() => play(60, 0.15, 'sawtooth', 0.05), 100); },
     enemy_die() { play(523, 0.08, 'sine', 0.11); play(659, 0.08, 'sine', 0.09); setTimeout(() => play(784, 0.1, 'sine', 0.08), 50); setTimeout(() => play(1047, 0.12, 'sine', 0.06), 110); },
+    setVol, getVol,
     attack() { play(160, 0.18, 'sawtooth', 0.11); play(240, 0.14, 'square', 0.09); play(320, 0.08, 'sine', 0.06); setTimeout(() => play(120, 0.12, 'triangle', 0.05), 60); }
   };
 })();

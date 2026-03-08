@@ -169,7 +169,7 @@ function update(dt) {
   // === Attack ===
   player.atkCooldown = Math.max(0, player.atkCooldown - dt);
   if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
-    player.attacking = true; player.atkTimer = player.weapon.dur; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
+    player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack(); player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';
     // 360 whip: hit all around

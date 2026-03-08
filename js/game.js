@@ -44,6 +44,7 @@ cvs.height = CH * DPR;
 cvs.style.width = '';
 cvs.style.height = '';
 ctx.scale(DPR, DPR);
+ctx.imageSmoothingEnabled = false;
 
 
 // ===== UI TEXT SYSTEM =====

@@ -1959,7 +1959,7 @@ function drawShop() {
   ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
   // Layout: 2 rows x 3 cols (or fewer)
   const cols = 3;
-  const cardW = 200, cardH = 160, padX = 20, padY = 16;
+  const cardW = 240, cardH = 200, padX = 24, padY = 20;
   const totalW = cols * cardW + (cols - 1) * padX;
   const startX = CW / 2 - totalW / 2;
   const startY = 130;
@@ -1977,19 +1977,19 @@ function drawShop() {
     ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
     ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
     // Icon
-    ctx.fillStyle = '#fff'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
+    ctx.fillStyle = '#fff'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.icon, sx + cardW / 2, sy + 50);
     // Name
-    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(s.name, sx + cardW / 2, sy + 70);
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(s.name, sx + cardW / 2, sy + 85);
     // Desc
-    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
+    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.desc, sx + cardW / 2, sy + 145); }
     // Cost
-    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
     // Select indicator
     if (sel) {
-      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 145);
+      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 178);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
       ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 145);

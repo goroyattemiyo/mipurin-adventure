@@ -38,6 +38,12 @@ const CW = 1280, CH = 960, TILE = 64, COLS = 20, ROWS = 15;
 
 // ===== CANVAS =====
 const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+cvs.width = CW * DPR;
+cvs.height = CH * DPR;
+cvs.style.width = '';
+cvs.style.height = '';
+ctx.scale(DPR, DPR);
 
 // ===== INPUT =====
 const keys = {}, pressed = {};

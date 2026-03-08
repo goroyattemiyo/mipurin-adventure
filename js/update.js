@@ -68,12 +68,7 @@ function update(dt) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     generateNodes(); gameState = 'nodeSelect';
   } return; }
-  if (gameState === 'nodeSelect') {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { nodeCursor = (nodeCursor + 2) % 3; Audio.menu_move(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { nodeCursor = (nodeCursor + 1) % 3; Audio.menu_move(); }
-    if (wasPressed('KeyZ')) { Audio.menu_select(); executeNode(nodeChoices[nodeCursor]); }
-    return;
-  }
+  if (gameState === 'nodeSelect') { updateNodeSelect(); return; }
   if (gameState === 'event') {
     if (eventPhase === 'choose') {
       if (wasPressed('ArrowUp') || wasPressed('KeyW')) { treeCursor.col = 0; Audio.menu_move(); }
@@ -298,6 +293,5 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
-
 
 

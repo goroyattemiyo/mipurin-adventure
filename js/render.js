@@ -304,40 +304,7 @@ function drawGameState() {
   if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = "bold 64px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = COL.clear; ctx.font = "bold 80px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
-  if (gameState === 'nodeSelect') {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = '#ffd700'; ctx.font = "bold 32px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    ctx.fillText('つぎの道をえらぼう', CW / 2, 160);
-    for (let i = 0; i < nodeChoices.length; i++) {
-      const n = nodeChoices[i];
-      const bx = CW / 2 - 360 + i * 240, by = 260, bw = 200, bh = 280;
-      // Card bg
-      ctx.fillStyle = nodeCursor === i ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)';
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.strokeStyle = nodeCursor === i ? n.color : 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = nodeCursor === i ? 4 : 2;
-      ctx.strokeRect(bx, by, bw, bh);
-      // Icon
-      ctx.fillStyle = '#fff'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText(n.icon, bx + bw / 2, by + 70);
-      // Name
-      ctx.fillStyle = n.color; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText(n.name, bx + bw / 2, by + 120);
-      // Desc
-      ctx.fillStyle = '#ccc'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-      const words = n.desc.split(''); let line = '', ly = by + 155;
-      for (const ch of words) { line += ch; if (ctx.measureText(line).width > bw - 30) { ctx.fillText(line, bx + bw / 2, ly); ly += 20; line = ''; } }
-      if (line) ctx.fillText(line, bx + bw / 2, ly);
-      // Cursor
-      if (nodeCursor === i) {
-        ctx.fillStyle = n.color; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-        ctx.fillText('▶ Z: えらぶ', bx + bw / 2, by + bh - 20);
-      }
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('← → で選択  /  Z で決定', CW / 2, CH - 60);
-    ctx.textAlign = 'left';
-  }
+  if (gameState === 'nodeSelect') { drawNodeMap(); }
   if (gameState === 'event' && currentEvent) {
     ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = '#3498db'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';

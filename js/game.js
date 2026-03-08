@@ -2072,7 +2072,7 @@ function drawTitle() {
     ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('Zキーでスタート', CW / 2, 560);
     ctx.fillStyle = '#aaa'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
-    ctx.fillStyle = '#ffd700'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 625);
+    ctx.fillStyle = '#ffd700'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 755);
   }
   ctx.fillStyle = '#888';
   ctx.font = '20px M PLUS Rounded 1c, sans-serif';

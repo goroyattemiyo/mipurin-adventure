@@ -3,21 +3,35 @@
 
 // ===== META PROGRESSION (Sprint 5) =====
 let nectar = 0;
-let gardenUpgrades = { hp: 0, atk: 0 };
+let gardenUpgrades = { hp: 0, atk: 0, speed: 0, dash: 0, magnet: 0, nectar: 0 };
+let gardenUnlocks = { speed: false, dash: false, magnet: false, nectar: false };
+let totalClears = 0;
 const GARDEN_DEFS = [
-  { id: 'hp', name: '🌱 生命の花壇', desc: '初期HP +1', cost: [10, 25, 50, 100, 200], max: 5, icon: '❤️' },
-  { id: 'atk', name: '🌹 力の花壇', desc: '初期ATK +1', cost: [15, 35, 70, 140, 250], max: 5, icon: '⚔️' }
+  { id: 'hp', name: '🌱 生命の花壇', desc: '初期HP +1', cost: [10, 25, 50, 100, 200], max: 5, icon: '❤️', unlock: null },
+  { id: 'atk', name: '🌹 力の花壇', desc: '初期ATK +1', cost: [15, 35, 70, 140, 250], max: 5, icon: '⚔️', unlock: null },
+  { id: 'speed', name: '🌻 疾風の花壇', desc: '初期速度 +8%', cost: [20, 45, 90], max: 3, icon: '💨', unlock: 'speed' },
+  { id: 'dash', name: '⚡ 閃光の花壇', desc: 'ダッシュCD -15%', cost: [25, 60, 120], max: 3, icon: '⚡', unlock: 'dash' },
+  { id: 'magnet', name: '✨ 収穫の花壇', desc: '磁力 +40', cost: [15, 30, 60], max: 3, icon: '🧲', unlock: 'magnet' },
+  { id: 'nectar', name: '🍯 蜜の花壇', desc: 'ネクター +10%', cost: [30, 80, 180], max: 3, icon: '🍯', unlock: 'nectar' }
 ];
 let gardenCursor = 0;
 let runNectar = 0; // nectar earned this run
 
 function saveMeta() {
-  try { localStorage.setItem('mipurin_nectar', nectar); localStorage.setItem('mipurin_garden', JSON.stringify(gardenUpgrades)); } catch(e) {}
+  try {
+    localStorage.setItem('mipurin_nectar', nectar);
+    localStorage.setItem('mipurin_garden', JSON.stringify(gardenUpgrades));
+    localStorage.setItem('mipurin_unlocks', JSON.stringify(gardenUnlocks));
+    localStorage.setItem('mipurin_clears', totalClears);
+  } catch(e) {}
 }
 function loadMeta() {
   try {
     const n = localStorage.getItem('mipurin_nectar'); if (n !== null) nectar = parseInt(n) || 0;
-    const g = localStorage.getItem('mipurin_garden'); if (g) gardenUpgrades = JSON.parse(g);
+    const g = localStorage.getItem('mipurin_garden'); if (g) Object.assign(gardenUpgrades, JSON.parse(g));
+    const u = localStorage.getItem('mipurin_unlocks'); if (u) Object.assign(gardenUnlocks, JSON.parse(u));
+    const c = localStorage.getItem('mipurin_clears'); if (c !== null) totalClears = parseInt(c) || 0;
+    checkGardenUnlocks();
   } catch(e) {}
 }
 loadMeta();
@@ -29,10 +43,23 @@ function getGardenCost(id) {
   return def.cost[lv];
 }
 
+function checkGardenUnlocks() {
+  if (totalClears >= 1) gardenUnlocks.speed = true;
+  if (totalClears >= 2) gardenUnlocks.dash = true;
+  if (totalClears >= 3) gardenUnlocks.magnet = true;
+  if (totalClears >= 5) gardenUnlocks.nectar = true;
+}
+
 function applyGardenBonuses() {
   player.maxHp = 7 + (gardenUpgrades.hp || 0);
   player.hp = player.maxHp;
   player.atk = 2 + (gardenUpgrades.atk || 0);
+  const spdLv = gardenUpgrades.speed || 0;
+  if (spdLv > 0) player.speed = player.speed * (1 + spdLv * 0.08);
+  const dashLv = gardenUpgrades.dash || 0;
+  if (dashLv > 0) player.dashCooldown = player.dashCooldown * (1 - dashLv * 0.15);
+  player.magnetRange = (player.magnetRange || 0) + (gardenUpgrades.magnet || 0) * 40;
+  player.nectarMul = (player.nectarMul || 0) + (gardenUpgrades.nectar || 0) * 0.10;
 }
 
 

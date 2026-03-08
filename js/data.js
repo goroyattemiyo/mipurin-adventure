@@ -342,3 +342,21 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
   weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
 
+
+
+// ===== NPC FLORA LINES =====
+const NPC_LINES = [
+  { cond: () => totalClears === 0, text: 'はじめまして！ わたしはフローラ。花壇のおせわをしているの。' },
+  { cond: () => totalClears === 1, text: 'おかえり！ はじめてのクリアおめでとう！ あたらしい花壇がさいたよ！' },
+  { cond: () => totalClears === 2, text: 'また会えたね！ ダッシュの花壇もさいたよ。つかってみて！' },
+  { cond: () => totalClears === 3, text: 'すごいね！ 収穫の花壇がかいほうされたよ。花粉あつめがらくになるよ！' },
+  { cond: () => totalClears >= 5, text: 'ミプリンはもう立派な冒険者だね。蜜の花壇で周回がはかどるよ！' },
+  { cond: () => nectar >= 500, text: 'ネクターがいっぱい！ 花壇をぜんぶ最大にしちゃおう！' },
+  { cond: () => gardenUpgrades.hp >= 5 && gardenUpgrades.atk >= 5, text: '基本の花壇が最大！ つぎは新しい花壇をためしてみて！' },
+  { cond: () => Object.values(gardenUpgrades).every(v => v >= 3), text: 'すべての花壇がLv3以上！ ミプリンは花の国いちの冒険者だね！' },
+  { cond: () => true, text: 'ネクターで花壇をそだてると、冒険がらくになるよ！' }
+];
+function getFloraLine() {
+  for (const line of NPC_LINES) { if (line.cond()) return line.text; }
+  return NPC_LINES[NPC_LINES.length - 1].text;
+}

@@ -39,10 +39,20 @@ function drawEnding() {
   }
   ctx.restore();
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-  ctx.fillText('花の国に平和が戻った！', CW/2, 380);
+    const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal';
+  const endTitle = endType === 'true' ? '✨ 真のエンディング ✨' : endType === 'good' ? '🌸 グッドエンディング 🌸' : '花の国に平和が戻った！';
+  ctx.fillText(endTitle, CW/2, 380);
   ctx.fillStyle = '#fff'; ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
-  ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
+  if (endType === 'true') {
+    ctx.fillText('すべての花の精霊と共鳴し、', CW/2, 430);
+    ctx.fillText('ミプリンは花の国の守護者となった。', CW/2, 460);
+  } else if (endType === 'good') {
+    ctx.fillText('多くの祝福に守られ、', CW/2, 430);
+    ctx.fillText('ミプリンは花粉を取り戻した。', CW/2, 460);
+  } else {
+    ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
+    ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
+  }
   ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
   ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW/2, 580);
@@ -62,6 +72,11 @@ function drawEnding() {
 
 
 
+function isGardenVisible(def) {
+  if (!def.unlock) return true;
+  return gardenUnlocks[def.unlock] === true;
+}
+
 function drawGarden() {
   ctx.fillStyle = '#1a0a2e'; ctx.fillRect(0, 0, CW, CH);
   // Stars
@@ -74,8 +89,24 @@ function drawGarden() {
   ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 60);
   ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
-  for (let i = 0; i < GARDEN_DEFS.length; i++) {
-    const def = GARDEN_DEFS[i];
+    const visibleDefs = GARDEN_DEFS.filter(d => isGardenVisible(d));
+  // NPC Flora（右下）
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 320, CH - 200, 300, 160);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW - 320, CH - 200, 300, 160);
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  ctx.fillText('🌸 フローラ', CW - 310, CH - 175);
+  ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
+  const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
+  const words = floraText.split('');
+  let fline = '', fly = CH - 150;
+  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 260) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
+  if (fline) ctx.fillText(fline, CW - 310, fly);
+  // クリア数表示
+  ctx.fillStyle = '#aaa'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('クリア回数: ' + totalClears, CW - 310, CH - 50);
+  ctx.textAlign = 'center';
+  for (let i = 0; i < visibleDefs.length; i++) {
+    const def = visibleDefs[i];
     const lv = gardenUpgrades[def.id] || 0;
     const cost = getGardenCost(def.id);
     const y = 150 + i * 100;

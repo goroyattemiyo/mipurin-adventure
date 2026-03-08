@@ -4,7 +4,7 @@ function update(dt) {
   updateMessages(dt);
 
   if (gameState === 'ending') {
-    if (wasPressed('KeyZ')) { nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
     return;
   }
   if (gameState === 'title') { titleBlink += dt;

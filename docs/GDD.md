@@ -267,3 +267,4 @@
 ## 第11章 新規ファイル一覧 (14本)
 
 blessings.js, blessingUI.js, weapons.js, meta.js, metaUI.js, nodeMap.js, nodeMapUI.js, roomTemplates.js, events.js, gameFeel.js, damageNumber.js, enemyAI.js, hud.js, minimap.js
+

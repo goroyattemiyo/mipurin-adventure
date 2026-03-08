@@ -1,3 +1,20 @@
+## v6.6.2 (2026-03-08)
+- systems.js を enemies.js (189行) + systems.js (350行) に分割
+- engine.js を update.js (300行) + render.js (422行) に分割
+- engine.js 削除
+- index.html 読み込み順序を7ファイル体制に更新 (?v=950)
+
+## v6.6.1 (2026-03-08)
+- 64ファイル削除（JS 36 + Python 17 + その他11）約11,500行除去
+- blessings.js, collection.js, npc.js を js/future/ にアーカイブ
+- tools/ は split_game.py のみ残存
+
+## v6.6.0 (2026-03-08)
+- 設計書統合: 5ドキュメント → 3ドキュメント体制 (GDD.md, STATUS.md, CHANGELOG.md)
+- COUNCIL-SESSION-001.md, TOOL-SPRITEGEN-v4.0.md を docs/archive/ に移動
+- STATUS-v5.0.md を STATUS.md に置換（バージョンレス化、v6.6.2時点の全情報反映）
+- GDD-MIPURIN-v2.0.md を GDD.md にリネーム、第11章をファイル構成に更新
+
 # ミプリンの冒険 — CHANGELOG
 
 ## v6.3.2 (2026-03-08)
@@ -62,3 +79,4 @@
 
 ## 以前
 - v5.x: コアゲームループ、5テーマ、12敵、4ボス、6武器、12祝福、BGM切替、プロローグ
+

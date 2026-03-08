@@ -15,9 +15,6 @@ const UI_TEXT_STYLE = {
   warn:     { font: "bold 18px 'M PLUS Rounded 1c', sans-serif", color: '#f66', align: 'center' },
 };
 function drawText(text, x, y, layer, overrides) {
-
-
-function drawText(text, x, y, layer, overrides) {
   const s = UI_TEXT_STYLE[layer] || UI_TEXT_STYLE.body;
   ctx.font = (overrides && overrides.font) || s.font;
   ctx.fillStyle = (overrides && overrides.color) || s.color;
@@ -261,8 +258,8 @@ function drawEnding() {
 
 function drawHUD() {
   // HP
-  const hs = 20;
-  for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px M PLUS Rounded 1c, sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
+  const hs = 22, hSpacing = hs + 6, hPerRow = 15;
+  for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8)); }
   // Score & pollen
   ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
   ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
@@ -494,4 +491,4 @@ function drawDmgNumbers() {
   for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
 }
 
-}
+

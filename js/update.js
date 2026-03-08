@@ -4,7 +4,7 @@ function update(dt) {
   updateMessages(dt);
 
   if (gameState === 'ending') {
-    if (wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    if (wasPressed('KeyZ')) { nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
     return;
   }
   if (gameState === 'title') { titleBlink += dt;
@@ -90,7 +90,7 @@ function update(dt) {
     return;
   }
 
-  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += runNectar; saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
       // Z: equip as main
       if (wasPressed('KeyZ')) {
@@ -269,6 +269,7 @@ function update(dt) {
       emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 15, 120, 0.5);
       Audio.enemy_die();
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
+      if (player.killHeal) player.hp = Math.min(player.hp + player.killHeal, player.maxHp);
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
       if (Math.random() < 0.20) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
@@ -297,4 +298,5 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
+
 

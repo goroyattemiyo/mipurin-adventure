@@ -1,4 +1,6 @@
-// ===== BLESSINGS =====
+// ===== SYSTEMS MODULE =====
+// Meta progression, shop, fade, game flow, sprites, prologue, collision
+
 // ===== META PROGRESSION (Sprint 5) =====
 let nectar = 0;
 let gardenUpgrades = { hp: 0, atk: 0 };
@@ -33,71 +35,6 @@ function applyGardenBonuses() {
   player.atk = 2 + (gardenUpgrades.atk || 0);
 }
 
-const BLESSING_POOL = [
-  { id: 'rose_atk', name: '🌹 ローザの力', desc: '攻撃力 +1', icon: '🌹', rarity: 'common', family: 'rose', apply: () => { player.atk += 1; } },
-  { id: 'rose_crit', name: '🗡️ ローザの刃', desc: '攻撃力 +2', icon: '🗡️', rarity: 'rare', family: 'rose', apply: () => { player.atk += 2; } },
-  { id: 'rose_range', name: '🌹 ローザの蔓', desc: '攻撃範囲 +20', icon: '🌹', rarity: 'rare', family: 'rose', apply: () => { player.atkRangeBonus += 20; } },
-  { id: 'rose_vampire', name: '🩸 ローザの渇き', desc: '撃破時HP回復', icon: '🩸', rarity: 'legend', family: 'rose', apply: () => { player.vampiric = true; } },
-  { id: 'lily_hp', name: '🤍 リリアの守り', desc: '最大HP +1 & 全回復', icon: '🤍', rarity: 'common', family: 'lily', apply: () => { player.maxHp += 1; player.hp = player.maxHp; } },
-  { id: 'lily_shield', name: '🛡️ リリアの結界', desc: '無敵時間 +50%', icon: '🛡️', rarity: 'rare', family: 'lily', apply: () => { player.invDuration *= 1.5; } },
-  { id: 'lily_armor', name: '🤍 リリアの鎧', desc: '最大HP +2', icon: '🤍', rarity: 'rare', family: 'lily', apply: () => { player.maxHp += 2; player.hp = Math.min(player.hp + 2, player.maxHp); } },
-  { id: 'lily_thorns', name: '🌿 リリアの棘', desc: '被弾時に反撃ダメージ2', icon: '🌿', rarity: 'legend', family: 'lily', apply: () => { player.thorns = 2; } },
-  { id: 'sunflower_speed', name: '🌻 ソーレの風', desc: '移動速度 +15%', icon: '🌻', rarity: 'common', family: 'sunflower', apply: () => { player.speed *= 1.15; } },
-  { id: 'sunflower_dash', name: '⚡ ソーレの疾走', desc: 'ダッシュCD -40%', icon: '⚡', rarity: 'rare', family: 'sunflower', apply: () => { player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.6); } },
-  { id: 'sunflower_atkspd', name: '🌻 ソーレの連撃', desc: '攻撃速度 +25%', icon: '🌻', rarity: 'rare', family: 'sunflower', apply: () => { player.atkSpeedBonus += 0.25; } },
-  { id: 'sunflower_burst', name: '☀️ ソーレの閃光', desc: '移動速度+30% & ダッシュCD-30%', icon: '☀️', rarity: 'legend', family: 'sunflower', apply: () => { player.speed *= 1.3; player.dashCooldown = Math.max(0.1, player.dashCooldown * 0.7); } },
-  { id: 'wisteria_poison', name: '💜 フジカの毒', desc: '攻撃にダメージ追加 +1', icon: '💜', rarity: 'common', family: 'wisteria', apply: () => { player.atk += 1; } },
-  { id: 'wisteria_slow', name: '💜 フジカの霧', desc: '攻撃力+1 & 範囲+10', icon: '💜', rarity: 'rare', family: 'wisteria', apply: () => { player.atk += 1; player.atkRangeBonus += 10; } },
-  { id: 'wisteria_web', name: '🕸️ フジカの絡み', desc: '攻撃範囲 +30', icon: '🕸️', rarity: 'rare', family: 'wisteria', apply: () => { player.atkRangeBonus += 30; } },
-  { id: 'wisteria_miasma', name: '☠️ フジカの瘴気', desc: '攻撃力+3 & 範囲+15', icon: '☠️', rarity: 'legend', family: 'wisteria', apply: () => { player.atk += 3; player.atkRangeBonus += 15; } },
-  { id: 'lotus_heal', name: '🌸 ハスミの癒し', desc: 'HPを全回復', icon: '🌸', rarity: 'common', family: 'lotus', apply: () => { player.hp = player.maxHp; } },
-  { id: 'lotus_grace', name: '🌸 ハスミの恩寵', desc: 'HP+2回復 & 無敵+20%', icon: '🌸', rarity: 'rare', family: 'lotus', apply: () => { player.hp = Math.min(player.hp + 2, player.maxHp); player.invDuration *= 1.2; } },
-  { id: 'lotus_bloom', name: '🌺 ハスミの開花', desc: '最大HP+1 & 移動速度+10%', icon: '🌺', rarity: 'rare', family: 'lotus', apply: () => { player.maxHp += 1; player.hp = player.maxHp; player.speed *= 1.1; } },
-  { id: 'lotus_regen', name: '💖 ハスミの生命力', desc: '最大HP +3 & 全回復', icon: '💖', rarity: 'legend', family: 'lotus', apply: () => { player.maxHp += 3; player.hp = player.maxHp; } },
-  { id: 'chrysanth_luck', name: '✨ キクネの幸運', desc: 'ドロップ磁力+80', icon: '✨', rarity: 'common', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 80; } },
-  { id: 'chrysanth_gold', name: '✨ キクネの黄金', desc: '花粉ドロップ+倍', icon: '✨', rarity: 'rare', family: 'chrysanth', apply: () => { player.pollenBonus = (player.pollenBonus||0) + 1; } },
-  { id: 'chrysanth_sight', name: '👁️ キクネの千里眼', desc: '攻撃範囲+15 & 磁力+40', icon: '👁️', rarity: 'rare', family: 'chrysanth', apply: () => { player.atkRangeBonus += 15; player.magnetRange = (player.magnetRange||0) + 40; } },
-  { id: 'chrysanth_fortune', name: '🌟 キクネの大福', desc: '磁力+120 & 花粉+倍 & HP+1', icon: '🌟', rarity: 'legend', family: 'chrysanth', apply: () => { player.magnetRange = (player.magnetRange||0) + 120; player.pollenBonus = (player.pollenBonus||0) + 1; player.maxHp += 1; player.hp = player.maxHp; } },
-];
-
-// ===== DUO BLESSINGS =====
-const DUO_DEFS = [
-  { families: ['rose', 'wisteria'], name: '🌹💜 棘毒の共鳴', desc: '攻撃力 +3', apply: () => { player.atk += 3; } },
-  { families: ['lily', 'lotus'], name: '🤍🌸 守護の花環', desc: '最大HP+2 & 無敵+30%', apply: () => { player.maxHp += 2; player.hp = player.maxHp; player.invDuration *= 1.3; } },
-  { families: ['sunflower', 'rose'], name: '🌻🌹 烈火の追風', desc: '攻撃力+2 & 速度+20%', apply: () => { player.atk += 2; player.speed *= 1.2; } },
-  { families: ['wisteria', 'chrysanth'], name: '💜✨ 毒蝶の舞', desc: '攻撃+2 & 磁力+100', apply: () => { player.atk += 2; player.magnetRange = (player.magnetRange||0) + 100; } },
-  { families: ['lotus', 'lily'], name: '🌸🤍 不滅の蓮華', desc: '最大HP+3 & 被弾反撃1', apply: () => { player.maxHp += 3; player.hp = player.maxHp; player.thorns = Math.max(player.thorns||0, 1); } },
-  { families: ['sunflower', 'chrysanth'], name: '🌻✨ 黄金の収穫', desc: '速度+25% & 花粉+倍 & 磁力+60', apply: () => { player.speed *= 1.25; player.pollenBonus = (player.pollenBonus||0) + 1; player.magnetRange = (player.magnetRange||0) + 60; } }
-];
-let activeDuos = [];
-
-function checkDuos() {
-  const fams = new Set(activeBlessings.map(b => b.family));
-  for (const duo of DUO_DEFS) {
-    if (activeDuos.some(d => d.name === duo.name)) continue;
-    if (duo.families.every(f => fams.has(f))) {
-      duo.apply(); activeDuos.push(duo); showFloat('✨ ' + duo.name + ' はつどう！', 3.0, MSG_COLORS.duo);
-      spawnDmg(player.x + player.w/2, player.y - 20, 0, '#ffd700');
-      emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.5);
-      Audio.level_up();
-    }
-  }
-}
-let blessingChoices = [], activeBlessings = [], selectCursor = 0;
-
-function pickBlessings() {
-  const pool = [...BLESSING_POOL];
-  // Weight: common=50, rare=35, epic=15
-  const weighted = [];
-  for (const b of pool) { const w = b.rarity === 'legend' ? 10 : b.rarity === 'rare' ? 30 : 50; for (let i = 0; i < w; i++) weighted.push(b); }
-  const picks = [], used = new Set();
-  while (picks.length < 3 && used.size < pool.length) {
-    const b = weighted[Math.floor(rng() * weighted.length)];
-    if (!used.has(b.id)) { used.add(b.id); picks.push(b); }
-  }
-  selectCursor = 0;
-  return picks;
-}
 
 // ===== SHOP =====
 let shopItems = [];
@@ -159,6 +96,7 @@ function startFloor() {
   player.dashing = false; player.dashCooldown = 0;
   dmgNumbers.length = 0; particles.length = 0;
   gameState = 'playing'; clearTimer = 0; deadTimer = 0;
+  if (player.roomHeal) { player.hp = Math.min(player.hp + player.roomHeal, player.maxHp); showFloat("🌸 フロア開始HP+" + player.roomHeal, 1.5, MSG_COLORS.heal); }
   if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
   else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
   const floorTheme = getTheme(floor);
@@ -323,6 +261,7 @@ function resetGame() {
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
   player.weapon = WEAPON_DEFS[0]; player.weapons = [WEAPON_DEFS[0], null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
+  player.roomHeal = 0; player.killHeal = 0; player.nectarMul = 0;
   activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();
   startFade(1, () => startFloor());
@@ -347,4 +286,7 @@ function getAttackBox() {
   const ax = player.atkDir.x, ay = player.atkDir.y;
   return { x: player.x + player.w / 2 + ax * 24 - range / 2, y: player.y + player.h / 2 + ay * 24 - range / 2, w: range, h: range };
 }
+
+
+
 

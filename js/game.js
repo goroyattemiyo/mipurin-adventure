@@ -173,7 +173,7 @@ function drawInventoryItems() {
     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('[' + (i + 1) + ']', sx, sy + 46);
-    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '24px M PLUS Rounded 1c, sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '40px M PLUS Rounded 1c, sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
     else { ctx.fillStyle = '#555'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('空', sx, sy + 5); }
     ctx.textAlign = 'left';
   }
@@ -1866,16 +1866,16 @@ function drawHUD() {
   // Floor & wave (centered, no overlap)
   ctx.textAlign = 'center';
   if (!isBossFloor() || !boss) {
-    ctx.fillStyle = COL.bless; ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 40px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 20);
   } else {
-    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 40px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 20);
   }
   ctx.textAlign = 'left';
   // Weapon
   ctx.fillStyle = player.weapon.color; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
-  ctx.fillStyle = COL.text; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
+  ctx.fillStyle = COL.text; ctx.font = '36px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
   // Blessings
   if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
@@ -1971,18 +1971,18 @@ function drawShop() {
     ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
     ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
     // Icon
-    ctx.fillStyle = '#fff'; ctx.font = '32px M PLUS Rounded 1c, sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
+    ctx.fillStyle = '#fff'; ctx.font = '48px M PLUS Rounded 1c, sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
     // Name
-    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 19px M PLUS Rounded 1c, sans-serif';
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(s.name, sx + cardW / 2, sy + 70);
     // Desc
     if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '19px M PLUS Rounded 1c, sans-serif'; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
     // Cost
-    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
     // Select indicator
     if (sel) {
-      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
+      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif';
       ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 145);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '19px M PLUS Rounded 1c, sans-serif';
@@ -2007,7 +2007,7 @@ function drawGarden() {
     ctx.fillStyle = 'rgba(255,255,200,' + (0.3 + Math.sin(Date.now()/1000 + i) * 0.2) + ')';
     ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 64px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 60);
   ctx.fillStyle = '#aaa'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
@@ -2059,7 +2059,7 @@ function drawTitle() {
   }
   // Title text
   ctx.fillStyle = '#ff9800';
-  ctx.font = 'bold 64px M PLUS Rounded 1c, sans-serif';
+  ctx.font = 'bold 140px M PLUS Rounded 1c, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('ミプリンの冒険', CW / 2, 440);
   ctx.fillStyle = '#795548';
@@ -2075,16 +2075,16 @@ function drawTitle() {
     ctx.fillStyle = '#ffd700'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 755);
   }
   ctx.fillStyle = '#888';
-  ctx.font = '20px M PLUS Rounded 1c, sans-serif';
+  ctx.font = '32px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('移動: WASD  攻撃: Z  ダッシュ: X', CW / 2, 640);
   ctx.fillText('アイテム: 1/2/3', CW / 2, 670);
   ctx.textAlign = 'left';
 }
 
 function drawGameState() {
-  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 64px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.clear; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
+    ctx.fillStyle = COL.clear; ctx.font = 'bold 80px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'nodeSelect') {
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
     ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
@@ -2157,8 +2157,8 @@ function drawGameState() {
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
     // Mipurin fallen
     if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
-    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
-    ctx.fillStyle = '#ddd'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
+    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 120px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
+    ctx.fillStyle = '#ddd'; ctx.font = '32px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
     ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
     ctx.fillStyle = '#aaa'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
@@ -2167,7 +2167,7 @@ function drawGameState() {
     ctx.textAlign = 'left'; }
 }
 function drawDmgNumbers() {
-  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 40px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
 }
 
 function draw() {

@@ -155,7 +155,7 @@ function drawInventoryItems() {
   ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + 40);
   ctx.fillStyle = '#ccc'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
-  ctx.fillText('射程: ' + player.weapon.range, wx + 20, wy + 85);
+  ctx.fillText('射程: ' + ((player.weapon.range||44) + (player.atkRangeBonus||0)), wx + 20, wy + 85);
     // Weapon slots
     ctx.fillStyle = '#ffd700'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('【おきにいり】', wx + 20, wy + 115);

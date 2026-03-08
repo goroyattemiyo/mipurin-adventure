@@ -203,21 +203,19 @@ function drawHUD() {
   const hs = 22, hSpacing = hs + 6, hPerRow = 15;
   for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8)); }
   // Score & pollen
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
+  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
   ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
   // Floor & wave (centered, no overlap)
   ctx.textAlign = 'center';
   if (!isBossFloor() || !boss) {
-    ctx.fillStyle = COL.bless; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 20);
+    ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 40);
   } else {
-    ctx.fillStyle = '#e74c3c'; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 20);
+    ctx.fillStyle = '#e74c3c'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40);
   }
   ctx.textAlign = 'left';
   // Weapon
-  ctx.fillStyle = player.weapon.color; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
-  ctx.fillStyle = COL.text; ctx.font = "36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
+  ctx.fillStyle = player.weapon.color; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
+  ctx.fillStyle = COL.text; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
   // Blessings
   if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
@@ -258,7 +256,7 @@ function drawHUD() {
     let helpText = 'WASD:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
     if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
     if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
-    ctx.fillText(helpText, CW / 2, CH - 6); ctx.textAlign = 'left';
+    ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';
 }
 
 

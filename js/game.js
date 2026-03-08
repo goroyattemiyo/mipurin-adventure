@@ -1420,7 +1420,7 @@ function update(dt) {
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';
     // 360 whip: hit all around
-    const box = wfx === '360' ? {x: player.x + player.w/2 - 40, y: player.y + player.h/2 - 40, w: 80, h: 80} : getAttackBox();
+    const r360 = 40 + (player.atkRangeBonus || 0); const box = wfx === '360' ? {x: player.x + player.w/2 - r360, y: player.y + player.h/2 - r360, w: r360 * 2, h: r360 * 2} : getAttackBox();
     // AOE hammer: larger box + shockwave
     const hitBox = wfx === 'aoe' ? {x: box.x - 16, y: box.y - 16, w: box.w + 32, h: box.h + 32} : box;
     if (wfx === 'aoe') { shakeTimer = 0.1; shakeIntensity = 6; emitParticles(box.x + box.w/2, box.y + box.h/2, '#b97', 10, 100, 0.3); }

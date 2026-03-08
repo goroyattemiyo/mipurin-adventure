@@ -122,7 +122,7 @@ function drawInventory() {
     ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
     ctx.fillRect(tx - 80, ty - 20, 160, 40);
     ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(tabs[i], tx, ty + 7);
   }
@@ -130,59 +130,59 @@ function drawInventory() {
   if (inventoryTab === 0) drawInventoryItems();
   else drawCollectionTab();
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '16px sans-serif';
+  ctx.font = '16px M PLUS Rounded 1c, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('← → でタブ切替  /  TAB で閉じる', CW / 2, CH - 30);
   ctx.textAlign = 'left';
 }
 function drawInventoryItems() {
   const lx = 120, ly = 140;
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('ステータス', lx, ly);
-  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#fff'; ctx.font = '18px M PLUS Rounded 1c, sans-serif';
   const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
   for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + 40 + i * 30);
   const wx = CW / 2 + 40, wy = 140;
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('武器', wx, wy);
-  ctx.fillStyle = player.weapon.color; ctx.font = '20px sans-serif';
+  ctx.fillStyle = player.weapon.color; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + 40);
-  ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#ccc'; ctx.font = '14px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
   ctx.fillText('射程: ' + player.weapon.range, wx + 20, wy + 85);
     // Weapon slots
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('【おきにいり】', wx + 20, wy + 115);
     const w0 = player.weapons[0];
-    if (w0) { ctx.fillStyle = w0.color; ctx.font = '14px sans-serif'; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + 135); }
-    ctx.fillStyle = '#aaa'; ctx.font = 'bold 16px sans-serif';
+    if (w0) { ctx.fillStyle = w0.color; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + 135); }
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 16px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('【もうひとつ】', wx + 20, wy + 160);
     const w1 = player.weapons[1];
-    if (w1) { ctx.fillStyle = w1.color; ctx.font = '14px sans-serif'; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + 180); }
-    else { ctx.fillStyle = '#666'; ctx.font = '14px sans-serif'; ctx.fillText('- なし -', wx + 30, wy + 180); }
+    if (w1) { ctx.fillStyle = w1.color; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + 180); }
+    else { ctx.fillStyle = '#666'; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.fillText('- なし -', wx + 30, wy + 180); }
   ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + 105);
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('祝福', wx, wy + 150);
-  if (activeBlessings.length === 0) { ctx.fillStyle = '#888'; ctx.font = '16px sans-serif'; ctx.fillText('なし', wx + 20, wy + 185); }
-  else { for (let i = 0; i < activeBlessings.length; i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + 185 + i * 28); ctx.fillStyle = '#aaa'; ctx.font = '12px sans-serif'; ctx.fillText(b.desc, wx + 50, wy + 200 + i * 28); } }
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  if (activeBlessings.length === 0) { ctx.fillStyle = '#888'; ctx.font = '16px M PLUS Rounded 1c, sans-serif'; ctx.fillText('なし', wx + 20, wy + 185); }
+  else { for (let i = 0; i < activeBlessings.length; i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = '16px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + 185 + i * 28); ctx.fillStyle = '#aaa'; ctx.font = '12px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.desc, wx + 50, wy + 200 + i * 28); } }
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('アイテム', lx, ly + 280);
   for (let i = 0; i < 3; i++) {
     const sx = lx + 30 + i * 80, sy = ly + 320;
     ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('[' + (i + 1) + ']', sx, sy + 46);
-    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
-    else { ctx.fillStyle = '#555'; ctx.font = '14px sans-serif'; ctx.fillText('空', sx, sy + 5); }
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = '24px M PLUS Rounded 1c, sans-serif'; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
+    else { ctx.fillStyle = '#555'; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.fillText('空', sx, sy + 5); }
     ctx.textAlign = 'left';
   }
 }
 function drawCollectionTab() {
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('🌸 花の国のいきもの図鑑', 120, 140);
   const names = Object.keys(collection);
-  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px sans-serif'; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 200); return; }
+  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = '18px M PLUS Rounded 1c, sans-serif'; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 200); return; }
   // 敵定義からloreを引く
   const allDefs = Object.values(ENEMY_DEFS);
   for (let i = 0; i < names.length; i++) {
@@ -193,15 +193,15 @@ function drawCollectionTab() {
     // 敵の色を探す
     const def = allDefs.find(d => d.name === names[i]) || {};
     ctx.fillStyle = def.color || '#fff';
-    ctx.font = 'bold 18px sans-serif';
+    ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(names[i], 140, ey);
-    ctx.fillStyle = '#ccc'; ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#ccc'; ctx.font = '13px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, 340, ey);
     if (def.lore && c.defeated > 0) {
-      ctx.fillStyle = '#999'; ctx.font = '12px sans-serif';
+      ctx.fillStyle = '#999'; ctx.font = '12px M PLUS Rounded 1c, sans-serif';
       ctx.fillText(def.lore, 160, ey + 22);
     } else if (c.defeated === 0) {
-      ctx.fillStyle = '#666'; ctx.font = '12px sans-serif';
+      ctx.fillStyle = '#666'; ctx.font = '12px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('??? （倒すと情報が解放されるよ）', 160, ey + 22);
     }
   }
@@ -424,8 +424,8 @@ function updateDrops(dt) {
     }
     const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
     if (rectOverlap(pb, db)) {
-      if (d.type === 'pollen') { pollen += 1 + Math.floor(floor / 3); Audio.item_get(); }
-      if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); }
+      if (d.type === 'pollen') { const amt = 1 + Math.floor(floor / 3); pollen += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
+      if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); showFloat('\uD83C\uDF6F HP+1', 1.2, '#2ecc71'); }
       drops.splice(i, 1);
     }
   }
@@ -592,7 +592,7 @@ function drawFloatMessages() {
     const slideY = 80 + i * 40;
     // Background
     ctx.globalAlpha = alpha * 0.85;
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = 'bold 20px M PLUS Rounded 1c, sans-serif';
     const tw = ctx.measureText(m.text).width + 40;
     const rx = CW / 2 - tw / 2, ry = slideY - 16, rh = 34;
     ctx.fillStyle = '#1a1a2e';
@@ -632,23 +632,23 @@ function drawDialogWindow() {
     const nw = ctx.measureText(dialogMsg.speaker).width + 30;
     ctx.fillStyle = '#1a1a3e'; ctx.fillRect(dx + 20, dy - 16, nw, 28);
     ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(dx + 20, dy - 16, nw, 28);
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(dialogMsg.speaker, dx + 35, dy + 3);
   }
   // Text with typewriter
-  ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#fff'; ctx.font = '18px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'left';
   const line = dialogMsg.lines[dialogMsg.lineIdx];
   const shown = line.substring(0, dialogMsg.charIdx);
   ctx.fillText(shown, dx + 24, dy + 45);
   // Page indicator
   if (dialogMsg.charIdx >= line.length) {
-    ctx.fillStyle = '#ffd700'; ctx.font = '14px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffd700'; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'right';
     const pageText = dialogMsg.lineIdx < dialogMsg.lines.length - 1 ? 'Z: つぎへ ▼' : 'Z: とじる ▼';
     ctx.fillText(pageText, dx + dw - 20, dy + dh - 15);
   }
   // Page count
   if (dialogMsg.lines.length > 1) {
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText((dialogMsg.lineIdx + 1) + '/' + dialogMsg.lines.length, dx + 24, dy + dh - 15);
   }
   ctx.restore();
@@ -1169,12 +1169,12 @@ function drawPrologue() {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, CH - 160, CW, 160);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 28px sans-serif';
+    ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(txt, CW / 2, CH - 80);
   }
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '18px sans-serif';
+  ctx.font = '18px M PLUS Rounded 1c, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Zキーで次へ  /  Xキーでスキップ', CW / 2, CH - 20);
   ctx.textAlign = 'left';
@@ -1503,7 +1503,7 @@ function update(dt) {
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
       // Drops
       if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
-      if (Math.random() < 0.15) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+      if (Math.random() < 0.20) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
       recordEnemy(enemies[i].name || enemies[i].type, true);
       enemies.splice(i, 1);
     }
@@ -1754,16 +1754,16 @@ function drawEnding() {
     ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
   }
   ctx.restore();
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('花の国に平和が戻った！', CW/2, 380);
-  ctx.fillStyle = '#fff'; ctx.font = '22px sans-serif';
+  ctx.fillStyle = '#fff'; ctx.font = '22px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
   ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
-  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#aaa'; ctx.font = '18px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
   ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW/2, 580);
   ctx.fillText('祝福: ' + activeBlessings.length + '  共鳴: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), CW/2, 550);
-  ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+  ctx.fillStyle = '#ffd700'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
   if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
   ctx.textAlign = 'left';
@@ -1817,7 +1817,7 @@ function drawTelegraph(en) {
   ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
   ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
   ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ff0'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+  ctx.fillStyle = '#ff0'; ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
 }
 
 function drawBoss() {
@@ -1852,38 +1852,38 @@ function drawBoss() {
   ctx.fillStyle = COL.hpBg; ctx.fillRect(bx, by, bw, bh);
   ctx.fillStyle = COL.hpLost; ctx.fillRect(bx, by, bw * Math.max(0, boss.hp / boss.maxHp), bh);
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
-  ctx.fillStyle = COL.text; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = COL.text; ctx.font = 'bold 10px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(boss.name + ' P' + boss.phase, CW / 2, by + bh + 12); ctx.textAlign = 'left';
 }
 
 function drawHUD() {
   // HP
   const hs = 20;
-  for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
+  for (let i = 0; i < player.maxHp; i++) { ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + 'px M PLUS Rounded 1c, sans-serif'; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + i * (hs + 4), 12 + hs); }
   // Score & pollen
-  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
-  ctx.fillStyle = COL.pollen; ctx.font = '13px sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
+  ctx.fillStyle = COL.text; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 20); ctx.textAlign = 'left';
+  ctx.fillStyle = COL.pollen; ctx.font = '13px M PLUS Rounded 1c, sans-serif'; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 38);
   // Floor & wave (centered, no overlap)
   ctx.textAlign = 'center';
   if (!isBossFloor() || !boss) {
-    ctx.fillStyle = COL.bless; ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 14px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 20);
   } else {
-    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 14px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 20);
   }
   ctx.textAlign = 'left';
   // Weapon
-  ctx.fillStyle = player.weapon.color; ctx.font = '12px sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
-  ctx.fillStyle = COL.text; ctx.font = '12px sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
+  ctx.fillStyle = player.weapon.color; ctx.font = '12px M PLUS Rounded 1c, sans-serif'; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 28);
+  ctx.fillStyle = COL.text; ctx.font = '12px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 14);
   // Blessings
-  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif';
+  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px M PLUS Rounded 1c, sans-serif';
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
   // Controls
   // Consumable slots
     // Item slots with clear labels
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 50, 170, 55);
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px sans-serif'; ctx.fillText('アイテム', CW - 178, 62);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px M PLUS Rounded 1c, sans-serif'; ctx.fillText('アイテム', CW - 178, 62);
     for (let i = 0; i < 3; i++) {
       const sx = CW - 160 + i * 52, sy = 80;
       // Slot background
@@ -1892,12 +1892,12 @@ function drawHUD() {
       ctx.strokeStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
       ctx.strokeRect(sx - 20, sy - 16, 40, 32);
       if (player.consumables && player.consumables[i]) {
-        ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff'; ctx.font = '20px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left';
       }
       // Key number (always visible)
       ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
-      ctx.font = 'bold 12px sans-serif'; ctx.fillText((i + 1), sx - 16, sy + 20);
+      ctx.font = 'bold 12px M PLUS Rounded 1c, sans-serif'; ctx.fillText((i + 1), sx - 16, sy + 20);
     }
     // Sub weapon indicator
     if (player.weapons[1] !== null) {
@@ -1905,14 +1905,14 @@ function drawHUD() {
       if (subW) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160, 30);
         ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160, 30);
-        ctx.fillStyle = '#aaa'; ctx.font = '11px sans-serif'; ctx.fillText('もうひとつ', 14, CH - 52);
-        ctx.fillStyle = subW.color || '#fff'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillStyle = '#aaa'; ctx.font = '11px M PLUS Rounded 1c, sans-serif'; ctx.fillText('もうひとつ', 14, CH - 52);
+        ctx.fillStyle = subW.color || '#fff'; ctx.font = 'bold 13px M PLUS Rounded 1c, sans-serif';
         ctx.fillText('Q: ' + subW.name, 14, CH - 38);
       }
     }
     // Controls help (context-sensitive)
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '13px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
     let helpText = 'WASD:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
     if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
     if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
@@ -1922,8 +1922,8 @@ function drawHUD() {
 function drawBlessing() {
   if (gameState !== 'blessing') return;
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = '14px sans-serif'; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
+  ctx.fillStyle = COL.bless; ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
+  ctx.fillStyle = COL.text; ctx.font = '14px M PLUS Rounded 1c, sans-serif'; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
   for (let i = 0; i < blessingChoices.length; i++) {
     const b = blessingChoices[i], bx = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
     const sel = i === selectCursor;
@@ -1931,11 +1931,11 @@ function drawBlessing() {
     const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
     ctx.strokeStyle = sel ? '#fff' : rCol; ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(bx, by, bw, bh);
     if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, by, bw, bh); }
-    ctx.fillStyle = COL.text; ctx.font = 'bold 36px sans-serif'; ctx.fillText(b.icon, bx + bw / 2, by + 55);
-    ctx.fillStyle = rCol; ctx.font = '11px sans-serif'; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, by + 80);
-    ctx.fillStyle = COL.bless; ctx.font = 'bold 18px sans-serif'; ctx.fillText(b.name, bx + bw / 2, by + 105);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '13px sans-serif'; ctx.fillText(b.desc, bx + bw / 2, by + 135);
-    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px sans-serif';
+    ctx.fillStyle = COL.text; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.icon, bx + bw / 2, by + 55);
+    ctx.fillStyle = rCol; ctx.font = '11px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, by + 80);
+    ctx.fillStyle = COL.bless; ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.name, bx + bw / 2, by + 105);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '13px M PLUS Rounded 1c, sans-serif'; ctx.fillText(b.desc, bx + bw / 2, by + 135);
+    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, by + 195);
   }
   ctx.textAlign = 'left';
@@ -1945,11 +1945,11 @@ function drawShop() {
   if (gameState !== 'shop') return;
   ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, CW, CH);
   // Title
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 30px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('🌸 はなの市場 🌸', CW / 2, 55);
-  ctx.fillStyle = '#ddd'; ctx.font = '16px sans-serif';
+  ctx.fillStyle = '#ddd'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('いらっしゃい！ なにがほしいの？', CW / 2, 82);
-  ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = COL.pollen; ctx.font = 'bold 16px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
   // Layout: 2 rows x 3 cols (or fewer)
   const cols = 3;
@@ -1971,21 +1971,21 @@ function drawShop() {
     ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
     ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
     // Icon
-    ctx.fillStyle = '#fff'; ctx.font = '32px sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
+    ctx.fillStyle = '#fff'; ctx.font = '32px M PLUS Rounded 1c, sans-serif'; ctx.fillText(s.icon, sx + cardW / 2, sy + 40);
     // Name
-    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = 'bold 15px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(s.name, sx + cardW / 2, sy + 70);
     // Desc
-    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px sans-serif'; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
+    if (s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px M PLUS Rounded 1c, sans-serif'; ctx.fillText(s.desc, sx + cardW / 2, sy + 90); }
     // Cost
-    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 14px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
     // Select indicator
     if (sel) {
-      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif';
       ctx.fillText(canBuy ? '▶ Zで買う ◀' : '花粉が足りない…', sx + cardW / 2, sy + 145);
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '13px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 145);
     }
   }
@@ -1994,7 +1994,7 @@ function drawShop() {
   const skipY = startY + skipRow * (cardH + padY) + 10;
   const skipSel = selectCursor >= shopItems.length;
   ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.4)';
-  ctx.font = (skipSel ? 'bold 18px' : '16px') + ' sans-serif';
+  ctx.font = (skipSel ? 'bold 18px' : '16px') + ' M PLUS Rounded 1c, sans-serif';
   ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Xキー / Escでつぎへ', CW / 2, skipY);
   ctx.textAlign = 'left';
 }
@@ -2007,9 +2007,9 @@ function drawGarden() {
     ctx.fillStyle = 'rgba(255,255,200,' + (0.3 + Math.sin(Date.now()/1000 + i) * 0.2) + ')';
     ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 60);
-  ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#aaa'; ctx.font = '18px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
   for (let i = 0; i < GARDEN_DEFS.length; i++) {
     const def = GARDEN_DEFS[i];
@@ -2022,27 +2022,27 @@ function drawGarden() {
     ctx.fillRect(CW/2 - 250, y, 500, 80);
     if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(CW/2 - 250, y, 500, 80); }
     // Icon + Name
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(def.icon + ' ' + def.name, CW/2 - 230, y + 30);
     // Desc
-    ctx.fillStyle = '#ccc'; ctx.font = '16px sans-serif';
+    ctx.fillStyle = '#ccc'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(def.desc, CW/2 - 230, y + 55);
     // Level
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'right';
     let lvText = 'Lv.' + lv + ' / ' + def.max;
     if (lv >= def.max) lvText += ' (MAX)';
     ctx.fillText(lvText, CW/2 + 230, y + 30);
     // Cost
     if (cost > 0) {
       ctx.fillStyle = nectar >= cost ? '#8f8' : '#f88';
-      ctx.font = '16px sans-serif';
+      ctx.font = '16px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('コスト: ' + cost + ' ネクター', CW/2 + 230, y + 55);
     } else {
-      ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#ffd700'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('✅ 最大強化済', CW/2 + 230, y + 55);
     }
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '14px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 40);
   ctx.textAlign = 'left';
 }
@@ -2059,35 +2059,35 @@ function drawTitle() {
   }
   // Title text
   ctx.fillStyle = '#ff9800';
-  ctx.font = 'bold 64px sans-serif';
+  ctx.font = 'bold 64px M PLUS Rounded 1c, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('ミプリンの冒険', CW / 2, 440);
   ctx.fillStyle = '#795548';
-  ctx.font = '24px sans-serif';
+  ctx.font = '24px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('v5.0', CW / 2, 480);
   // Blink
   titleBlink += 1 / 60;
   if (Math.sin(titleBlink * 3) > -0.3) {
     ctx.fillStyle = '#e65100';
-    ctx.font = 'bold 32px sans-serif';
+    ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('Zキーでスタート', CW / 2, 560);
-    ctx.fillStyle = '#aaa'; ctx.font = '18px sans-serif'; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
-    ctx.fillStyle = '#ffd700'; ctx.font = '16px sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 625);
+    ctx.fillStyle = '#aaa'; ctx.font = '18px M PLUS Rounded 1c, sans-serif'; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
+    ctx.fillStyle = '#ffd700'; ctx.font = '16px M PLUS Rounded 1c, sans-serif'; ctx.fillText('ネクター: ' + nectar, CW / 2, 625);
   }
   ctx.fillStyle = '#888';
-  ctx.font = '20px sans-serif';
+  ctx.font = '20px M PLUS Rounded 1c, sans-serif';
   ctx.fillText('移動: WASD  攻撃: Z  ダッシュ: X', CW / 2, 640);
   ctx.fillText('アイテム: 1/2/3', CW / 2, 670);
   ctx.textAlign = 'left';
 }
 
 function drawGameState() {
-  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.clear; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
+    ctx.fillStyle = COL.clear; ctx.font = 'bold 36px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
   if (gameState === 'nodeSelect') {
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 32px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('つぎの道をえらぼう', CW / 2, 160);
     for (let i = 0; i < nodeChoices.length; i++) {
       const n = nodeChoices[i];
@@ -2099,31 +2099,31 @@ function drawGameState() {
       ctx.lineWidth = nodeCursor === i ? 4 : 2;
       ctx.strokeRect(bx, by, bw, bh);
       // Icon
-      ctx.fillStyle = '#fff'; ctx.font = '48px sans-serif';
+      ctx.fillStyle = '#fff'; ctx.font = '48px M PLUS Rounded 1c, sans-serif';
       ctx.fillText(n.icon, bx + bw / 2, by + 70);
       // Name
-      ctx.fillStyle = n.color; ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = n.color; ctx.font = 'bold 22px M PLUS Rounded 1c, sans-serif';
       ctx.fillText(n.name, bx + bw / 2, by + 120);
       // Desc
-      ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif';
+      ctx.fillStyle = '#ccc'; ctx.font = '14px M PLUS Rounded 1c, sans-serif';
       const words = n.desc.split(''); let line = '', ly = by + 155;
       for (const ch of words) { line += ch; if (ctx.measureText(line).width > bw - 30) { ctx.fillText(line, bx + bw / 2, ly); ly += 20; line = ''; } }
       if (line) ctx.fillText(line, bx + bw / 2, ly);
       // Cursor
       if (nodeCursor === i) {
-        ctx.fillStyle = n.color; ctx.font = '16px sans-serif';
+        ctx.fillStyle = n.color; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
         ctx.fillText('▶ Z: えらぶ', bx + bw / 2, by + bh - 20);
       }
     }
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '16px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('← → で選択  /  Z で決定', CW / 2, CH - 60);
     ctx.textAlign = 'left';
   }
   if (gameState === 'event' && currentEvent) {
     ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = '#3498db'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#3498db'; ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('❓ イベント', CW / 2, 200);
-    ctx.fillStyle = '#fff'; ctx.font = '22px sans-serif';
+    ctx.fillStyle = '#fff'; ctx.font = '22px M PLUS Rounded 1c, sans-serif';
     ctx.fillText(currentEvent.text, CW / 2, 280);
     if (eventPhase === 'choose') {
       const opts = [currentEvent.a.label, currentEvent.b.label];
@@ -2133,13 +2133,13 @@ function drawGameState() {
         ctx.fillRect(CW / 2 - 200, oy - 25, 400, 50);
         ctx.strokeStyle = nodeCursor === i ? '#3498db' : 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 2; ctx.strokeRect(CW / 2 - 200, oy - 25, 400, 50);
-        ctx.fillStyle = nodeCursor === i ? '#fff' : '#aaa'; ctx.font = '20px sans-serif';
+        ctx.fillStyle = nodeCursor === i ? '#fff' : '#aaa'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
         ctx.fillText(opts[i], CW / 2, oy + 7);
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('↑↓ で選択  /  Z で決定', CW / 2, 540);
     } else {
-      ctx.fillStyle = '#ffd700'; ctx.font = '18px sans-serif';
+      ctx.fillStyle = '#ffd700'; ctx.font = '18px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('Z: つぎへ', CW / 2, 400);
     }
     ctx.textAlign = 'left';
@@ -2147,9 +2147,9 @@ function drawGameState() {
 
   if (gameState === 'weaponDrop' && weaponPopup.active) {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 28px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
-      ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#fff'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
       ctx.fillText('ATK: ' + weaponPopup.weapon.atk + '  ' + (weaponPopup.weapon.desc || ''), CW / 2, CH / 2);
       ctx.fillText('Z: おきにいりに  Q: もうひとつに  X: すてる', CW / 2, CH / 2 + 40);
       ctx.textAlign = 'left';
@@ -2157,17 +2157,17 @@ function drawGameState() {
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(80,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH);
     // Mipurin fallen
     if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
-    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
-    ctx.fillStyle = '#ddd'; ctx.font = '20px sans-serif';
+    ctx.fillStyle = COL.hpLost; ctx.font = 'bold 48px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ゲームオーバー', CW / 2, CH / 2 - 40);
+    ctx.fillStyle = '#ddd'; ctx.font = '20px M PLUS Rounded 1c, sans-serif';
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
     ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
-    ctx.fillStyle = '#aaa'; ctx.font = '16px sans-serif';
+    ctx.fillStyle = '#aaa'; ctx.font = '16px M PLUS Rounded 1c, sans-serif';
     if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
     else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
     ctx.textAlign = 'left'; }
 }
 function drawDmgNumbers() {
-  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
+  for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = 'bold 18px M PLUS Rounded 1c, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
 }
 
 function draw() {

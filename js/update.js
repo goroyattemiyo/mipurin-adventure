@@ -142,7 +142,6 @@ function update(dt) {
   if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
   if (mx !== 0 || my !== 0) {
     player.atkDir.x = Math.sign(mx || 0); player.atkDir.y = Math.sign(my || 0);
-    if (mx !== 0) player.atkDir.y = 0; if (my !== 0 && mx === 0) player.atkDir.x = 0;
   }
 
   player.dashCooldown = Math.max(0, player.dashCooldown - dt);

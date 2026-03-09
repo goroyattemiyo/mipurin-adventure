@@ -217,32 +217,87 @@ function drawHPBar(e, yOff) {
 
 function drawAttackEffect() {
   if (!player.attacking) return;
-  const box = getAttackBox();
-  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-  const ba = Math.atan2(player.atkDir.y, player.atkDir.x);
+  const wfx = player.weapon.fx || 'none';
   const wc = player.weapon.color || '#fff';
   const progress = 1 - (player.atkTimer / player.atkDuration);
+  const px = player.x + player.w / 2, py = player.y + player.h / 2;
+  let ax = player.atkDir.x, ay = player.atkDir.y;
+  const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+  const ba = Math.atan2(ay, ax);
   ctx.save();
-  // Dark outline for contrast on any background
-  ctx.globalAlpha = 0.5 * (1 - progress);
-  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 8;
-  ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.1, ba + 1.1); ctx.stroke();
-  // Main slash arc (bright)
-  ctx.globalAlpha = 0.9 * (1 - progress);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.0, ba + 1.0); ctx.stroke();
-  // Weapon color arc
-  ctx.strokeStyle = wc; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(cx, cy, 22 + progress * 10, ba - 0.8, ba + 0.8); ctx.stroke();
-  // Bright flash at start
-  if (progress < 0.3) {
-    ctx.globalAlpha = 0.4 * (1 - progress / 0.3);
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+  if (wfx === '360') {
+    // 蔦鞭: 全方位なぎ払いリング
+    const r = 30 + progress * 25;
+    ctx.globalAlpha = 0.5 * (1 - progress);
+    ctx.strokeStyle = wc; ctx.lineWidth = 5 + progress * 3;
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.15 * (1 - progress);
+    ctx.fillStyle = wc;
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+    // 回転する葉っぱ風の弧
+    ctx.globalAlpha = 0.6 * (1 - progress);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    const spinA = ba + progress * Math.PI * 3;
+    ctx.beginPath(); ctx.arc(px, py, r - 6, spinA - 1.2, spinA + 1.2); ctx.stroke();
+  } else if (wfx === 'aoe') {
+    // 女王の杖: 衝撃波 + 放射線
+    const cx = px + ax * 24, cy = py + ay * 24;
+    const r = 20 + progress * 50;
+    ctx.globalAlpha = 0.4 * (1 - progress);
+    ctx.fillStyle = wc;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.globalAlpha = 0.6 * (1 - progress);
+    for (let i = 0; i < 8; i++) {
+      const ra = i * Math.PI / 4 + progress * 0.5;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(ra) * r * 0.9, cy + Math.sin(ra) * r * 0.9); ctx.stroke();
+    }
+    ctx.strokeStyle = wc; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  } else if (wfx === 'double') {
+    // 蜂の針 / 羽根手裏剣: 素早い二重斬り
+    const ox = px + ax * 20, oy = py + ay * 20;
+    // 第1弧
+    ctx.globalAlpha = 0.7 * (1 - progress);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(ox, oy, 22 + progress * 14, ba - 0.9, ba + 0.9); ctx.stroke();
+    ctx.strokeStyle = wc; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(ox, oy, 18 + progress * 10, ba - 0.7, ba + 0.7); ctx.stroke();
+    // 第2弧 (少し遅れて小さい)
+    const p2 = Math.max(0, progress - 0.2) / 0.8;
+    if (p2 > 0) {
+      ctx.globalAlpha = 0.5 * (1 - p2);
+      ctx.strokeStyle = wc; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ox, oy, 14 + p2 * 12, ba - 0.5 + p2 * 0.3, ba + 0.5 - p2 * 0.3); ctx.stroke();
+    }
+    // 閃光
+    if (progress < 0.2) {
+      ctx.globalAlpha = 0.5 * (1 - progress / 0.2);
+      ctx.fillStyle = wc;
+      ctx.beginPath(); ctx.arc(ox, oy, 10, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    // デフォルト (蜜砲, 花粉盾など): 従来のスラッシュ弧
+    const box = getAttackBox();
+    const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+    ctx.globalAlpha = 0.5 * (1 - progress);
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.1, ba + 1.1); ctx.stroke();
+    ctx.globalAlpha = 0.9 * (1 - progress);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(cx, cy, 26 + progress * 14, ba - 1.0, ba + 1.0); ctx.stroke();
+    ctx.strokeStyle = wc; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, 22 + progress * 10, ba - 0.8, ba + 0.8); ctx.stroke();
+    if (progress < 0.3) {
+      ctx.globalAlpha = 0.4 * (1 - progress / 0.3);
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+    }
   }
   ctx.restore();
-  emitParticles(cx, cy, wc, 1, 50, 0.18);
+  emitParticles(px + ax * 16, py + ay * 16, wc, 1, 50, 0.18);
 }
+
 
 function drawDashTrail() {
   if (!player.dashing) return;

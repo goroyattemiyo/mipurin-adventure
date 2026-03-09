@@ -312,7 +312,9 @@ function moveWithCollision(ent, dx, dy) {
 
 function getAttackBox() {
   const range = (player.weapon.range || 44) + (player.atkRangeBonus || 0);
-  const ax = player.atkDir.x, ay = player.atkDir.y;
+  let ax = player.atkDir.x, ay = player.atkDir.y;
+  const len = Math.hypot(ax, ay) || 1;
+  ax /= len; ay /= len;
   return { x: player.x + player.w / 2 + ax * 24 - range / 2, y: player.y + player.h / 2 + ay * 24 - range / 2, w: range, h: range };
 }
 

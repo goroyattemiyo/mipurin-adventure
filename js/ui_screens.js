@@ -150,9 +150,8 @@ function drawTitle() {
   if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
   ctx.fillRect(0, 0, CW, CH);
   // Draw cute mipurin
-  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a'; if (endingImgs[endImgKey]) { const eiw = Math.min(CW * 0.6, 700), eih = eiw * 0.75; ctx.drawImage(endingImgs[endImgKey], CW/2 - eiw/2, 40, eiw, eih); } else if (mipurinReady) {
-    const f = MIPURIN_FRAMES.down;
-    const sz = 240;
+  if (mipurinReady) {
+    const f = MIPURIN_FRAMES.down; const sz = 240;
     ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, CW / 2 - sz / 2, 120, sz, sz);
   }
   // Title text

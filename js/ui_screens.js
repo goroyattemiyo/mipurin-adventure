@@ -90,20 +90,20 @@ function drawGarden() {
   ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
     const visibleDefs = GARDEN_DEFS.filter(d => isGardenVisible(d));
   // NPC Flora（右下）
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW/2 - 200, CH - 200, 300, 160);
-  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW/2 - 200, CH - 200, 300, 160);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW/2 - 200, CH - 280, 300, 200);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW/2 - 200, CH - 280, 300, 200);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; const fsz = 320; ctx.drawImage(floraImg, CW/2 + 100, CH - fsz - 80, fsz * 0.65, fsz); ctx.restore(); }
-  ctx.fillText('🌸 フローラ', CW/2 - 190, CH - 175);
+  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; const fsz = 320; const floraFloat = Math.sin(Date.now() / 800) * 6; ctx.drawImage(floraImg, CW/2 + 100, CH - fsz - 140 + floraFloat, fsz * 0.65, fsz); ctx.restore(); }
+  ctx.fillText('🌸 フローラ', CW/2 - 190, CH - 255);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
   const words = floraText.split('');
-  let fline = '', fly = CH - 150;
-  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 160) { ctx.fillText(fline, CW/2 - 190, fly); fly += 20; fline = ''; } }
+  let fline = '', fly = CH - 230;
+  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 250) { ctx.fillText(fline, CW/2 - 190, fly); fly += 20; fline = ''; } }
   if (fline) ctx.fillText(fline, CW/2 - 190, fly);
   // クリア数表示
   ctx.fillStyle = '#aaa'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('クリア回数: ' + totalClears, CW/2 - 190, CH - 50);
+  ctx.fillText('クリア回数: ' + totalClears, CW/2 - 190, CH - 100);
   ctx.textAlign = 'center';
   for (let i = 0; i < visibleDefs.length; i++) {
     const def = visibleDefs[i];
@@ -137,7 +137,7 @@ function drawGarden() {
     }
   }
   ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 40);
+  ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 15);
   ctx.textAlign = 'left';
 }
 

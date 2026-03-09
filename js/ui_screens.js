@@ -32,14 +32,13 @@ function drawPrologue() {
 
 function drawEnding() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-  ctx.save(); ctx.globalAlpha = 0.9;
+  const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal'; ctx.save(); ctx.globalAlpha = 0.9;
   const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a'; if (endingImgs[endImgKey]) { const eiw = Math.min(CW * 0.6, 700), eih = eiw * 0.75; ctx.drawImage(endingImgs[endImgKey], CW/2 - eiw/2, 40, eiw, eih); } else if (mipurinReady) {
     const sz = 200;
     ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
   }
   ctx.restore();
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal';
   const endTitle = endType === 'true' ? '✨ クリスタルの再生 ✨' : endType === 'good' ? '🌸 かけらの光 🌸' : '小さな希望';
   ctx.fillText(endTitle, CW/2, 380);
   ctx.fillStyle = '#fff'; ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";

@@ -32,8 +32,8 @@ function drawPrologue() {
 
 function drawEnding() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-  ctx.save(); ctx.globalAlpha = 0.8;
-  if (mipurinReady) {
+  ctx.save(); ctx.globalAlpha = 0.9;
+  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a'; if (endingImgs[endImgKey]) { const eiw = Math.min(CW * 0.6, 700), eih = eiw * 0.75; ctx.drawImage(endingImgs[endImgKey], CW/2 - eiw/2, 40, eiw, eih); } else if (mipurinReady) {
     const sz = 200;
     ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
   }
@@ -94,6 +94,7 @@ function drawGarden() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 320, CH - 200, 300, 160);
   ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW - 320, CH - 200, 300, 160);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  if (floraReady) { ctx.drawImage(floraImg, CW - 100, CH - 200, 80, 140); }
   ctx.fillText('🌸 フローラ', CW - 310, CH - 175);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
@@ -146,10 +147,10 @@ function drawGarden() {
 function drawTitle() {
   if (currentBGM !== 'title') playBGM('title');
   ctx.fillStyle = '#fffde7';
-  updateTitleParticles(); drawTitleParticles();
+  if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
   ctx.fillRect(0, 0, CW, CH);
   // Draw cute mipurin
-  if (mipurinReady) {
+  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a'; if (endingImgs[endImgKey]) { const eiw = Math.min(CW * 0.6, 700), eih = eiw * 0.75; ctx.drawImage(endingImgs[endImgKey], CW/2 - eiw/2, 40, eiw, eih); } else if (mipurinReady) {
     const f = MIPURIN_FRAMES.down;
     const sz = 240;
     ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, CW / 2 - sz / 2, 120, sz, sz);

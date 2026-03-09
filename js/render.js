@@ -451,7 +451,7 @@ function drawGameState() {
     }
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(50,15,40,0.65)'; ctx.fillRect(0, 0, CW, CH);
     // Mipurin fallen
-    if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
+    if (deadImgReady) { ctx.save(); ctx.globalAlpha = 0.8; const sz = 160; ctx.drawImage(deadMipurinImg, CW/2 - sz/2, CH/2 + 20, sz, sz); ctx.restore(); } else if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
     ctx.fillStyle = COL.hpLost; ctx.font = "bold 60px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('おやすみ、ミプリン…', CW / 2, CH / 2 - 40);
     ctx.fillStyle = '#ddd'; ctx.font = "32px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
@@ -477,6 +477,8 @@ function draw() {
   drawBoss(); drawProjectiles(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
 
   ctx.restore();
+  // Boss silhouette during dialog
+  if (gameState === 'dialog' && boss && bossSilhouettes[boss.id]) { ctx.save(); ctx.globalAlpha = 0.3 + Math.sin(Date.now()/300) * 0.1; const silSz = 200; ctx.drawImage(bossSilhouettes[boss.id], CW/2 - silSz/2, CH/2 - silSz/2 - 60, silSz, silSz); ctx.restore(); }
   drawGameState(); drawBlessing(); drawShop();
 
   drawInventory();

@@ -308,6 +308,7 @@ function drawShop() {
   ctx.fillText('🌸 はなの市場 🌸', CW / 2, 55);
   ctx.fillStyle = '#ddd'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('いらっしゃい！ なにがほしいの？', CW / 2, 82);
+  if (shopkeeperReady) { ctx.drawImage(shopkeeperImg, 40, 30, 70, 110); }
   ctx.fillStyle = COL.pollen; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
   // Layout: 2 rows x 3 cols (or fewer)

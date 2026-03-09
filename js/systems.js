@@ -321,3 +321,49 @@ function getAttackBox() {
 
 
 
+
+// ===== TITLE BACKGROUND =====
+const titleBgImg = new Image();
+titleBgImg.src = 'assets/sprites/title_bg.webp';
+let titleBgReady = false;
+titleBgImg.onload = () => { titleBgReady = true; };
+
+// ===== DEATH SCREEN IMAGE =====
+const deadMipurinImg = new Image();
+deadMipurinImg.src = 'assets/sprites/dead_mipurin.webp';
+let deadImgReady = false;
+deadMipurinImg.onload = () => { deadImgReady = true; };
+
+// ===== ENDING IMAGES =====
+const endingImgs = {};
+['ending_a','ending_b','ending_c'].forEach(id => {
+  const img = new Image();
+  img.src = 'assets/sprites/' + id + '.webp';
+  img.onload = () => { endingImgs[id] = img; };
+});
+
+// ===== NPC FLORA PORTRAIT =====
+const floraImg = new Image();
+floraImg.src = 'assets/sprites/flora_portrait.webp';
+let floraReady = false;
+floraImg.onload = () => { floraReady = true; };
+
+// ===== SHOPKEEPER IMAGE =====
+const shopkeeperImg = new Image();
+shopkeeperImg.src = 'assets/sprites/shopkeeper.webp';
+let shopkeeperReady = false;
+shopkeeperImg.onload = () => { shopkeeperReady = true; };
+
+// ===== BOSS SILHOUETTE IMAGES =====
+const bossSilhouettes = {};
+const BOSS_SIL_MAP = {
+  queen_hornet: 'assets/sprites/boss_silhouette_hornet.webp',
+  fungus_king: 'assets/sprites/boss_silhouette_fungus.webp',
+  crystal_golem: 'assets/sprites/boss_silhouette_golem.webp',
+  shadow_moth: 'assets/sprites/boss_silhouette_moth.webp'
+};
+Object.keys(BOSS_SIL_MAP).forEach(id => {
+  const img = new Image();
+  img.src = BOSS_SIL_MAP[id];
+  img.onload = () => { bossSilhouettes[id] = img; };
+});

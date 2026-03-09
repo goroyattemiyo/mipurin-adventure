@@ -26,6 +26,7 @@ function update(dt) {
   if (floorClearAnimTimer < 2) floorClearAnimTimer += dt;
   if (gameState === 'playing' || gameState === 'waveWait') updateBgParticles(dt, getTheme(floor).name);
   updateMessages(dt);
+  if (typeof updateBubble === "function") updateBubble(dt);
 
   if (gameState === 'ending') {
     if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title'; }
@@ -210,7 +211,8 @@ function update(dt) {
   // === Attack ===
   player.atkCooldown = Math.max(0, player.atkCooldown - dt);
   if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
-    player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack();
+    player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack(); Audio.voice_attack();
+    if (Math.random() < 0.15) showBubble('えいっ！', 0.8);
     if (player.weapon.comboFx === 'parry') player._parryWindow = 0.2; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';

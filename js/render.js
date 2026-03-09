@@ -246,7 +246,25 @@ function drawAttackEffect() {
 
 function drawDashTrail() {
   if (!player.dashing) return;
-  ctx.fillStyle = COL.dash; ctx.beginPath(); ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 24, 0, Math.PI * 2); ctx.fill();
+  const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
+  const ddx = player.dashDir.x, ddy = player.dashDir.y;
+  // 3-frame ghost trail
+  for (let g = 3; g >= 1; g--) {
+    const gx = cx - ddx * g * 18, gy = cy - ddy * g * 18;
+    ctx.globalAlpha = 0.12 * g;
+    if (mipurinReady) {
+      const dir = getPlayerDir();
+      const mf = MIPURIN_FRAMES[dir];
+      const sz = player.w + 24;
+      ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, gx - sz/2, gy - sz/2, sz, sz);
+    } else {
+      ctx.fillStyle = COL.player;
+      ctx.beginPath(); ctx.arc(gx, gy, player.w/2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  // Bright dash circle
+  ctx.fillStyle = COL.dash; ctx.beginPath(); ctx.arc(cx, cy, 24, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawTelegraph(en) {
@@ -362,7 +380,7 @@ function draw() {
   if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
 
   const th = getTheme(floor); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
-  drawRoom(); drawDashTrail(); drawDrops();
+  drawRoom(); drawBgParticles(); drawDashTrail(); drawDrops();
   for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
   for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
   drawBoss(); drawProjectiles(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();

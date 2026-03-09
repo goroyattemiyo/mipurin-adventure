@@ -361,3 +361,51 @@ function getFloraLine() {
   for (const line of NPC_LINES) { if (line.cond()) return line.text; }
   return NPC_LINES[NPC_LINES.length - 1].text;
 }
+// ===== BACKGROUND PARTICLES (Sprint E) =====
+const bgParticles = [];
+const BG_PARTICLE_MAX = 40;
+const BG_THEMES = {
+  forest:  { icons: ['🍃','🌿','🍂'], colors: ['#8bc34a','#66bb6a','#a5d6a7'], drift: 15 },
+  cave:    { icons: ['💎','✨','🪨'], colors: ['#90a4ae','#78909c','#b0bec5'], drift: 8 },
+  flower:  { icons: ['🌸','🌺','🌷'], colors: ['#f48fb1','#f06292','#ec407a'], drift: 12 },
+  abyss:   { icons: ['🔮','💜','✨'], colors: ['#9575cd','#7e57c2','#b39ddb'], drift: 10 },
+  ruins:   { icons: ['🔥','💫','⭐'], colors: ['#ffb74d','#ffa726','#ff9800'], drift: 14 }
+};
+function spawnBgParticle(themeName) {
+  const t = BG_THEMES[themeName] || BG_THEMES.forest;
+  bgParticles.push({
+    x: Math.random() * CW,
+    y: -10,
+    vx: (Math.random() - 0.5) * t.drift,
+    vy: 10 + Math.random() * t.drift,
+    rot: Math.random() * Math.PI * 2,
+    rotSpd: (Math.random() - 0.5) * 2,
+    alpha: 0.15 + Math.random() * 0.25,
+    size: 10 + Math.random() * 8,
+    icon: t.icons[Math.floor(Math.random() * t.icons.length)],
+    color: t.colors[Math.floor(Math.random() * t.colors.length)]
+  });
+}
+function updateBgParticles(dt, themeName) {
+  // Spawn
+  if (bgParticles.length < BG_PARTICLE_MAX && Math.random() < 0.15) spawnBgParticle(themeName);
+  // Update
+  for (let i = bgParticles.length - 1; i >= 0; i--) {
+    const p = bgParticles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.rotSpd * dt;
+    if (p.y > CH + 20 || p.x < -20 || p.x > CW + 20) bgParticles.splice(i, 1);
+  }
+}
+function drawBgParticles() {
+  for (const p of bgParticles) {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.font = p.size + "px 'M PLUS Rounded 1c', sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.icon, 0, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}

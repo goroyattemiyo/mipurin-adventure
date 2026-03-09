@@ -174,7 +174,8 @@ function update(dt) {
 
   // === Player movement ===
   let mx = 0, my = 0;
-  if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
+  if(mx!==0||my!==0||isDown('KeyZ')||isDown('KeyX')){idleTimer=0;}else{idleTimer+=dt;}
+    if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
   if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
   if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
   if (isDown('ArrowDown') || isDown('KeyS')) my += 1;
@@ -224,7 +225,7 @@ function update(dt) {
     // Double dagger: schedule second hit
     if (wfx === 'double') { setTimeout(() => { if (gameState !== 'playing') return;
       for (const en2 of enemies) { if (en2.hp <= 0) continue;
-        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); Audio.hit(); }}
+        if (rectOverlap(getAttackBox(), en2)) { en2.hp -= atkDmg; en2.hitFlash = 0.1; hitStopTimer = 0.05; const kb = 16; const ka = Math.atan2(en2.y - player.y, en2.x - player.x); moveWithCollision(en2, Math.cos(ka)*kb, Math.sin(ka)*kb); spawnDmg(en2.x + en2.w/2, en2.y, atkDmg, '#ffa'); emitParticles(en2.x+en2.w/2, en2.y+en2.h/2, '#fff', 5, 80, 0.2); Audio.hit(); if(Math.random()<0.3) showBubble(["えいっ！","とりゃ！","それっ！","やぁ！"][Math.floor(Math.random()*4)]); if(typeof Audio.voice_attack==="function"&&Math.random()<0.25) Audio.voice_attack(); }}
       if (boss && boss.hp > 0 && rectOverlap(getAttackBox(), boss)) { boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; spawnDmg(boss.x + boss.w/2, boss.y, atkDmg, '#ffa'); emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); Audio.hit(); }
     }, 80); }
     const hitEnList = [];
@@ -363,7 +364,7 @@ function update(dt) {
   // Remove dead enemies
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].hp <= 0) {
-      score += enemies[i].score;
+      score += enemies[i].score; for(let p=0;p<8;p++){const a=Math.PI*2*p/8;emitParticles(enemies[i].x+enemies[i].w/2+Math.cos(a)*12,enemies[i].y+enemies[i].h/2+Math.sin(a)*12,["#ffb7c5","#fff","#ffe4e1","#ffd1dc"][p%4],3,60,0.3);} if(Math.random()<0.25) showBubble(["やったぁ！","えへへ♪","ばいばーい！","おつかれ〜"][Math.floor(Math.random()*4)]);
       emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 10, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 5, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 6, 50, 0.5);
       Audio.enemy_die();
       // 毒撃破: 毒霧拡散
@@ -384,7 +385,7 @@ function update(dt) {
 
   // Boss death
   if (boss && boss.hp <= 0) {
-    score += boss.score || 200; Audio.door_open();
+    score += boss.score || 200; Audio.door_open(); showBubble("やったぁ！ ボスたおしたよ！"); if(typeof Audio.voice_boss_kill==="function") Audio.voice_boss_kill();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     const bossPollenAmt = 5 + Math.floor(floor / 2); pollen += bossPollenAmt; showFloat('花粉 +' + bossPollenAmt, 2.0, MSG_COLORS.info); emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#f1c40f', 15, 100, 0.4);
     hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8);
@@ -407,7 +408,7 @@ function update(dt) {
   }
 
   // Projectiles, drops, particles, dmg numbers
-  updateProjectiles(dt); updateDrops(dt); updateParticles(dt);
+  updateProjectiles(dt); updateDrops(dt); updateParticles(dt); if(typeof updateBubbles==="function") updateBubbles(dt);
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }

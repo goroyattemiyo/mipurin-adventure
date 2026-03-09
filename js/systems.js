@@ -101,6 +101,7 @@ function updateFade(dt) {
 
 // ===== GAME FLOW =====
 function startFloor() {
+  if(typeof MONOLOGUES!=="undefined"&&Math.random()<0.6) setTimeout(()=>showBubble(MONOLOGUES[Math.floor(Math.random()*MONOLOGUES.length)]),800);
   dialogMsg = null; dialogCallback = null;
   rng = mulberry32(Date.now() + floor);
   roomSpikes = []; roomMap = generateRoom(floor);

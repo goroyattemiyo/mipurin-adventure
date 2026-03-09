@@ -122,6 +122,7 @@ function drawEnemyShape(e, color) {
 }
 
 function drawEntity(e, color, isP) {
+  if(isP && typeof idleTimer!=="undefined" && idleTimer>5){ const iw=Math.sin(Date.now()/300)*3; e=Object.assign({},e,{x:e.x+iw}); }
   const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
@@ -457,7 +458,10 @@ function drawGameState() {
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
     ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
     ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-    if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
+      const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
+  ctx.font = '18px "M PLUS Rounded 1c"'; ctx.fillStyle = '#ffb7c5'; ctx.textAlign = 'center';
+  ctx.fillText(DEATH_LINES[Math.floor(Date.now()/3000) % DEATH_LINES.length], CW/2, CH/2 + 95);
+  if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
     else { ctx.fillText('しばらくおまちください...', CW / 2, CH / 2 + 130); }
     ctx.textAlign = 'left'; }
 }
@@ -485,7 +489,23 @@ function draw() {
   drawRoom(); drawBgParticles(); if (typeof drawHoneyPools === 'function') drawHoneyPools(); drawDashTrail(); drawDrops();
   for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
   for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
-  drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
+  drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect(); drawEntity(player, COL.player, true);
+  if(typeof bubbles!=="undefined"&&bubbles.length>0){
+    const b=bubbles[0]; ctx.save(); ctx.globalAlpha=Math.max(0,b.alpha);
+    const bx=player.x-camX+player.w/2, by=player.y-camY-30;
+    const tw=ctx.measureText(b.text).width;
+    const bw=tw+24, bh=30, rx=bx-bw/2, ry=by-bh;
+    ctx.fillStyle='rgba(255,255,255,0.92)';
+    ctx.beginPath(); ctx.moveTo(rx+8,ry); ctx.lineTo(rx+bw-8,ry);
+    ctx.quadraticCurveTo(rx+bw,ry,rx+bw,ry+8); ctx.lineTo(rx+bw,ry+bh-8);
+    ctx.quadraticCurveTo(rx+bw,ry+bh,rx+bw-8,ry+bh); ctx.lineTo(bx+4,ry+bh);
+    ctx.lineTo(bx,ry+bh+8); ctx.lineTo(bx-4,ry+bh); ctx.lineTo(rx+8,ry+bh);
+    ctx.quadraticCurveTo(rx,ry+bh,rx,ry+bh-8); ctx.lineTo(rx,ry+8);
+    ctx.quadraticCurveTo(rx,ry,rx+8,ry); ctx.fill();
+    ctx.fillStyle='#5a3040'; ctx.font='bold 14px "M PLUS Rounded 1c"';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(b.text, bx, ry+bh/2); ctx.restore();
+  } drawParticles(); drawDmgNumbers(); drawHUD();
 
   ctx.restore();
   // Boss silhouette during dialog

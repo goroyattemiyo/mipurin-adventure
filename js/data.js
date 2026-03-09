@@ -53,6 +53,27 @@ function getFloorBounds(floor) {
 }
 // ===== PARTICLES =====
 const particles = [];
+function showBubble(text, duration) {
+  bubbles.push({ text: text, timer: duration || 1.5, alpha: 1.0 });
+}
+function updateBubbles(dt) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    bubbles[i].timer -= dt;
+    if (bubbles[i].timer < 0.3) bubbles[i].alpha = bubbles[i].timer / 0.3;
+    if (bubbles[i].timer <= 0) bubbles.splice(i, 1);
+  }
+}
+const bubbles = [];
+function showBubble(text, duration) {
+  bubbles.push({ text: text, timer: duration || 1.5, alpha: 1.0 });
+}
+function updateBubbles(dt) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    bubbles[i].timer -= dt;
+    if (bubbles[i].timer < 0.3) bubbles[i].alpha = bubbles[i].timer / 0.3;
+    if (bubbles[i].timer <= 0) bubbles.splice(i, 1);
+  }
+}
 function emitParticles(x, y, color, count, spd, life) {
   const maxNew = Math.min(count, 60 - particles.length); for (let i = 0; i < maxNew; i++) {
     const a = Math.random() * Math.PI * 2, s = Math.random() * spd;
@@ -450,7 +471,12 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   dashSpeed: 700, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
   weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
 
-
+let idleTimer = 0;
+const MONOLOGUES = [
+  'がんばるぞ〜！', 'お花いっぱい咲くといいな♪', 'おなかすいたかも…',
+  'このフロア、なんかいい匂い！', 'みぷりん、まけないもん！', 'はちみつ食べたいな〜',
+  'つぎはどんな敵かな？', 'フローラさん元気かな…', 'えへへ、冒険たのしい！'
+];
 
 // ===== NPC FLORA LINES =====
 const NPC_LINES = [

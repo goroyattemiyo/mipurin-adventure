@@ -111,89 +111,102 @@ function setBlock(map, c, r) {
   }
 }
 
-function applyTemplate(map, name, floor) {
-  if (name === 'open') {
-    const cnt = 2 + Math.min(floor, 4); const placed = [];
-    for (let i = 0; i < cnt; i++) {
-      let pc, pr, tries = 0;
-      do { pc = 2+Math.floor(rng()*(COLS-4)); pr = 2+Math.floor(rng()*(ROWS-4)); tries++; }
-      while (tries < 50 && (placed.some(p => Math.abs(p[0]-pc)<3 && Math.abs(p[1]-pr)<3) || safeZone(pc,pr)));
-      if (tries < 50) { placed.push([pc,pr]); setBlock(map,pc,pr); }
-    }
-  } else if (name === 'maze') {
-    const segs = 3 + Math.floor(rng()*3);
-    for (let i = 0; i < segs; i++) {
-      const horiz = rng() > 0.5, len = 3+Math.floor(rng()*3);
-      const sc = 2+Math.floor(rng()*(COLS-6)), sr = 2+Math.floor(rng()*(ROWS-6));
-      for (let j = 0; j < len; j++) {
-        const c = horiz ? sc+j : sc, r = horiz ? sr : sr+j;
-        if (c>0 && c<COLS-1 && r>0 && r<ROWS-1 && !safeZone(c,r)) map[r*COLS+c] = 1;
+function applyTemplate(map, name, fl) {
+  const fb = getFloorBounds(fl);
+  const mc = Math.floor((fb.c0 + fb.c1) / 2), mr = Math.floor((fb.r0 + fb.r1) / 2);
+  const fw = fb.c1 - fb.c0, fh = fb.r1 - fb.r0;
+  function put(c, r) { if (c > fb.c0 && c < fb.c1 && r > fb.r0 && r < fb.r1 && !safeZone(c, r)) map[r * COLS + c] = 1; }
+  function clr(c, r) { if (c >= 0 && c < COLS && r >= 0 && r < ROWS) map[r * COLS + c] = 0; }
+
+  if (name === 'pillars') {
+    var spacing = fl <= 2 ? 3 : 4;
+    for (var r = fb.r0 + 2; r < fb.r1 - 1; r += spacing) {
+      for (var c = fb.c0 + 2; c < fb.c1 - 1; c += spacing) {
+        if (rng() < 0.7) put(c, r);
       }
-      const mid = Math.floor(len/2);
-      const gc = horiz ? sc+mid : sc, gr = horiz ? sr : sr+mid;
-      if (gc>0 && gc<COLS-1 && gr>0 && gr<ROWS-1) map[gr*COLS+gc] = 0;
     }
-  } else if (name === 'circular') {
-    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2), rx = 5, ry = 4;
-    for (let r = 1; r < ROWS-1; r++) for (let c = 1; c < COLS-1; c++) {
-      const dx = (c-cx)/rx, dy = (r-cy)/ry, dist = dx*dx + dy*dy;
-      if (dist > 0.65 && dist < 1.3 && !safeZone(c,r)) map[r*COLS+c] = 1;
+  } else if (name === 'corridors') {
+    var wallCount = 1 + Math.floor(rng() * 2);
+    for (var w = 0; w < wallCount; w++) {
+      var horiz = rng() > 0.5;
+      if (horiz) {
+        var wr = fb.r0 + 2 + Math.floor(rng() * Math.max(1, fh - 4));
+        for (var c = fb.c0 + 1; c < fb.c1; c++) put(c, wr);
+        var g1 = fb.c0 + 2 + Math.floor(rng() * Math.max(1, Math.floor(fw / 2)));
+        var g2 = mc + 1 + Math.floor(rng() * Math.max(1, Math.floor(fw / 2) - 2));
+        clr(g1, wr); clr(g1 + 1, wr); clr(g2, wr); clr(g2 + 1, wr);
+      } else {
+        var wc = fb.c0 + 3 + Math.floor(rng() * Math.max(1, fw - 6));
+        for (var r = fb.r0 + 1; r < fb.r1; r++) put(wc, r);
+        var g1 = fb.r0 + 2 + Math.floor(rng() * Math.max(1, Math.floor(fh / 2)));
+        var g2 = mr + 1 + Math.floor(rng() * Math.max(1, Math.floor(fh / 2) - 2));
+        clr(wc, g1); clr(wc, g1 + 1); clr(wc, g2); clr(wc, g2 + 1);
+      }
     }
-    for (let d = -1; d <= 1; d++) {
-      if (cy+d>0 && cy+d<ROWS-1) { map[(cy+d)*COLS+(cx-rx)] = 0; map[(cy+d)*COLS+(cx+rx)] = 0; }
-      if (cx+d>0 && cx+d<COLS-1) { map[(cy-ry)*COLS+cx+d] = 0; map[(cy+ry)*COLS+cx+d] = 0; }
+    for (var i = 0; i < 2 + Math.floor(rng() * 2); i++) {
+      put(fb.c0 + 2 + Math.floor(rng() * Math.max(1, fw - 3)), fb.r0 + 2 + Math.floor(rng() * Math.max(1, fh - 3)));
     }
-  } else if (name === 'L_shape') {
-    const quads = [[2,2],[12,2],[2,9],[12,9]];
-    const qi = Math.floor(rng()*3), q = quads[qi<2?qi:3];
-    const bx=q[0], by=q[1], bw=3+Math.floor(rng()*2), bh=2+Math.floor(rng()*2);
-    for (let r=by; r<by+bh && r<ROWS-1; r++)
-      for (let c=bx; c<bx+bw && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
-    if (rng()>0.5) {
-      for (let r=by+bh; r<by+bh+3 && r<ROWS-1; r++)
-        for (let c=bx; c<bx+2 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
-    } else {
-      for (let r=by; r<by+2 && r<ROWS-1; r++)
-        for (let c=bx+bw; c<bx+bw+3 && c<COLS-1; c++) if (!safeZone(c,r)) map[r*COLS+c]=1;
+  } else if (name === 'arena') {
+    var offC = Math.max(2, Math.floor(fw * 0.2)), offR = Math.max(2, Math.floor(fh * 0.25));
+    put(mc - offC, mr - offR); put(mc + offC, mr - offR);
+    put(mc - offC, mr + offR); put(mc + offC, mr + offR);
+    put(fb.c0 + 2, fb.r0 + 2); put(fb.c0 + 3, fb.r0 + 2);
+    put(fb.c1 - 2, fb.r0 + 2); put(fb.c1 - 3, fb.r0 + 2);
+    put(fb.c0 + 2, fb.r1 - 2); put(fb.c0 + 3, fb.r1 - 2);
+    put(fb.c1 - 2, fb.r1 - 2); put(fb.c1 - 3, fb.r1 - 2);
+  } else if (name === 'scattered') {
+    var cnt = 4 + Math.floor(fl * 0.8);
+    for (var i = 0; i < cnt; i++) {
+      var pc = fb.c0 + 2 + Math.floor(rng() * Math.max(1, fw - 3));
+      var pr = fb.r0 + 2 + Math.floor(rng() * Math.max(1, fh - 3));
+      put(pc, pr);
+      if (rng() < 0.5) put(pc + (rng() > 0.5 ? 1 : 0), pr + (rng() > 0.5 ? 1 : 0));
     }
-    const opp = quads[qi<2?3-qi:0];
-    setBlock(map, opp[0]+Math.floor(rng()*2), opp[1]+Math.floor(rng()*2));
-  } else if (name === 'cross') {
-    const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2);
-    for (let c=cx-6; c<=cx+6; c++)
-      if (c>0 && c<COLS-1 && !safeZone(c,cy) && (c-cx+6)%4!==0) map[cy*COLS+c]=1;
-    for (let r=cy-4; r<=cy+4; r++)
-      if (r>0 && r<ROWS-1 && !safeZone(cx,r) && (r-cy+4)%4!==0) map[r*COLS+cx]=1;
-    for (let r=cy-1; r<=cy+1; r++)
-      for (let c=cx-1; c<=cx+1; c++) if (r>0 && c>0) map[r*COLS+c]=0;
+  } else if (name === 'ring') {
+    var rx = Math.max(2, Math.floor(fw * 0.3)), ry = Math.max(2, Math.floor(fh * 0.3));
+    for (var r = fb.r0 + 1; r < fb.r1; r++) {
+      for (var c = fb.c0 + 1; c < fb.c1; c++) {
+        var dx = (c - mc) / rx, dy = (r - mr) / ry, dist = dx * dx + dy * dy;
+        if (dist > 0.6 && dist < 1.1) put(c, r);
+      }
+    }
+    for (var d = -1; d <= 1; d++) { clr(mc + d, mr - ry); clr(mc + d, mr + ry); clr(mc - rx, mr + d); clr(mc + rx, mr + d); }
+    if (rng() < 0.6) put(mc - 1, mr);
+    if (rng() < 0.6) put(mc + 1, mr);
+  } else {
+    for (var i = 0; i < 3 + Math.floor(rng() * 3); i++) {
+      put(fb.c0 + 2 + Math.floor(rng() * Math.max(1, fw - 3)), fb.r0 + 2 + Math.floor(rng() * Math.max(1, fh - 3)));
+    }
   }
 }
 
-function generateRoom(floor) {
-  const themeName = getTheme(floor).name;
-  const templates = THEME_TEMPLATES[themeName] || ['open'];
-  const pick = isBossFloor() ? 'arena' : templates[Math.floor(rng()*templates.length)];
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const map = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (r===0||r===ROWS-1||c===0||c===COLS-1) { map.push(1); continue; } map.push(0);
+function generateRoom(fl) {
+  var themeName = getTheme(fl).name;
+  var templates = THEME_TEMPLATES[themeName] || ['pillars'];
+  var pick = isBossFloor() ? 'arena' : templates[Math.floor(rng() * templates.length)];
+  for (var attempt = 0; attempt < 5; attempt++) {
+    var map = [];
+    var _fb = getFloorBounds(fl);
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || r < _fb.r0 || r > _fb.r1 || c < _fb.c0 || c > _fb.c1) { map.push(1); continue; } map.push(0);
     }
-    applyTemplate(map, pick, floor);
+    applyTemplate(map, pick, fl);
     roomSpikes = [];
-    if (floor >= 4 && !isBossFloor()) {
-      const maxSp = Math.min(2 + Math.floor((floor-3)*1.5), 10);
-      for (let i = 0; i < maxSp; i++) {
-        let sc, sr, tries = 0;
-        do { sc=2+Math.floor(rng()*(COLS-4)); sr=2+Math.floor(rng()*(ROWS-4)); tries++; }
-        while (tries<30 && (map[sr*COLS+sc]!==0 || safeZone(sc,sr)));
-        if (tries<30 && map[sr*COLS+sc]===0) { map[sr*COLS+sc]=2; roomSpikes.push({c:sc,r:sr}); }
+    if (fl >= 4 && !isBossFloor()) {
+      var maxSp = Math.min(2 + Math.floor((fl - 3) * 1.5), 10);
+      for (var i = 0; i < maxSp; i++) {
+        var sc, sr, tries = 0;
+        do { sc = _fb.c0 + 1 + Math.floor(rng() * Math.max(1, _fb.c1 - _fb.c0 - 2)); sr = _fb.r0 + 1 + Math.floor(rng() * Math.max(1, _fb.r1 - _fb.r0 - 2)); tries++; }
+        while (tries < 30 && (map[sr * COLS + sc] !== 0 || safeZone(sc, sr)));
+        if (tries < 30 && map[sr * COLS + sc] === 0) { map[sr * COLS + sc] = 2; roomSpikes.push({ c: sc, r: sr }); }
       }
     }
     if (floodFill(map)) return map;
   }
-  const map = [];
-  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
-    if (r===0||r===ROWS-1||c===0||c===COLS-1) map.push(1); else map.push(0);
+  var map = [];
+  var _fb2 = getFloorBounds(fl);
+  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || r < _fb2.r0 || r > _fb2.r1 || c < _fb2.c0 || c > _fb2.c1) map.push(1); else map.push(0);
   }
   roomSpikes = []; return map;
 }

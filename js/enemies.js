@@ -77,7 +77,8 @@ function spawnEnemy(type, col, row) {
 
 function randEnemyPos() {
   let c, r, tries = 0;
-  do { c = 2 + Math.floor(rng() * (COLS - 4)); r = 2 + Math.floor(rng() * (ROWS - 4)); tries++; }
+  var _efb = getFloorBounds(floor);
+  do { c = _efb.c0 + 1 + Math.floor(rng() * Math.max(1, _efb.c1 - _efb.c0 - 2)); r = _efb.r0 + 1 + Math.floor(rng() * Math.max(1, _efb.r1 - _efb.r0 - 2)); tries++; }
   while (tries < 30 && (tileAt(roomMap, c, r) === 1 || tileAt(roomMap, c-1, r) === 1 || tileAt(roomMap, c+1, r) === 1 || tileAt(roomMap, c, r-1) === 1 || tileAt(roomMap, c, r+1) === 1 || (Math.abs(c - 10) < 3 && Math.abs(r - 5) < 3)));
   return [c, r];
 }
@@ -187,4 +188,3 @@ function updateBoss(dt) {
     }
   }
 }
-

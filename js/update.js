@@ -47,6 +47,24 @@ function update(dt) {
     if (wasPressed('KeyX') || wasPressed('Escape')) { gameState = 'title'; Audio.menu_select(); }
     return; }
   if (gameState === 'prologue') { updatePrologue(dt); return; }
+  if (gameState === 'cutin') {
+    cutinTimer += dt;
+    if (cutinPhase === 'slidein' && cutinTimer > 0.6) { cutinPhase = 'hold'; cutinTimer = 0; shakeTimer = 0.2; shakeIntensity = 10; }
+    if (cutinPhase === 'hold' && cutinTimer > 1.2) { cutinPhase = 'fade'; cutinTimer = 0; }
+    if (cutinPhase === 'fade' && cutinTimer > 0.5) {
+      cutinPhase = 'none';
+      const bossLines = {
+        'queen_hornet': ['ブンブン…… あたまが…おかしく…なる…！', 'ここから… でていけぇ！ …たすけて…'],
+        'fungus_king': ['この胞子は… わたしの意志では…ない…', 'クリスタルのかけらが… わたしを狂わせる… 止めて…くれ…'],
+        'crystal_golem': ['…ゴゴゴ…… 封印を… 守らなければ…', 'しかし… 体が… いうことを きかない…'],
+        'shadow_moth': ['ヒヒヒ… 気づいたか、ちいさなハチさん？', 'クリスタルを砕いたのは… このわたしだよ…']
+      };
+      const bl = bossLines[cutinBossId] || ['ボスがあらわれた！'];
+      gameState = 'dialog';
+      showDialog(boss ? boss.name : '???', bl, function() { gameState = 'playing'; });
+    }
+    return;
+  }
   // Inventory toggle
   if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; }
   if (inventoryOpen) {
@@ -366,7 +384,7 @@ function update(dt) {
   if (boss && boss.hp <= 0) {
     score += boss.score || 200; Audio.door_open();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
-    for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
+    const bossPollenAmt = 5 + Math.floor(floor / 2); pollen += bossPollenAmt; showFloat('花粉 +' + bossPollenAmt, 2.0, MSG_COLORS.info); emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#f1c40f', 15, 100, 0.4);
     hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8);
     const _bdd = {
       'queen_hornet': { s: 'スズメバチの女王', l: ['…はっ… わたし…なにを…？', 'ありがとう、ちいさなハチさん。闇の胞子がわたしを操っていたの…', 'クリスタルのかけらを感じる… もっと奥に…気をつけて'] },
@@ -374,8 +392,7 @@ function update(dt) {
       'crystal_golem': { s: 'クリスタルゴーレム', l: ['…封印の力が… 弱まっている…', 'わたしは女王さまにつくられた番人… クリスタルを守るために…', 'あの闇の蛾を止めてくれ… 奥に進め…'] },
       'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] }
     };
-    const _bd = _bdd[boss.id];
-    boss = null;
+    const _bd = _bdd[boss.id]; lastBossId = boss.id; boss = null;
     if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }); }
     else { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
   }
@@ -392,6 +409,8 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
+
+
 
 
 

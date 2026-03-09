@@ -47,7 +47,7 @@ let rng = mulberry32(Date.now());
 // ===== PARTICLES =====
 const particles = [];
 function emitParticles(x, y, color, count, spd, life) {
-  for (let i = 0; i < count; i++) {
+  const maxNew = Math.min(count, 60 - particles.length); for (let i = 0; i < maxNew; i++) {
     const a = Math.random() * Math.PI * 2, s = Math.random() * spd;
     particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life || 0.4, maxLife: life || 0.4, color, size: 2 + Math.random() * 3 });
   }

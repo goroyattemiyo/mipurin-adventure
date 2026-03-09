@@ -112,10 +112,7 @@ function startFloor() {
       'crystal_golem': ['…ゴゴゴ…… 封印を… 守らなければ…', 'しかし… 体が… いうことを きかない…'],
       'shadow_moth': ['ヒヒヒ… 気づいたか、ちいさなハチさん？', 'クリスタルを砕いたのは… このわたしだよ…'],
     };
-    if (boss) {
-      const bl = bossLines[boss.id] || [boss.name + ' があらわれた！'];
-      showDialog(boss.name, bl, function() { gameState = 'playing'; });
-    }
+    if (boss) { cutinBossId = boss.id; cutinTimer = 0; cutinPhase = 'slidein'; gameState = 'cutin'; lastBossId = boss.id; }
   }
   else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
   player.x = TILE * 10; player.y = TILE * 7;
@@ -370,3 +367,4 @@ Object.keys(BOSS_SIL_MAP).forEach(id => {
   img.src = BOSS_SIL_MAP[id];
   img.onload = () => { bossSilhouettes[id] = img; };
 });
+

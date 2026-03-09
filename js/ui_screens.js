@@ -93,13 +93,13 @@ function drawGarden() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 320, CH - 200, 300, 160);
   ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW - 320, CH - 200, 300, 160);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.9; ctx.drawImage(floraImg, CW - 95, CH - 190, 70, 70); ctx.restore(); }
+  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; ctx.drawImage(floraImg, CW - 110, CH - 200, 100, 140); ctx.restore(); }
   ctx.fillText('🌸 フローラ', CW - 310, CH - 175);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
   const words = floraText.split('');
   let fline = '', fly = CH - 150;
-  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 180) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
+  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 160) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
   if (fline) ctx.fillText(fline, CW - 310, fly);
   // クリア数表示
   ctx.fillStyle = '#aaa'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";

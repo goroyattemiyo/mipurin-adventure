@@ -123,7 +123,7 @@ function spawnBoss() { Audio.boss_appear();
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];
   const sc = 1 + floor * 0.12;
-  boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 2, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
+  boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 3 + def.h / 2, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
     dmg: Math.ceil(def.dmg * (1 + floor * 0.08)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
     chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0 };
 }

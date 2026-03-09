@@ -114,3 +114,5 @@ const Audio = (() => {
 
 
 let titleGuard = 0;
+
+let cutinTimer = 0, cutinBossId = '', cutinPhase = 'none', lastBossId = '';

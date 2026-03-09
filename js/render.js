@@ -466,6 +466,17 @@ function draw() {
   if (gameState === 'ending') { drawEnding(); return; }
   if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'garden') { drawGarden(); return; }
   if (gameState === 'title') { drawTitle(); return; }
+  if (gameState === 'cutin') {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+    var silImg = bossSilhouettes[cutinBossId];
+    if (silImg) {
+      var prog = 0;
+      if (cutinPhase === 'slidein') { prog = Math.min(1, cutinTimer / 0.6); var sx = CW * (1 - prog); ctx.globalAlpha = prog; ctx.drawImage(silImg, sx, 0, CW, CH); ctx.globalAlpha = 1; }
+      else if (cutinPhase === 'hold') { var pulse = 1 + Math.sin(cutinTimer * 8) * 0.03; ctx.save(); ctx.translate(CW/2, CH/2); ctx.scale(pulse, pulse); ctx.drawImage(silImg, -CW/2, -CH/2, CW, CH); ctx.restore(); ctx.fillStyle = '#fff'; ctx.globalAlpha = 0.9; ctx.font = "bold 48px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; var bname = boss ? boss.name : '???'; ctx.fillText(bname, CW/2, CH - 100); ctx.globalAlpha = 1; ctx.textAlign = 'left'; }
+      else if (cutinPhase === 'fade') { ctx.globalAlpha = 1 - cutinTimer / 0.5; ctx.drawImage(silImg, 0, 0, CW, CH); ctx.globalAlpha = 1; }
+    }
+    return;
+  }
 
   ctx.save();
   if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
@@ -478,7 +489,7 @@ function draw() {
 
   ctx.restore();
   // Boss silhouette during dialog
-  if (gameState === 'dialog' && boss && bossSilhouettes[boss.id]) { ctx.save(); ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 300) * 0.1; ctx.drawImage(bossSilhouettes[boss.id], 0, 0, CW, CH); ctx.restore(); }
+  if (gameState === 'dialog' && lastBossId && bossSilhouettes[lastBossId]) { ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(Date.now() / 400) * 0.08; ctx.drawImage(bossSilhouettes[lastBossId], 0, 0, CW, CH); ctx.restore(); }
   drawGameState(); drawBlessing(); drawShop();
 
   drawInventory();
@@ -498,4 +509,5 @@ function loop(time) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(loop); });
+
 

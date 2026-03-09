@@ -26,7 +26,6 @@ mipurin-adventure/ (branch: v2)
 │   ├── STATUS.md       # ← 本ドキュメント
 │   ├── CHANGELOG.md
 │   ├── IMAGE-PROMPTS.md # AI画像生成プロンプト集
-│   ├── COUNCIL-SESSION-002.md
 │   └── archive/
 ├── assets/
 │   ├── mipurin.png     # プレイヤースプライト (500×500, 4方向)
@@ -172,6 +171,24 @@ v6.12.1の主な変動:
 
 Phase 1 目標 55/100 → 達成済み。現在 65/100。Phase 2 目標 73/100。
 
+### COUNCIL議論の結論（Synapse Council）
+
+議論はSynapse / Synapse2システムで有識者（Roguelite Designer, Game Balance Designer, Narrative Editor, Concept Designer, Implementer等）を召喚し実施。
+
+**COUNCIL-001（マップ・BGM・ストーリー根本改修）**
+- 最優先は**マップ構造（選択と分岐）**。単調さの根本原因は意思決定構造の不足
+- BGMとストーリーはマップ構造という器があって初めて効果が増す
+- Phase 1: フロア間3択選択画面 → Phase 2: ツリー型ノードマップ（✅ 両方実装済み）
+- BGM: 全面差し替えより状況連動演出（ローパス, ボス前無音）を優先
+- ストーリー: 大規模NPCシステムではなくテキスト差し込み型の軽量拡張で前進感を作る
+- 保留: NPC会話システム本格実装, 78祝福全面拡張, BGM全面差し替え, 最終ボス追加
+
+**COUNCIL-002（バランス＆表示修正）**
+- ATK 1→2, HP 5→7, DMGスケール 0.1→0.06, F1-2弱敵限定, 回復20%
+- CSS縮小問題 → HiDPI対応 + フォント5層階層 + ctx.fontクォート101箇所修正
+- M PLUS Rounded 1c導入でかわいさ統一
+
+
 ---
 
 ## 6. 次のアクション (Sprint G-B以降)
@@ -197,7 +214,7 @@ Phase 2 残り目標: 65→73 (+8ポイント)
 ## 7. 開発ルール（絶対遵守）
 
 1. **忖度禁止**: 技術的に問題がある場合は理由を明示して率直に反対意見を述べる
-2. **議論における対等性**: AIエージェントはプロジェクトの共同開発者として対等に議論する
+2. **議論における対等性**: [Synapse](https://github.com/goroyattemiyo/Synapse) および [Synapse2](https://github.com/goroyattemiyo/Synapse2) のシステムで有識者を召喚し、根拠ベースで議論する
 3. **品質に対する妥協禁止**: 技術的負債を積む場合は内容・返済時期・リスクを必ず明記する
 4. **根拠ベースの意思決定**: GDD v2.0のスコア表・コード品質指標など客観的根拠に基づく
 5. **スコープ厳守**: Phase外の機能要望は明確に先送りする

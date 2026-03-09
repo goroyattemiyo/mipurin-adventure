@@ -119,7 +119,7 @@ function startFloor() {
   player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
   player.dashing = false; player.dashCooldown = 0;
   dmgNumbers.length = 0; particles.length = 0;
-  gameState = 'playing'; clearTimer = 0; deadTimer = 0;
+  if (cutinPhase === 'none') gameState = 'playing'; clearTimer = 0; deadTimer = 0;
   if (player.roomHeal) { player.hp = Math.min(player.hp + player.roomHeal, player.maxHp); showFloat("🌸 フロア開始HP+" + player.roomHeal, 1.5, MSG_COLORS.heal); }
   if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
   else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }

@@ -44,6 +44,13 @@ const COL = { bg: '#a8d5ba', wall: '#6b8f71', floor: '#c8e6c9', floorAlt: '#b2df
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
 let rng = mulberry32(Date.now());
 
+// ===== FLOOR SIZE =====
+function getFloorBounds(floor) {
+  if (isBossFloor()) return { c0: 1, r0: 1, c1: COLS - 2, r1: ROWS - 2 }; // full
+  if (floor <= 2) return { c0: 3, r0: 2, c1: COLS - 4, r1: ROWS - 3 }; // 14x11
+  if (floor <= 5) return { c0: 2, r0: 1, c1: COLS - 3, r1: ROWS - 2 }; // 16x13
+  return { c0: 1, r0: 1, c1: COLS - 2, r1: ROWS - 2 }; // 18x14 or full
+}
 // ===== PARTICLES =====
 const particles = [];
 function emitParticles(x, y, color, count, spd, life) {
@@ -72,11 +79,11 @@ function drawParticles() {
 // 0=floor, 1=wall, 2=spike
 let roomSpikes = [];
 const THEME_TEMPLATES = {
-  forest:  ['open', 'circular', 'L_shape'],
-  cave:    ['maze', 'L_shape', 'cross'],
-  flower:  ['open', 'circular', 'open'],
-  abyss:   ['maze', 'cross', 'L_shape'],
-  ruins:   ['cross', 'L_shape', 'circular']
+  forest:  ['pillars', 'scattered', 'corridors'],
+  cave:    ['corridors', 'ring', 'scattered'],
+  flower:  ['pillars', 'scattered', 'ring'],
+  abyss:   ['corridors', 'ring', 'pillars'],
+  ruins:   ['ring', 'corridors', 'scattered']
 };
 const PC = 10, PR = 7;
 function safeZone(c, r) { return Math.abs(c - PC) < 3 && Math.abs(r - PR) < 3; }
@@ -165,7 +172,7 @@ function applyTemplate(map, name, floor) {
 function generateRoom(floor) {
   const themeName = getTheme(floor).name;
   const templates = THEME_TEMPLATES[themeName] || ['open'];
-  const pick = isBossFloor() ? 'open' : templates[Math.floor(rng()*templates.length)];
+  const pick = isBossFloor() ? 'arena' : templates[Math.floor(rng()*templates.length)];
   for (let attempt = 0; attempt < 5; attempt++) {
     const map = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
@@ -426,8 +433,8 @@ let titleBlink = 0;
 
 const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, maxHp: 5, atk: 1,
   attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
-  atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.15, dashCooldown: 0,
-  dashSpeed: 600, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
+  atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.22, dashCooldown: 0,
+  dashSpeed: 700, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
   weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
 
 

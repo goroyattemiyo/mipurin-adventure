@@ -90,20 +90,20 @@ function drawGarden() {
   ctx.fillText('ネクター: ' + nectar, CW / 2, 95);
     const visibleDefs = GARDEN_DEFS.filter(d => isGardenVisible(d));
   // NPC Flora（右下）
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 320, CH - 200, 300, 160);
-  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW - 320, CH - 200, 300, 160);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW/2 - 200, CH - 200, 300, 160);
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW/2 - 200, CH - 200, 300, 160);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; ctx.drawImage(floraImg, CW - 110, CH - 200, 100, 140); ctx.restore(); }
-  ctx.fillText('🌸 フローラ', CW - 310, CH - 175);
+  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; const fsz = 220; ctx.drawImage(floraImg, CW/2 + 120, CH - fsz - 40, fsz * 0.65, fsz); ctx.restore(); }
+  ctx.fillText('🌸 フローラ', CW/2 - 190, CH - 175);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
   const words = floraText.split('');
   let fline = '', fly = CH - 150;
-  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 160) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
-  if (fline) ctx.fillText(fline, CW - 310, fly);
+  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 160) { ctx.fillText(fline, CW/2 - 190, fly); fly += 20; fline = ''; } }
+  if (fline) ctx.fillText(fline, CW/2 - 190, fly);
   // クリア数表示
   ctx.fillStyle = '#aaa'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('クリア回数: ' + totalClears, CW - 310, CH - 50);
+  ctx.fillText('クリア回数: ' + totalClears, CW/2 - 190, CH - 50);
   ctx.textAlign = 'center';
   for (let i = 0; i < visibleDefs.length; i++) {
     const def = visibleDefs[i];
@@ -146,7 +146,7 @@ function drawGarden() {
 function drawTitle() {
   if (currentBGM !== 'title') playBGM('title');
   ctx.fillStyle = '#fffde7';
-  if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
+  if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
   // Draw cute mipurin
   if (mipurinReady) {
     const f = MIPURIN_FRAMES.down; const sz = 240;

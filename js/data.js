@@ -241,10 +241,11 @@ function updateDrops(dt) {
       const mdx = player.x + player.w/2 - d.x, mdy = player.y + player.h/2 - d.y;
       const md = Math.hypot(mdx, mdy) || 1;
       d.x += (mdx / md) * 200 * dt; d.y += (mdy / md) * 200 * dt;
+      if (Math.random() < 0.15) emitParticles(d.x, d.y, '#ffd700', 1, 30, 0.2);
     }
     const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
     if (rectOverlap(pb, db)) {
-      if (d.type === 'pollen') { const amt = 1 + Math.floor(floor / 3); pollen += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
+      if (d.type === 'pollen') { emitParticles(d.x, d.y, '#f1c40f', 4, 50, 0.3); const amt = 1 + Math.floor(floor / 3); pollen += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
       if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); showFloat('\uD83C\uDF6F HP+1', 1.2, '#2ecc71'); }
       drops.splice(i, 1);
     }
@@ -414,3 +415,36 @@ function drawBgParticles() {
 let blessingAnimTimer = 0;    // blessing card slide-in timer
 let hpBounceTimer = 0;        // HP heart bounce on damage
 let floorClearAnimTimer = 0;  // floor clear text animation
+
+// ===== TITLE PARTICLES =====
+const titleParticles = [];
+function updateTitleParticles() {
+  if (titleParticles.length < 25 && Math.random() < 0.08) {
+    titleParticles.push({
+      x: Math.random() * CW, y: -10,
+      vx: (Math.random() - 0.5) * 20,
+      vy: 15 + Math.random() * 20,
+      rot: Math.random() * Math.PI * 2,
+      rotSpd: (Math.random() - 0.5) * 2,
+      alpha: 0.2 + Math.random() * 0.3,
+      size: 14 + Math.random() * 10,
+      icon: ['🌸','🌺','🍃','✨','🌼'][Math.floor(Math.random() * 5)]
+    });
+  }
+  for (let i = titleParticles.length - 1; i >= 0; i--) {
+    const p = titleParticles[i];
+    p.x += p.vx * 0.016; p.y += p.vy * 0.016; p.rot += p.rotSpd * 0.016;
+    if (p.y > CH + 20) titleParticles.splice(i, 1);
+  }
+}
+function drawTitleParticles() {
+  for (const p of titleParticles) {
+    ctx.save(); ctx.globalAlpha = p.alpha;
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.font = p.size + "px 'M PLUS Rounded 1c', sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.icon, 0, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}

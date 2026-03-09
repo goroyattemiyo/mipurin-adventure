@@ -107,7 +107,7 @@ const Audio = (() => {
     dialog_open() { play(392, 0.1, 'sine', 0.08); play(523, 0.08, 'sine', 0.05); setTimeout(() => play(659, 0.12, 'sine', 0.07), 70); },
     dialog_close() { play(659, 0.08, 'sine', 0.07); play(523, 0.06, 'sine', 0.04); setTimeout(() => play(392, 0.1, 'sine', 0.06), 60); },
     player_hurt() { play(90, 0.2, 'sawtooth', 0.12); play(700, 0.05, 'sine', 0.1); setTimeout(() => play(500, 0.08, 'sine', 0.07), 50); setTimeout(() => play(60, 0.15, 'sawtooth', 0.05), 100); },
-    enemy_die() { play(523, 0.08, 'sine', 0.11); play(659, 0.08, 'sine', 0.09); setTimeout(() => play(784, 0.1, 'sine', 0.08), 50); setTimeout(() => play(1047, 0.12, 'sine', 0.06), 110); },
+    enemy_die() { play(523, 0.08, 'sine', 0.11); play(659, 0.08, 'sine', 0.09); setTimeout(() => play(784, 0.1, 'sine', 0.08), 50); setTimeout(() => play(1047, 0.12, 'sine', 0.06), 110); setTimeout(() => play(1568, 0.08, 'sine', 0.04), 160); },
     setVol, getVol,
     attack() { play(160, 0.18, 'sawtooth', 0.11); play(240, 0.14, 'square', 0.09); play(320, 0.08, 'sine', 0.06); setTimeout(() => play(120, 0.12, 'triangle', 0.05), 60); }
   };

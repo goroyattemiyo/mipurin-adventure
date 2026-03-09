@@ -118,6 +118,7 @@ const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }
 
 function spawnBoss() { Audio.boss_appear();
+  shakeTimer = 0.3; shakeIntensity = 8; emitParticles(CW/2, CH/2, '#ffd700', 15, 100, 0.6);
   // Boss dialog will be triggered after spawn
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];

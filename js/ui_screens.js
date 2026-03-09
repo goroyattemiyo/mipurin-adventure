@@ -146,6 +146,7 @@ function drawGarden() {
 function drawTitle() {
   if (currentBGM !== 'title') playBGM('title');
   ctx.fillStyle = '#fffde7';
+  updateTitleParticles(); drawTitleParticles();
   ctx.fillRect(0, 0, CW, CH);
   // Draw cute mipurin
   if (mipurinReady) {

@@ -285,7 +285,7 @@ function update(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].hp <= 0) {
       score += enemies[i].score;
-      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 15, 120, 0.5);
+      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 10, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 5, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 6, 50, 0.5);
       Audio.enemy_die();
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
       if (player.killHeal) player.hp = Math.min(player.hp + player.killHeal, player.maxHp);

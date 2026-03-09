@@ -451,7 +451,7 @@ function drawGameState() {
     }
     if (gameState === 'dead') { ctx.fillStyle = 'rgba(50,15,40,0.65)'; ctx.fillRect(0, 0, CW, CH);
     // Mipurin fallen
-    if (deadImgReady) { ctx.save(); ctx.globalAlpha = 0.85; const sz = 180; ctx.beginPath(); ctx.arc(CW/2, CH/2 + 100, sz/2, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(deadMipurinImg, CW/2 - sz/2, CH/2 + 10, sz, sz); ctx.restore(); } else if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
+    if (deadImgReady) { ctx.save(); ctx.globalAlpha = 0.9; const sz = 280; ctx.beginPath(); ctx.arc(CW/2, CH/2 + 140, sz/2, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(deadMipurinImg, CW/2 - sz/2, CH/2, sz, sz); ctx.restore(); } else if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
     ctx.fillStyle = COL.hpLost; ctx.font = "bold 60px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('おやすみ、ミプリン…', CW / 2, CH / 2 - 40);
     ctx.fillStyle = '#ddd'; ctx.font = "32px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);

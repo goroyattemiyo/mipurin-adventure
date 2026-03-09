@@ -93,7 +93,7 @@ function drawGarden() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW/2 - 200, CH - 200, 300, 160);
   ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW/2 - 200, CH - 200, 300, 160);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; const fsz = 220; ctx.drawImage(floraImg, CW/2 + 120, CH - fsz - 40, fsz * 0.65, fsz); ctx.restore(); }
+  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.95; const fsz = 320; ctx.drawImage(floraImg, CW/2 + 100, CH - fsz - 80, fsz * 0.65, fsz); ctx.restore(); }
   ctx.fillText('🌸 フローラ', CW/2 - 190, CH - 175);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';

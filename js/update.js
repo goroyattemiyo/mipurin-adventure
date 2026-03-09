@@ -32,7 +32,7 @@ function update(dt) {
   }
   // Dialog state - pause game, Z to advance
   if (gameState === 'dialog') {
-    if (wasPressed('KeyZ') || wasPressed('Enter')) { advanceDialog(); }
+    if (wasPressed('KeyZ') || wasPressed('Enter') || wasPressed('Escape')) { advanceDialog(); }
     return;
   }
   if (gameState === 'blessing') {

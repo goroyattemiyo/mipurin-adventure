@@ -195,7 +195,7 @@ function update(dt) {
         hitEnList.push(en); } }
     // Hit boss
     if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
-      boss.hp -= atkDmg; boss.hitFlash = 0.1; hitStopTimer = 0.07; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
+      boss.hp -= atkDmg; boss.hitFlash = 0.12; hitStopTimer = 0.09; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
       shakeTimer = 0.06; shakeIntensity = 4; Audio.hit();
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, player.weapon.color, 5, 80, 0.3);
     }
@@ -228,14 +228,38 @@ function update(dt) {
     }
     if (en.pattern === 'shoot') {
       en.shootTimer -= dt;
-      if (en.shootTimer <= 0) { en.shootTimer = en.shootInterval || 2; spawnProjectile(en.x + en.w / 2, en.y + en.h / 2, dx, dy, 100, en.dmg, false); }
+      if (en.shootTimer <= 0 && en.state !== 'shootTele') {
+        en.state = 'shootTele'; en.shootTeleTimer = 0.4;
+        en.shootTarget = { x: player.x + player.w/2, y: player.y + player.h/2 };
+      }
+      if (en.state === 'shootTele') {
+        en.shootTeleTimer -= dt;
+        if (en.shootTeleTimer <= 0) {
+          en.state = 'idle'; en.shootTimer = en.shootInterval || 2;
+          spawnProjectile(en.x + en.w/2, en.y + en.h/2, en.shootTarget.x - (en.x + en.w/2), en.shootTarget.y - (en.y + en.h/2), 100, en.dmg, false);
+          Audio.attack();
+        }
+      }
     }
     if (en.pattern === 'teleport') {
       en.wanderTimer -= dt;
-      if (en.wanderTimer <= 0) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4)));
-      while (tileAt(roomMap, Math.floor(en.x / TILE), Math.floor(en.y / TILE)) === 1) { en.x = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); en.y = TILE * (2 + Math.floor(Math.random() * (ROWS - 4))); }
-        emitParticles(en.x + en.w / 2, en.y + en.h / 2, en.color, 6, 60, 0.3); en.wanderTimer = 2 + Math.random() * 2; }
-      if (d < 200 && d > 0) moveWithCollision(en, (dx / d) * en.speed * 0.5 * dt, (dy / d) * en.speed * 0.5 * dt);
+      if (en.wanderTimer <= 0 && en.state !== 'teleWarn') {
+        let nx, ny, tries = 0;
+        do { nx = TILE * (2 + Math.floor(Math.random() * (COLS - 4))); ny = TILE * (2 + Math.floor(Math.random() * (ROWS - 4))); tries++; }
+        while (tries < 30 && tileAt(roomMap, Math.floor(nx / TILE), Math.floor(ny / TILE)) === 1);
+        en.teleTarget = { x: nx, y: ny }; en.state = 'teleWarn'; en.teleWarnTimer = 0.3;
+        emitParticles(en.x + en.w/2, en.y + en.h/2, en.color, 4, 40, 0.2);
+      }
+      if (en.state === 'teleWarn') {
+        en.teleWarnTimer -= dt;
+        if (en.teleWarnTimer <= 0) {
+          en.x = en.teleTarget.x; en.y = en.teleTarget.y;
+          emitParticles(en.x + en.w/2, en.y + en.h/2, en.color, 6, 60, 0.3);
+          en.state = 'idle'; en.wanderTimer = 2 + Math.random() * 2;
+        }
+      } else {
+        if (d < 200 && d > 0) moveWithCollision(en, (dx / d) * en.speed * 0.5 * dt, (dy / d) * en.speed * 0.5 * dt);
+      }
     }
 
     // Contact damage
@@ -275,7 +299,7 @@ function update(dt) {
     score += boss.score || 200; Audio.door_open();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
-    shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8); boss = null; gameState = 'floorClear'; clearTimer = 0;
+    hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8); boss = null; gameState = 'floorClear'; clearTimer = 0;
   }
 
   // Wave clear

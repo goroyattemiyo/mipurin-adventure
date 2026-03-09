@@ -268,13 +268,35 @@ function drawDashTrail() {
 }
 
 function drawTelegraph(en) {
-  if (en.state !== 'telegraph' || !en.chargeDir) return;
-  const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
-  ctx.fillStyle = COL.telegraph; ctx.beginPath();
-  ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
-  ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
-  ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ff0'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+  // Charge telegraph (existing)
+  if (en.state === 'telegraph' && en.chargeDir) {
+    const cx = en.x + en.w/2, cy = en.y + en.h/2;
+    ctx.fillStyle = COL.telegraph; ctx.beginPath();
+    ctx.moveTo(cx - en.chargeDir.y * 20, cy + en.chargeDir.x * 20);
+    ctx.lineTo(cx + en.chargeDir.x * 200, cy + en.chargeDir.y * 200);
+    ctx.lineTo(cx + en.chargeDir.y * 20, cy - en.chargeDir.x * 20); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff0'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+  }
+  // Shoot telegraph — pulsing ring around enemy
+  if (en.state === 'shootTele' && en.shootTarget) {
+    const cx = en.x + en.w/2, cy = en.y + en.h/2;
+    const prog = 1 - (en.shootTeleTimer || 0) / 0.4;
+    ctx.strokeStyle = 'rgba(255,100,50,' + (0.3 + prog * 0.5) + ')'; ctx.lineWidth = 2 + prog * 2;
+    ctx.beginPath(); ctx.arc(cx, cy, en.w/2 + 8 + prog * 12, 0, Math.PI * 2); ctx.stroke();
+    // Aim line to target
+    ctx.strokeStyle = 'rgba(255,50,50,' + (0.2 + prog * 0.4) + ')'; ctx.lineWidth = 1; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(en.shootTarget.x, en.shootTarget.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ff0'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('!', cx, en.y - 8);
+  }
+  // Teleport telegraph — pulsing ring at destination
+  if (en.state === 'teleWarn' && en.teleTarget) {
+    const prog = 1 - (en.teleWarnTimer || 0) / 0.3;
+    ctx.strokeStyle = 'rgba(180,100,255,' + (0.2 + prog * 0.6) + ')'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(en.teleTarget.x + en.w/2, en.teleTarget.y + en.h/2, en.w/2 + prog * 15, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(180,100,255,' + (0.1 + prog * 0.2) + ')'; ctx.beginPath(); ctx.arc(en.teleTarget.x + en.w/2, en.teleTarget.y + en.h/2, en.w/2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.textAlign = 'left';
 }
 
 function drawBoss() {

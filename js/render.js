@@ -342,8 +342,22 @@ function drawBoss() {
 
 function drawGameState() {
   if (gameState === 'waveWait') { ctx.fillStyle = COL.text; ctx.font = "bold 64px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('WAVE ' + (wave + 1), CW / 2, CH / 2); ctx.textAlign = 'left'; }
-  if (gameState === 'floorClear') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = COL.clear; ctx.font = "bold 80px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('FLOOR ' + floor + ' CLEAR!', CW / 2, CH / 2); ctx.textAlign = 'left'; }
+  if (gameState === 'floorClear') {
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, CW, CH);
+    const fcProg = Math.min(1, floorClearAnimTimer * 1.5);
+    const fcScale = fcProg < 0.5 ? 0.5 + fcProg * 1.5 : 1.25 - (fcProg - 0.5) * 0.5;
+    const fcAlpha = Math.min(1, fcProg * 2);
+    ctx.save();
+    ctx.translate(CW / 2, CH / 2); ctx.scale(fcScale, fcScale);
+    ctx.globalAlpha = fcAlpha;
+    ctx.fillStyle = COL.clear; ctx.font = "bold 80px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillText('FLOOR ' + floor + ' CLEAR!', 0, 0);
+    ctx.fillStyle = '#ffd700'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('+ ' + score + ' pts', 0, 50);
+    ctx.restore();
+    if (floorClearAnimTimer < 0.1) emitParticles(CW/2, CH/2, '#ffd700', 15, 100, 0.5);
+    ctx.textAlign = 'left';
+  }
   if (gameState === 'nodeSelect') { drawNodeMap(); }
   if (gameState === 'event' && currentEvent) {
     ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, CW, CH);

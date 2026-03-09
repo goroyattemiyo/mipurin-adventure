@@ -1,6 +1,9 @@
 // ===== UPDATE =====
 function update(dt) {
   updateFade(dt);
+  if (blessingAnimTimer < 1) blessingAnimTimer += dt * 3;
+  if (hpBounceTimer > 0) hpBounceTimer -= dt;
+  if (floorClearAnimTimer < 2) floorClearAnimTimer += dt;
   if (gameState === 'playing' || gameState === 'waveWait') updateBgParticles(dt, getTheme(floor).name);
   updateMessages(dt);
 
@@ -63,7 +66,7 @@ function update(dt) {
   if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
   if (gameState === 'floorClear') { clearTimer += dt; if (clearTimer > 1.5) {
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
-    if (eliteNext) { eliteNext = false; const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend'); const picks = []; const used = new Set(); while (picks.length < 3 && picks.length < rarePlus.length) { const b = rarePlus[Math.floor(rng() * rarePlus.length)]; if (!used.has(b.id)) { used.add(b.id); picks.push(b); } } blessingChoices = picks.length >= 3 ? picks : pickBlessings(); selectCursor = 0; showFloat('💀 エリートクリア！レア祝福確定！', 2.5, MSG_COLORS.boss); gameState = 'dialog'; showDialog('ミプリン', ['強敵を倒した！ すごい祝福がもらえるよ！'], function() { gameState = 'blessing'; }); } else { blessingChoices = pickBlessings(); selectCursor = 0; gameState = 'dialog'; showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { gameState = 'blessing'; }); }
+    if (eliteNext) { eliteNext = false; const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend'); const picks = []; const used = new Set(); while (picks.length < 3 && picks.length < rarePlus.length) { const b = rarePlus[Math.floor(rng() * rarePlus.length)]; if (!used.has(b.id)) { used.add(b.id); picks.push(b); } } blessingChoices = picks.length >= 3 ? picks : pickBlessings(); selectCursor = 0; showFloat('💀 エリートクリア！レア祝福確定！', 2.5, MSG_COLORS.boss); gameState = 'dialog'; showDialog('ミプリン', ['強敵を倒した！ すごい祝福がもらえるよ！'], function() { blessingAnimTimer = 0; gameState = 'blessing'; }); } else { blessingChoices = pickBlessings(); selectCursor = 0; gameState = 'dialog'; showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { blessingAnimTimer = 0; gameState = 'blessing'; }); }
   } return; }
   if (gameState === 'nodeSelect') { updateNodeSelect(); return; }
   if (gameState === 'event') {
@@ -148,7 +151,7 @@ function update(dt) {
     const spc = Math.floor((player.x + player.w/2) / TILE);
     const spr = Math.floor((player.y + player.h/2) / TILE);
     if (spc >= 0 && spc < COLS && spr >= 0 && spr < ROWS && roomMap[spr * COLS + spc] === 2) {
-      player.hp -= 1; player.invTimer = player.invDuration;
+      player.hp -= 1; player.invTimer = player.invDuration; hpBounceTimer = 0.3;
       Audio.player_hurt();
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
       showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
@@ -265,7 +268,7 @@ function update(dt) {
     // Contact damage
     if (player.invTimer <= 0 && !player.dashing) {
       if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
-        player.hp -= en.dmg; player.invTimer = player.invDuration; shakeTimer = 0.1; shakeIntensity = 5;
+        player.hp -= en.dmg; player.invTimer = player.invDuration; hpBounceTimer = 0.3; shakeTimer = 0.1; shakeIntensity = 5;
         spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.player_hurt();
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
@@ -299,13 +302,13 @@ function update(dt) {
     score += boss.score || 200; Audio.door_open();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
-    hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8); boss = null; gameState = 'floorClear'; clearTimer = 0;
+    hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8); boss = null; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0;
   }
 
   // Wave clear
   if (!boss && enemies.length === 0 && gameState === 'playing') {
     wave++;
-    if (wave >= WAVES.length) { gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); }
+    if (wave >= WAVES.length) { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); }
     else { gameState = 'waveWait'; clearTimer = 0; }
   }
 

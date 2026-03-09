@@ -409,3 +409,8 @@ function drawBgParticles() {
   }
   ctx.globalAlpha = 1;
 }
+
+// ===== UI ANIMATION STATE (Sprint E Step 3) =====
+let blessingAnimTimer = 0;    // blessing card slide-in timer
+let hpBounceTimer = 0;        // HP heart bounce on damage
+let floorClearAnimTimer = 0;  // floor clear text animation

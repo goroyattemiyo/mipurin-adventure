@@ -202,7 +202,7 @@ function drawDialogWindow() {
 function drawHUD() {
   // HP
   const hs = 22, hSpacing = hs + 6, hPerRow = 15;
-  for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8)); }
+  for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); const hBounce = (hpBounceTimer > 0 && i < player.hp) ? Math.sin((hpBounceTimer * 20) + i * 0.5) * 4 : 0; ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8) + hBounce); }
   // Score & pollen
   ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
   ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 56);
@@ -267,22 +267,33 @@ function drawBlessing() {
   ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
   ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
   for (let i = 0; i < blessingChoices.length; i++) {
-    const b = blessingChoices[i], bx = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
-    const sel = i === selectCursor;
-    ctx.fillStyle = sel ? 'rgba(50,50,80,0.95)' : COL.blessBox; ctx.fillRect(bx, by, bw, bh);
+    const b = blessingChoices[i], bxBase = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
+    // Slide-in + scale animation
+    const cardDelay = i * 0.15;
+    const cardProg = Math.min(1, Math.max(0, (blessingAnimTimer - cardDelay) * 2));
+    const eased = 1 - Math.pow(1 - cardProg, 3);
+    const slideOff = (1 - eased) * 80;
+    const cardScale = 0.7 + eased * 0.3;
+    ctx.save();
+    ctx.translate(bxBase + bw/2, by + bh/2);
+    ctx.scale(cardScale, cardScale);
+    ctx.globalAlpha = eased;
+    const bx = -bw/2, byLocal = -bh/2 + slideOff;
+    ctx.fillStyle = sel ? 'rgba(50,50,80,0.95)' : COL.blessBox; ctx.fillRect(bx, byLocal, bw, bh);
     const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
-    ctx.strokeStyle = sel ? '#fff' : rCol; ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(bx, by, bw, bh);
-    if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, by, bw, bh); }
-    ctx.fillStyle = COL.text; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, by + 55);
-    ctx.fillStyle = rCol; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, by + 80);
-    ctx.fillStyle = COL.bless; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, by + 105);
+    ctx.strokeStyle = sel ? '#fff' : rCol; ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(bx, byLocal, bw, bh);
+    if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, byLocal, bw, bh); }
+    ctx.fillStyle = COL.text; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55);
+    ctx.fillStyle = rCol; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80);
+    ctx.fillStyle = COL.bless; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 105);
     // desc word wrap
-    { const dchars = (b.desc||'').split(''); let dline = '', dly = by + 135;
+    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135;
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
       for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18; dline = ''; } }
       if (dline) ctx.fillText(dline, bx + bw/2, dly); }
     ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, by + 195);
+    ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, byLocal + bh - 25);
+    ctx.restore();
   }
   ctx.textAlign = 'left';
 }
@@ -309,7 +320,6 @@ function drawShop() {
     const row = Math.floor(i / cols), col = i % cols;
     const sx = startX + col * (cardW + padX);
     const sy = startY + row * (cardH + padY);
-    const sel = i === selectCursor;
     const canBuy = pollen >= s.cost;
     // Card background
     ctx.fillStyle = canBuy ? (sel ? 'rgba(60,50,90,0.95)' : 'rgba(30,30,50,0.85)') : 'rgba(60,30,30,0.8)';

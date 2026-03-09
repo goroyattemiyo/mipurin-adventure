@@ -208,7 +208,13 @@ const WEAPON_DEFS = [
   { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 52, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
   { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 84, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
   { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
-  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' }];
+  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' },
+  { id: 'golden_needle', name: '🐝 蜂の金針', dmgMul: 1.3, range: 68, speed: 0.16, dur: 0.15, desc: '3撃目に衝撃波！金色の連撃', color: '#ffaa00', fx: 'double', tier: 2, minFloor: 6, comboFx: 'shockwave' },
+  { id: 'amber_cannon', name: '🍯 蜜の大砲', dmgMul: 1.8, range: 120, speed: 0.45, dur: 0.2, desc: '着弾に蜜だまり。敵が減速する', color: '#cc7700', fx: 'none', tier: 2, minFloor: 6, comboFx: 'honeypool' },
+  { id: 'holy_shield', name: '✨ 聖花の盾', dmgMul: 1.0, range: 60, speed: 0.3, dur: 0.18, desc: 'パリィ成功でATK×4＋HP回復！', color: '#fff0d0', fx: 'none', tier: 2, minFloor: 9, comboFx: 'parry' },
+  { id: 'cursed_thorn', name: '💜 呪いの荊', dmgMul: 0.9, range: 96, speed: 0.38, dur: 0.2, desc: '攻撃に毒付与。毒撃破で毒霧拡散', color: '#8e44ad', fx: '360', tier: 2, minFloor: 9, comboFx: 'poison' },
+  { id: 'storm_wing', name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 84, speed: 0.1, dur: 0.08, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
+  { id: 'queen_true_staff', name: '💎 女王の真杖', dmgMul: 2.5, range: 76, speed: 0.5, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe', tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
 
 
 // ===== WEAPON COLLECTION =====
@@ -273,6 +279,86 @@ function drawDrops() {
 }
 
 
+
+
+// ===== HONEY POOL (蜜だまり) =====
+const honeyPools = [];
+function spawnHoneyPool(x, y) {
+  honeyPools.push({ x, y, life: 3.0, radius: 40 });
+}
+function updateHoneyPools(dt) {
+  for (let i = honeyPools.length - 1; i >= 0; i--) {
+    honeyPools[i].life -= dt;
+    if (honeyPools[i].life <= 0) { honeyPools.splice(i, 1); continue; }
+    // 敵減速
+    for (const en of enemies) {
+      if (en.hp <= 0) continue;
+      const dx = en.x + en.w/2 - honeyPools[i].x, dy = en.y + en.h/2 - honeyPools[i].y;
+      if (Math.hypot(dx, dy) < honeyPools[i].radius) en._honeySlow = 0.3;
+    }
+    if (boss && boss.hp > 0) {
+      const dx = boss.x + boss.w/2 - honeyPools[i].x, dy = boss.y + boss.h/2 - honeyPools[i].y;
+      if (Math.hypot(dx, dy) < honeyPools[i].radius) boss._honeySlow = 0.3;
+    }
+  }
+}
+function drawHoneyPools() {
+  for (const hp of honeyPools) {
+    ctx.globalAlpha = 0.3 * (hp.life / 3.0);
+    ctx.fillStyle = '#cc7700';
+    ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.15 * (hp.life / 3.0);
+    ctx.fillStyle = '#ffaa00';
+    ctx.beginPath(); ctx.arc(hp.x, hp.y, hp.radius * 0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== HOMING PROJECTILES (ホーミング羽) =====
+const homingProjs = [];
+function spawnHomingProj(x, y, dmg) {
+  homingProjs.push({ x, y, dmg, life: 2.0, speed: 180, size: 6 });
+}
+function updateHomingProjs(dt) {
+  for (let i = homingProjs.length - 1; i >= 0; i--) {
+    const h = homingProjs[i]; h.life -= dt;
+    if (h.life <= 0) { homingProjs.splice(i, 1); continue; }
+    // 最寄り敵を探す
+    let nearest = null, nd = 9999;
+    for (const en of enemies) {
+      if (en.hp <= 0) continue;
+      const d = Math.hypot(en.x + en.w/2 - h.x, en.y + en.h/2 - h.y);
+      if (d < nd) { nd = d; nearest = en; }
+    }
+    if (boss && boss.hp > 0) {
+      const d = Math.hypot(boss.x + boss.w/2 - h.x, boss.y + boss.h/2 - h.y);
+      if (d < nd) { nd = d; nearest = boss; }
+    }
+    if (nearest) {
+      const tx = (nearest.x || nearest.x) + (nearest.w||0)/2, ty = (nearest.y||nearest.y) + (nearest.h||0)/2;
+      const dx = tx - h.x, dy = ty - h.y, d = Math.hypot(dx, dy) || 1;
+      h.x += (dx/d) * h.speed * dt; h.y += (dy/d) * h.speed * dt;
+      // 当たり判定
+      if (d < 20) {
+        nearest.hp -= h.dmg; nearest.hitFlash = 0.1;
+        spawnDmg(nearest.x + (nearest.w||0)/2, nearest.y, h.dmg, '#00bcd4');
+        emitParticles(h.x, h.y, '#00bcd4', 3, 40, 0.2);
+        Audio.hit();
+        homingProjs.splice(i, 1);
+      }
+    }
+  }
+}
+function drawHomingProjs() {
+  for (const h of homingProjs) {
+    ctx.globalAlpha = h.life / 2.0;
+    ctx.fillStyle = '#00bcd4';
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.size, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.size * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
 
 // ===== STATE =====
 let roomMap = [], floor = 1, wave = 0, WAVES = [];

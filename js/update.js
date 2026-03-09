@@ -1,6 +1,26 @@
 // ===== UPDATE =====
 function update(dt) {
   updateFade(dt);
+  // 蜜だまり・ホーミング更新
+  if (typeof updateHoneyPools === 'function') updateHoneyPools(dt);
+  if (typeof updateHomingProjs === 'function') updateHomingProjs(dt);
+  // 毒DoT更新
+  for (const en of enemies) {
+    if (en._poisonTimer > 0) { en._poisonTimer -= dt; en._poisonTick -= dt;
+      if (en._poisonTick <= 0) { en._poisonTick = 0.5; en.hp -= en._poisonDmg; en.hitFlash = 0.05; spawnDmg(en.x+en.w/2, en.y, en._poisonDmg, '#8e44ad'); emitParticles(en.x+en.w/2, en.y+en.h/2, '#8e44ad', 2, 30, 0.2); }
+      if (en.hp <= 0 && en._poisonTimer > 0) { en._poisonTimer = 0; }
+    }
+    // 蜜減速リセット
+    if (en._honeySlow) { en._honeySlowActive = en._honeySlow; en._honeySlow = 0; } else { en._honeySlowActive = 0; }
+  }
+  if (boss && boss.hp > 0) {
+    if (boss._poisonTimer > 0) { boss._poisonTimer -= dt; boss._poisonTick -= dt;
+      if (boss._poisonTick <= 0) { boss._poisonTick = 0.5; boss.hp -= boss._poisonDmg; boss.hitFlash = 0.05; spawnDmg(boss.x+boss.w/2, boss.y, boss._poisonDmg, '#8e44ad'); }
+    }
+    if (boss._honeySlow) { boss._honeySlowActive = boss._honeySlow; boss._honeySlow = 0; } else { boss._honeySlowActive = 0; }
+  }
+  // パリィウィンドウ
+  if (player._parryWindow > 0) player._parryWindow -= dt;
   if (blessingAnimTimer < 1) blessingAnimTimer += dt * 3;
   if (hpBounceTimer > 0) hpBounceTimer -= dt;
   if (floorClearAnimTimer < 2) floorClearAnimTimer += dt;
@@ -172,7 +192,8 @@ function update(dt) {
   // === Attack ===
   player.atkCooldown = Math.max(0, player.atkCooldown - dt);
   if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
-    player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack(); player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
+    player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack();
+    if (player.weapon.comboFx === 'parry') player._parryWindow = 0.2; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';
     // 360 whip: hit all around
@@ -195,6 +216,35 @@ function update(dt) {
         const angle = Math.atan2(en.y - player.y, en.x - player.x);
         moveWithCollision(en, Math.cos(angle) * (wfx === 'pierce' ? 8 : 20), Math.sin(angle) * (wfx === 'pierce' ? 8 : 20));
         hitEnList.push(en); } }
+    // === 固有効果発動 ===
+    const _cfx = player.weapon.comboFx || '';
+    // 蜂の金針: コンボカウンタ
+    if (_cfx === 'shockwave') {
+      player._comboCount = (player._comboCount || 0) + 1;
+      if (player._comboCount >= 3) { player._comboCount = 0; shakeTimer = 0.12; shakeIntensity = 6;
+        const scx = player.x+player.w/2+player.atkDir.x*30, scy = player.y+player.h/2+player.atkDir.y*30;
+        emitParticles(scx, scy, '#ffaa00', 12, 100, 0.4);
+        for (const en of enemies) { if (en.hp <= 0) continue;
+          if (Math.hypot(en.x+en.w/2-scx, en.y+en.h/2-scy) < 80) { en.hp -= atkDmg; en.hitFlash = 0.1; spawnDmg(en.x+en.w/2, en.y, atkDmg, '#ffaa00'); } }
+        if (boss && boss.hp > 0 && Math.hypot(boss.x+boss.w/2-scx, boss.y+boss.h/2-scy) < 80) { boss.hp -= atkDmg; boss.hitFlash = 0.1; spawnDmg(boss.x+boss.w/2, boss.y, atkDmg, '#ffaa00'); }
+        showFloat('💥 衝撃波！', 1.0, MSG_COLORS.buff);
+      }
+    } else { player._comboCount = 0; }
+    // 蜜の大砲: ヒットした敵の位置に蜜だまり
+    if (_cfx === 'honeypool' && hitEnList.length > 0) {
+      const _he = hitEnList[0]; spawnHoneyPool(_he.x + _he.w/2, _he.y + _he.h/2);
+    }
+    if (_cfx === 'honeypool' && boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
+      spawnHoneyPool(boss.x + boss.w/2, boss.y + boss.h/2);
+    }
+    // 呪いの荊: 毒付与
+    if (_cfx === 'poison') {
+      for (const _he of hitEnList) { _he._poisonTimer = 2.0; _he._poisonTick = 0.5; _he._poisonDmg = Math.max(1, Math.ceil(atkDmg * 0.3)); }
+      if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) { boss._poisonTimer = 2.0; boss._poisonTick = 0.5; boss._poisonDmg = Math.max(1, Math.ceil(atkDmg * 0.3)); }
+    }
+    // 翼の嵐: ホーミング羽生成
+    if (_cfx === 'homing') { spawnHomingProj(player.x+player.w/2, player.y+player.h/2, Math.max(1, Math.ceil(atkDmg * 0.5))); }
+    // 女王の真杖: 爆発範囲は既にaoe hitBoxで拡大済み（dmgMul 2.5で対応）
     // Hit boss
     if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
       boss.hp -= atkDmg; boss.hitFlash = 0.12; hitStopTimer = 0.09; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
@@ -217,7 +267,7 @@ function update(dt) {
         en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1 + Math.random() * 2; }
       moveWithCollision(en, en.wanderDir.x * en.speed * dt, en.wanderDir.y * en.speed * dt);
     }
-    if (en.pattern === 'chase' && d > 0) moveWithCollision(en, (dx / d) * en.speed * dt, (dy / d) * en.speed * dt);
+    if (en.pattern === 'chase' && d > 0) { const _sl = 1 - (en._honeySlowActive || 0); moveWithCollision(en, (dx / d) * en.speed * _sl * dt, (dy / d) * en.speed * _sl * dt); }
     if (en.pattern === 'charge') {
       if (en.state === 'idle') { en.wanderTimer -= dt;
         if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2; en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1.5 + Math.random(); }
@@ -267,11 +317,21 @@ function update(dt) {
     // Contact damage
     if (player.invTimer <= 0 && !player.dashing) {
       if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
+        // パリィ判定
+        if (player.weapon.comboFx === 'parry' && player._parryWindow > 0) {
+          en.hp -= Math.ceil(player.atk * 4); en.hitFlash = 0.2; shakeTimer = 0.15; shakeIntensity = 8;
+          spawnDmg(en.x+en.w/2, en.y, Math.ceil(player.atk*4), '#fff0d0');
+          emitParticles(player.x+player.w/2, player.y+player.h/2, '#fff0d0', 15, 100, 0.4);
+          player.hp = Math.min(player.hp + 1, player.maxHp); player.invTimer = 0.5;
+          showFloat('✨ パリィ！', 1.5, MSG_COLORS.buff); Audio.level_up();
+          player._parryWindow = 0;
+        } else {
         player.hp -= en.dmg; player.invTimer = player.invDuration; hpBounceTimer = 0.3; shakeTimer = 0.1; shakeIntensity = 5;
         spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.player_hurt();
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
+        } // パリィelse閉じ
         if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); }
       }
     }
@@ -286,6 +346,12 @@ function update(dt) {
       score += enemies[i].score;
       emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 10, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 5, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 6, 50, 0.5);
       Audio.enemy_die();
+      // 毒撃破: 毒霧拡散
+      if (enemies[i]._poisonTimer > 0) {
+        emitParticles(enemies[i].x+enemies[i].w/2, enemies[i].y+enemies[i].h/2, '#8e44ad', 10, 80, 0.5);
+        for (const _ne of enemies) { if (_ne.hp <= 0 || _ne === enemies[i]) continue;
+          if (Math.hypot(_ne.x-enemies[i].x, _ne.y-enemies[i].y) < 80) { _ne._poisonTimer = 2.0; _ne._poisonTick = 0.5; _ne._poisonDmg = enemies[i]._poisonDmg || 1; } }
+      }
       if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
       if (player.killHeal) player.hp = Math.min(player.hp + player.killHeal, player.maxHp);
       // Drops

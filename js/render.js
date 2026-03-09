@@ -471,10 +471,10 @@ function draw() {
   if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
 
   const th = getTheme(floor); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
-  drawRoom(); drawBgParticles(); drawDashTrail(); drawDrops();
+  drawRoom(); drawBgParticles(); if (typeof drawHoneyPools === 'function') drawHoneyPools(); drawDashTrail(); drawDrops();
   for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
   for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
-  drawBoss(); drawProjectiles(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
+  drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect(); drawEntity(player, COL.player, true); drawParticles(); drawDmgNumbers(); drawHUD();
 
   ctx.restore();
   // Boss silhouette during dialog

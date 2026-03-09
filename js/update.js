@@ -393,7 +393,7 @@ function update(dt) {
       'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] }
     };
     const _bd = _bdd[boss.id]; lastBossId = boss.id; boss = null;
-    if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }); }
+    if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }); }
     else { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
   }
 

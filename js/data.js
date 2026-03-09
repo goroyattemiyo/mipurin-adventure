@@ -348,15 +348,15 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
 
 // ===== NPC FLORA LINES =====
 const NPC_LINES = [
-  { cond: () => totalClears === 0, text: 'はじめまして！ わたしはフローラ。花壇のおせわをしているの。' },
-  { cond: () => totalClears === 1, text: 'おかえり！ はじめてのクリアおめでとう！ あたらしい花壇がさいたよ！' },
-  { cond: () => totalClears === 2, text: 'また会えたね！ ダッシュの花壇もさいたよ。つかってみて！' },
-  { cond: () => totalClears === 3, text: 'すごいね！ 収穫の花壇がかいほうされたよ。花粉あつめがらくになるよ！' },
-  { cond: () => totalClears >= 5, text: 'ミプリンはもう立派な冒険者だね。蜜の花壇で周回がはかどるよ！' },
-  { cond: () => nectar >= 500, text: 'ネクターがいっぱい！ 花壇をぜんぶ最大にしちゃおう！' },
-  { cond: () => gardenUpgrades.hp >= 5 && gardenUpgrades.atk >= 5, text: '基本の花壇が最大！ つぎは新しい花壇をためしてみて！' },
-  { cond: () => Object.values(gardenUpgrades).every(v => v >= 3), text: 'すべての花壇がLv3以上！ ミプリンは花の国いちの冒険者だね！' },
-  { cond: () => true, text: 'ネクターで花壇をそだてると、冒険がらくになるよ！' }
+  { cond: () => totalClears === 0, text: 'わたしはフローラ。女王さまにお仕えしていたの… クリスタルが砕けてから、女王さまが行方不明で…' },
+  { cond: () => totalClears === 1, text: 'おかえり！ クリスタルのかけらの力を感じるわ。花壇に新しい芽がでたよ！' },
+  { cond: () => totalClears === 2, text: 'あのボスたち… 本当は悪い子じゃないの。闇の胞子に操られていたんだと思う…' },
+  { cond: () => totalClears === 3, text: 'クリスタルゴーレムは女王さまがつくった封印の番人だったの。封印が壊れて暴走してしまった…' },
+  { cond: () => totalClears >= 5, text: '闇の蛾の奥にもっと大きな闇があるって… いつか女王さまを見つけられるかもしれない' },
+  { cond: () => totalClears >= 8, text: 'ミプリンの中にクリスタルと同じ光を感じるの… もしかして女王さまの力が宿っている…？' },
+  { cond: () => Object.values(gardenUpgrades).every(v => v >= 3), text: 'すべての花壇に精霊の力が満ちたわ。きっとクリスタルを元に戻せる日がくる…！' },
+  { cond: () => nectar >= 500, text: 'こんなにたくさんのかけら… 女王さまもきっと喜んでいるわ' },
+  { cond: () => true, text: 'クリスタルのかけらを集めて花壇を育てて。この国にもう一度花を咲かせよう' }
 ];
 function getFloraLine() {
   for (const line of NPC_LINES) { if (line.cond()) return line.text; }

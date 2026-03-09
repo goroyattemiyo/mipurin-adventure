@@ -40,18 +40,18 @@ function drawEnding() {
   ctx.restore();
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
     const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal';
-  const endTitle = endType === 'true' ? '✨ 真のエンディング ✨' : endType === 'good' ? '🌸 グッドエンディング 🌸' : '花の国に平和が戻った！';
+  const endTitle = endType === 'true' ? '✨ クリスタルの再生 ✨' : endType === 'good' ? '🌸 かけらの光 🌸' : '小さな希望';
   ctx.fillText(endTitle, CW/2, 380);
   ctx.fillStyle = '#fff'; ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
   if (endType === 'true') {
-    ctx.fillText('すべての花の精霊と共鳴し、', CW/2, 430);
-    ctx.fillText('ミプリンは花の国の守護者となった。', CW/2, 460);
+    ctx.fillText('すべてのかけらが集まり、クリスタルが光を取り戻した。', CW/2, 430);
+    ctx.fillText('女王さまの声が聞こえた──「ありがとう、ミプリン」', CW/2, 460);
   } else if (endType === 'good') {
-    ctx.fillText('多くの祝福に守られ、', CW/2, 430);
-    ctx.fillText('ミプリンは花粉を取り戻した。', CW/2, 460);
+    ctx.fillText('たくさんのかけらを集め、花の国に色が戻りはじめた。', CW/2, 430);
+    ctx.fillText('フローラの花壇に見たことのない花が咲いた。', CW/2, 460);
   } else {
-    ctx.fillText('ミプリンは花粉を取り戻し、', CW/2, 430);
-    ctx.fillText('虫たちは再び元気を取り戻した。', CW/2, 460);
+    ctx.fillText('闇の蛾を倒し、花粉が少しずつ戻りはじめた。', CW/2, 430);
+    ctx.fillText('クリスタルはまだ砕けたまま… でも希望の光は灯った。', CW/2, 460);
   }
   ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);

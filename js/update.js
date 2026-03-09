@@ -301,7 +301,17 @@ function update(dt) {
     score += boss.score || 200; Audio.door_open();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     for (let i = 0; i < 5; i++) spawnDrop(boss.x + boss.w / 2 + (Math.random() - 0.5) * 40, boss.y + boss.h / 2 + (Math.random() - 0.5) * 40, 'pollen');
-    hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8); boss = null; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0;
+    hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8);
+    const _bdd = {
+      'queen_hornet': { s: 'スズメバチの女王', l: ['…はっ… わたし…なにを…？', 'ありがとう、ちいさなハチさん。闇の胞子がわたしを操っていたの…', 'クリスタルのかけらを感じる… もっと奥に…気をつけて'] },
+      'fungus_king': { s: 'キノコの王', l: ['…やっと… 楽になれた…', '地下にもっと深い闇がある… クリスタルを砕いたやつが…', 'どうか… この森を… たのむ…'] },
+      'crystal_golem': { s: 'クリスタルゴーレム', l: ['…封印の力が… 弱まっている…', 'わたしは女王さまにつくられた番人… クリスタルを守るために…', 'あの闇の蛾を止めてくれ… 奥に進め…'] },
+      'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] }
+    };
+    const _bd = _bdd[boss.id];
+    boss = null;
+    if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }); }
+    else { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
   }
 
   // Wave clear

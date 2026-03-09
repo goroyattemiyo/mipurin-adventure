@@ -107,13 +107,13 @@ function startFloor() {
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;
     // Boss entrance dialog
     const bossLines = {
+      'queen_hornet': ['ブンブン…… あたまが…おかしく…なる…！', 'ここから… でていけぇ！ …たすけて…'],
+      'fungus_king': ['この胞子は… わたしの意志では…ない…', 'クリスタルのかけらが… わたしを狂わせる… 止めて…くれ…'],
+      'crystal_golem': ['…ゴゴゴ…… 封印を… 守らなければ…', 'しかし… 体が… いうことを きかない…'],
+      'shadow_moth': ['ヒヒヒ… 気づいたか、ちいさなハチさん？', 'クリスタルを砕いたのは… このわたしだよ…'],
       'queen_hornet': ['ブンブンブン…… ここはわたしの巣よ！', 'ミプリンなんかに まけないわ！'],
-      'fungus_king': ['フフフ…… キノコの胞子が おまえをつつむ……', 'ここから先は とおさないぞ！'],
-      'crystal_golem': ['…………ゴゴゴ……', 'このクリスタルのかたさ、ためしてみるか？'],
-      'shadow_moth': ['ヒラヒラ…… やみのなかへ おいで……', 'わたしの はやさに ついてこれるかしら？']
     };
     if (boss) {
-      gameState = 'dialog';
       const bl = bossLines[boss.id] || [boss.name + ' があらわれた！'];
       showDialog(boss.name, bl, function() { gameState = 'playing'; });
     }
@@ -254,12 +254,16 @@ for (let i = 1; i <= 10; i++) {
   prologueImages.push(img);
 }
 const prologueTexts = [
-  'ある日、花の国に異変が起きた…',
-  '花粉が枯れ、虫たちは元気をなくしていった',
-  '小さなミツバチのミプリンは決意した',
-  '「わたしが花粉を取り戻す！」',
-  '冒険の旅が、今はじまる──',
-  ''
+  '花の国──花粉と蜜であふれる、ちいさな楽園',
+  'でも ある日、花がいろをうしない、雨がやまなくなった',
+  'みんなで祈った。どうか、この国を守ってと──',
+  '花の国の命のみなもと──「蜂蜜のクリスタル」',
+  '女王さまがずっと守ってきた、たいせつな宝物',
+  '──けれど、闇がクリスタルを砕いた。女王さまは姿を消した',
+  '花は枯れ、国は灰色に沈んでいった…',
+  'まっくらな世界に、ひとつだけ光が残っていた',
+  '「わたしが行く。クリスタルのかけらを取り戻す！」',
+  'ミプリンの冒険が、今はじまる──'
 ];
 let prologuePage = 0, prologueTimer = 0, prologueFade = 0, prologueGuard = 0;
 

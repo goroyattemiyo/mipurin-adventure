@@ -160,7 +160,7 @@ function drawTitle() {
   ctx.fillText('ミプリンの冒険', CW / 2, 440);
   ctx.fillStyle = '#795548';
   ctx.font = "24px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('v6.10', CW / 2, 480);
+  ctx.fillText(VERSION, CW / 2, 480);
   // Blink
   titleBlink += 1 / 60;
   if (Math.sin(titleBlink * 3) > -0.3) {

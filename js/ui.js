@@ -267,6 +267,7 @@ function drawBlessing() {
   ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
   ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
   for (let i = 0; i < blessingChoices.length; i++) {
+    const sel = selectCursor === i;
     const b = blessingChoices[i], bxBase = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
     // Slide-in + scale animation
     const cardDelay = i * 0.15;
@@ -317,6 +318,7 @@ function drawShop() {
   const startY = 130;
   for (let i = 0; i < shopItems.length; i++) {
     const s = shopItems[i];
+    const sel = selectCursor === i;
     const row = Math.floor(i / cols), col = i % cols;
     const sx = startX + col * (cardW + padX);
     const sy = startY + row * (cardH + padY);

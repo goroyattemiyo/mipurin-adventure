@@ -109,10 +109,10 @@ function spawnWave() {
 // ===== BOSS =====
 let boss = null;
 const BOSS_DEFS = [
-  { id: 'queen_hornet', name: 'スズメバチの女王', hp: 30, speed: 70, w: 56, h: 56, dmg: 3, color: '#f39c12', pattern: 'boss_charge', score: 200, phases: 2 },
-  { id: 'fungus_king', name: 'キノコの王', hp: 45, speed: 40, w: 64, h: 64, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot', score: 300, phases: 2 },
-  { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 64, h: 64, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
-  { id: 'shadow_moth', name: '闇の蛾', hp: 50, speed: 90, w: 52, h: 52, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
+  { id: 'queen_hornet', name: 'スズメバチの女王', hp: 30, speed: 70, w: 112, h: 112, dmg: 3, color: '#f39c12', pattern: 'boss_charge', score: 200, phases: 2 },
+  { id: 'fungus_king', name: 'キノコの王', hp: 45, speed: 40, w: 128, h: 128, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot', score: 300, phases: 2 },
+  { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 128, h: 128, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
+  { id: 'shadow_moth', name: '闇の蛾', hp: 50, speed: 90, w: 104, h: 104, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
 
 const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }

@@ -28,10 +28,10 @@ function update(dt) {
   updateMessages(dt);
 
   if (gameState === 'ending') {
-    if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); }
+    if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title'; }
     return;
   }
-  if (gameState === 'title') { titleBlink += dt;
+  if (gameState === 'title') { titleBlink += dt; if (titleGuard > 0) { titleGuard -= dt; return; }
     if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
     if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; Audio.menu_select(); }
     return; }
@@ -105,7 +105,7 @@ function update(dt) {
     return;
   }
 
-  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); gameState = 'title'; floor = 1; resetGame(); } return; }
+  if (gameState === 'dead') { deadTimer += dt; if (deadTimer > 2.0 && wasPressed('KeyZ')) { nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title'; } return; }
     if (gameState === 'weaponDrop' && weaponPopup.active) {
       // Z: equip as main
       if (wasPressed('KeyZ')) {
@@ -392,5 +392,7 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
+
+
 
 

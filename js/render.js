@@ -141,7 +141,7 @@ function drawEntity(e, color, isP) {
       const isMoving = keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD'] ||
                        keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
       const bob = isMoving ? Math.sin(Date.now() / 100) * 2 : 0;
-      const squash = isMoving ? 1 + Math.sin(Date.now() / 120) * 0.03 : 1;
+      const squash = isMoving ? 1 + Math.sin(Date.now() / 120) * 0.10 : 1;
       ctx.save();
       ctx.translate(cx, e.y + e.h / 2 + bob);
       ctx.scale(squash, 2 - squash);
@@ -458,7 +458,7 @@ function drawGameState() {
     ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
     ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
     if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
-    else { ctx.fillText('...', CW / 2, CH / 2 + 130); }
+    else { ctx.fillText('しばらくおまちください...', CW / 2, CH / 2 + 130); }
     ctx.textAlign = 'left'; }
 }
 
@@ -478,7 +478,7 @@ function draw() {
 
   ctx.restore();
   // Boss silhouette during dialog
-  if (gameState === 'dialog' && boss && bossSilhouettes[boss.id]) { ctx.save(); ctx.globalAlpha = 0.3 + Math.sin(Date.now()/300) * 0.1; const silSz = 200; ctx.drawImage(bossSilhouettes[boss.id], CW/2 - silSz/2, CH/2 - silSz/2 - 60, silSz, silSz); ctx.restore(); }
+  if (gameState === 'dialog' && boss && bossSilhouettes[boss.id]) { ctx.save(); ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 300) * 0.1; ctx.drawImage(bossSilhouettes[boss.id], 0, 0, CW, CH); ctx.restore(); }
   drawGameState(); drawBlessing(); drawShop();
 
   drawInventory();

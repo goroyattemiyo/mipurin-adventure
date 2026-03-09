@@ -93,13 +93,13 @@ function drawGarden() {
   ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 320, CH - 200, 300, 160);
   ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(CW - 320, CH - 200, 300, 160);
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  if (floraReady) { ctx.drawImage(floraImg, CW - 100, CH - 200, 80, 140); }
+  if (floraReady) { ctx.save(); ctx.globalAlpha = 0.9; ctx.drawImage(floraImg, CW - 95, CH - 190, 70, 70); ctx.restore(); }
   ctx.fillText('🌸 フローラ', CW - 310, CH - 175);
   ctx.fillStyle = '#fff'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
   const floraText = typeof getFloraLine === 'function' ? getFloraLine() : '';
   const words = floraText.split('');
   let fline = '', fly = CH - 150;
-  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 260) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
+  for (const ch of words) { fline += ch; if (ctx.measureText(fline).width > 180) { ctx.fillText(fline, CW - 310, fly); fly += 20; fline = ''; } }
   if (fline) ctx.fillText(fline, CW - 310, fly);
   // クリア数表示
   ctx.fillStyle = '#aaa'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
@@ -147,7 +147,6 @@ function drawTitle() {
   if (currentBGM !== 'title') playBGM('title');
   ctx.fillStyle = '#fffde7';
   if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
-  ctx.fillRect(0, 0, CW, CH);
   // Draw cute mipurin
   if (mipurinReady) {
     const f = MIPURIN_FRAMES.down; const sz = 240;
@@ -162,7 +161,6 @@ function drawTitle() {
   ctx.font = "24px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText(VERSION, CW / 2, 480);
   // Blink
-  titleBlink += 1 / 60;
   if (Math.sin(titleBlink * 3) > -0.3) {
     ctx.fillStyle = '#e65100';
     ctx.font = "bold 32px 'M PLUS Rounded 1c', sans-serif";

@@ -13,11 +13,21 @@
 | Blessing reroll (X+15pol) | Done |
 | Ending UI split | Done |
 | Dev tools (check_globals v2, check_concat) | Done |
-| **Equipment tab UI (Phase 1)** | **Done** |
-| **Weapon upgrade (Lv0-3)** | **Done** |
-| **Backpack (4 slots)** | **Done** |
-| **Mouse input base** | **Done** |
+| Equipment tab UI (RPG style) | Done |
+| Weapon upgrade (Lv0-3) | Done |
+| Backpack (4 slots) | Done |
+| Mouse input base | Done |
+| **Synapse bug-prevention workflow** | **Done** |
 | Mouse drag-and-drop (Phase 2) | Planned |
 | Tap-select equip (Phase 3) | Planned |
 | Weapon growth tree | Planned |
 | CI / automated tests | Planned |
+
+## Development Method Score
+| Item | Before | After |
+| --- | --- | --- |
+| Patch safety | 14 | 18 |
+| Quality tools | 18 | 18 |
+| Bug prevention | 0 | 12 |
+| Documentation | 10 | 12 |
+| **Total (dev)** | **75** | **~82** |

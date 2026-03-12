@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v6.16.0b (2026-03-12) Workflow v3: コミット前MD必須ルール
+- patch_workflow.md v3: コミット前にREADME/ROADMAP/STATUS/CHANGELOG更新を必須化
+- MD更新なしのコミットを禁止するルール追加
+
+## v6.16.0a (2026-03-12) Bug Prevention Workflow
+- patch_workflow.md v2: 事前バグ予測フェーズを正式追加
+- Reviewer が最低5項目の想定バグを列挙してから実装開始するルール
+- 開発方法スコア 75 -> ~82 (bug prevention +12)
+
 ## v6.16.0 (2026-03-12) Sprint G Phase 1: 装備システム基盤
 - マウス入力基盤追加 (mouse状態 + イベントハンドラ)
 - 武器強化システム: initWeapon/upgradeWeapon, 花粉消費でLv0→3

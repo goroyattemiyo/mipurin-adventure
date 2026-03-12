@@ -1,43 +1,39 @@
-# CHANGELOG — ミプリンの冒険
+# CHANGELOG - ミプリンの冒険
+
+## v6.15.1 (2026-03-12)
+
+### 開発基盤強化
+- runNectar/loopCount 重複宣言解消 (game.js→systems.jsに統合)
+- tools/check_globals.js v2: スコープ解析による偽陽性削減
+- tools/check_concat.js: HTML読み込み順の連結構文チェック
+- tools/patch_workflow.md: パッチ適用手順書
+- VARIABLE_MAP.md: 変数所有権ルール文書
 
 ## v6.15.0 (2026-03-12)
 
 ### 新機能
-- **周回システム**: エンディングでXキーで2周目開始。武器/祝福/花粉引継ぎ
-- **敵周回スケーリング**: HP×(1+loop×0.5), ATK×(1+loop×0.3)
-- **敵色違い**: loopHueShift()で周回ごとに色相30度シフト
-- **花粉リロール**: 祝福選択画面でXキー+花粉15消費で選び直し
-- **モバイルタッチ操作**: touch.js新規（仮想ジョイスティック+ボタン, マルチタッチ）
+- 周回システム: エンディングXキーで2周目（武器/祝福/花粉引継ぎ）
+- 敵周回スケーリング: HP x(1+loop x0.5), ATK x(1+loop x0.3)
+- 敵色違い: loopHueShift()で色相シフト
+- 花粉リロール: 祝福選択Xキー+花粉15
+- モバイルタッチ: touch.js（仮想ジョイスティック+ボタン, マルチタッチ）
 
 ### バグ修正
-- **runNectar未加算**: 花粉拾得/ボス撃破/フロアクリアの3箇所で加算するよう修正
-- **エンディングUI重なり**: 画像左側/テキスト右側パネルに分離
-- **ゲームオーバーUI重なり**: テキスト上部パネル/画像下部に分離
-- **タイトル画面**: 情報パネル統合, 灰色(#888)テキスト廃止, blinkネスト修正
-- **ボスシルエット誤表示**: 非ボスダイアログでの表示を抑制
-
-### UI/UX
-- エンディング画面に周回バッジ表示（N周目クリア！）
-- 祝福選択画面に花粉リロールガイド表示
-- render.jsコメント63行削減（30.2KB→28.5KB）
+- runNectar未加算: 花粉/ボス/フロアの3箇所で加算
+- エンディングUI重なり: 画像左/テキスト右パネル分離
+- ゲームオーバーUI重なり: テキスト上部/画像下部分離
+- タイトル画面: 情報パネル統合, 色改善
+- ボスシルエット誤表示: 非ボスダイアログで抑制
 
 ## v6.14.1 (2026-03-12)
 
 ### バグ修正（18件）
-- F1: render.js camX/camY 未定義クラッシュ
-- F2: update.js updateBubble→updateBubbles タイポ
-- F4: game.js タイマー変数宣言
-- F5: stopBGM フェード統一
-- F6: enemies.js ボスフロアBGM競合
-- F7/F9: idleTimer リセット
-- F8: dashCooldown 初期値0.5
-- F10: eliteNext リセット
-- F11/F13: ui_screens.js blinkネスト + Escape処理
-- F12: titleVolSel 宣言
-- F14: index.html バージョン更新
-- F16: 重複BGMチェック削除
-- F18: 未使用bossLines削除
-- F20: パーティクル数削減
-
-### QoL
-- 吹き出しエッジクランプ, 回復/クリア吹き出し, 死亡台詞ローテーション安定化
+- render.js camX/camY未定義クラッシュ
+- update.js updateBubbleタイポ
+- game.js タイマー変数宣言
+- stopBGMフェード統一
+- enemies.js ボスフロアBGM競合
+- idleTimerリセット, dashCooldown初期値0.5
+- eliteNextリセット, ui_screens.js blinkネスト
+- titleVolSel宣言, 重複BGMチェック削除
+- 未使用bossLines削除, パーティクル数削減

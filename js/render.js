@@ -460,7 +460,7 @@ function drawGameState() {
     ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
       const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
   ctx.font = '18px "M PLUS Rounded 1c"'; ctx.fillStyle = '#ffb7c5'; ctx.textAlign = 'center';
-  ctx.fillText(DEATH_LINES[Math.floor(Date.now()/3000) % DEATH_LINES.length], CW/2, CH/2 + 95);
+  ctx.fillText(DEATH_LINES[Math.floor(deadTimer*1.7)%DEATH_LINES.length], CW/2, CH/2 + 95);
   if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
     else { ctx.fillText('しばらくおまちください...', CW / 2, CH / 2 + 130); }
     ctx.textAlign = 'left'; }
@@ -492,9 +492,8 @@ function draw() {
   drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect(); drawEntity(player, COL.player, true);
   if(typeof bubbles!=="undefined"&&bubbles.length>0){
     const b=bubbles[0]; ctx.save(); ctx.globalAlpha=Math.max(0,b.alpha);
-    const bx=player.x-camX+player.w/2, by=player.y-camY-30;
-    const tw=ctx.measureText(b.text).width;
-    const bw=tw+24, bh=30, rx=bx-bw/2, ry=by-bh;
+    let bx=player.x+player.w/2, by=player.y-30; const bw2=ctx.measureText(b.text).width+24; if(bx-bw2/2<10)bx=10+bw2/2; if(bx+bw2/2>CW-10)bx=CW-10-bw2/2; if(by-30<10)by=40;
+    const bw=bw2, bh=30, rx=bx-bw/2, ry=by-bh;
     ctx.fillStyle='rgba(255,255,255,0.92)';
     ctx.beginPath(); ctx.moveTo(rx+8,ry); ctx.lineTo(rx+bw-8,ry);
     ctx.quadraticCurveTo(rx+bw,ry,rx+bw,ry+8); ctx.lineTo(rx+bw,ry+bh-8);

@@ -26,7 +26,7 @@ function update(dt) {
   if (floorClearAnimTimer < 2) floorClearAnimTimer += dt;
   if (gameState === 'playing' || gameState === 'waveWait') updateBgParticles(dt, getTheme(floor).name);
   updateMessages(dt);
-  if (typeof updateBubble === "function") updateBubble(dt);
+  if (typeof updateBubbles === "function") updateBubbles(dt);
 
   if (gameState === 'ending') {
     if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title'; }
@@ -37,6 +37,7 @@ function update(dt) {
     if (wasPressed('ArrowUp') || wasPressed('KeyW')) { titleVolSel = titleVolSel <= 0 ? 1 : titleVolSel - 1; Audio.menu_move(); }
     if (wasPressed('ArrowDown') || wasPressed('KeyS')) { titleVolSel = titleVolSel < 0 ? 0 : (titleVolSel + 1) % 2; Audio.menu_move(); }
     if (titleVolSel >= 0 && (wasPressed('ArrowLeft') || wasPressed('KeyA'))) { if(titleVolSel===0) setBgmVol(bgmVolume-0.1); else setSeVol(seVolume-0.1); Audio.menu_move(); }
+    if (titleVolSel >= 0 && wasPressed('Escape')) { titleVolSel = -1; Audio.menu_move(); }
     if (titleVolSel >= 0 && (wasPressed('ArrowRight') || wasPressed('KeyD'))) { if(titleVolSel===0) setBgmVol(bgmVolume+0.1); else setSeVol(seVolume+0.1); Audio.menu_move(); }
     if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
     if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; Audio.menu_select(); }
@@ -180,7 +181,6 @@ function update(dt) {
 
   // === Player movement ===
   let mx = 0, my = 0;
-  if(mx!==0||my!==0||isDown('KeyZ')||isDown('KeyX')){idleTimer=0;}else{idleTimer+=dt;}
     if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
   if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
   if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
@@ -189,6 +189,7 @@ function update(dt) {
   if (mx !== 0 || my !== 0) {
     player.atkDir.x = Math.sign(mx || 0); player.atkDir.y = Math.sign(my || 0);
   }
+  if (mx !== 0 || my !== 0 || isDown('KeyZ') || isDown('KeyX')) { if (idleTimer > 5) showBubble('ふぁ…おはよ', 1.0); idleTimer = 0; } else { idleTimer += dt; }
 
   player.dashCooldown = Math.max(0, player.dashCooldown - dt);
   // Spike damage (トゲ床) - dash makes you immune
@@ -370,8 +371,8 @@ function update(dt) {
   // Remove dead enemies
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].hp <= 0) {
-      score += enemies[i].score; for(let p=0;p<8;p++){const a=Math.PI*2*p/8;emitParticles(enemies[i].x+enemies[i].w/2+Math.cos(a)*12,enemies[i].y+enemies[i].h/2+Math.sin(a)*12,["#ffb7c5","#fff","#ffe4e1","#ffd1dc"][p%4],3,60,0.3);} if(Math.random()<0.25) showBubble(["やったぁ！","えへへ♪","ばいばーい！","おつかれ〜"][Math.floor(Math.random()*4)]);
-      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 10, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 5, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 6, 50, 0.5);
+      score += enemies[i].score; for(let p=0;p<8;p++){const a=Math.PI*2*p/8;emitParticles(enemies[i].x+enemies[i].w/2+Math.cos(a)*12,enemies[i].y+enemies[i].h/2+Math.sin(a)*12,["#ffb7c5","#fff","#ffe4e1","#ffd1dc"][p%4], 2,60,0.3);} if(Math.random()<0.25) showBubble(["やったぁ！","えへへ♪","ばいばーい！","おつかれ〜"][Math.floor(Math.random()*4)]);
+      emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 6, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 3, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 3, 50, 0.5);
       Audio.enemy_die();
       // 毒撃破: 毒霧拡散
       if (enemies[i]._poisonTimer > 0) {
@@ -390,7 +391,8 @@ function update(dt) {
   }
 
   // Boss death
-  if (boss && boss.hp > 0 && boss.hp <= boss.maxHp * 0.5 && currentBGM !== "nest_boss") { playBGM("nest_boss", 1.0); }
+    if (boss && boss.hp > 0 && boss.hp <= boss.maxHp * 0.5 && currentBGM !== 'nest_boss') { playBGM('nest_boss', 1.0); }
+
     if (boss && boss.hp <= 0) {
     score += boss.score || 200; Audio.door_open(); showBubble("やったぁ！ ボスたおしたよ！"); if(typeof Audio.voice_boss_kill==="function") Audio.voice_boss_kill();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
@@ -410,7 +412,7 @@ function update(dt) {
   // Wave clear
   if (!boss && enemies.length === 0 && gameState === 'playing') {
     wave++;
-    if (wave >= WAVES.length) { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); stopBGM(0.8); }
+    if (wave >= WAVES.length) { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); stopBGM(0.8); showBubble('やったぁ！クリア！',1.5); }
     else { gameState = 'waveWait'; clearTimer = 0; }
   }
 

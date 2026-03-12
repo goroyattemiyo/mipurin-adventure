@@ -47,7 +47,7 @@ function updateProjectiles(dt) {
         shakeTimer = 0.1; shakeIntensity = 5; Audio.player_hurt();
         spawnDmg(player.x + player.w / 2, player.y, p.dmg, '#fff');
         emitParticles(player.x + player.w / 2, player.y + player.h / 2, '#fff', 4, 80, 0.2);
-        if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(); }
+        if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
         projectiles.splice(i, 1);
       }
     }
@@ -163,7 +163,7 @@ function updateBoss(dt) {
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (Math.hypot(player.x - boss.x, player.y - boss.y) < 100 && player.invTimer <= 0 && !player.dashing) {
         player.hp -= boss.dmg; player.invTimer = player.invDuration; Audio.player_hurt();
-        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); } }
+        spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff'); if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(0.8); } }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h, '#aaa', 12, 100, 0.4); } }
     if (boss.state === 'slam') { if (boss.stateTimer > 0.8) { boss.state = 'idle'; boss.stateTimer = 0; } }
   }
@@ -184,7 +184,7 @@ function updateBoss(dt) {
       spawnDmg(player.x + player.w / 2, player.y, boss.dmg, '#fff');
       const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
       moveWithCollision(player, Math.cos(angle) * 40, Math.sin(angle) * 40);
-      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); }
+      if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(0.8); }
     }
   }
 }

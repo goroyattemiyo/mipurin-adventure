@@ -107,25 +107,19 @@ function startFloor() {
   roomSpikes = []; roomMap = generateRoom(floor);
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;
     // Boss entrance dialog
-    const bossLines = {
-      'queen_hornet': ['ブンブン…… あたまが…おかしく…なる…！', 'ここから… でていけぇ！ …たすけて…'],
-      'fungus_king': ['この胞子は… わたしの意志では…ない…', 'クリスタルのかけらが… わたしを狂わせる… 止めて…くれ…'],
-      'crystal_golem': ['…ゴゴゴ…… 封印を… 守らなければ…', 'しかし… 体が… いうことを きかない…'],
-      'shadow_moth': ['ヒヒヒ… 気づいたか、ちいさなハチさん？', 'クリスタルを砕いたのは… このわたしだよ…'],
-    };
     if (boss) { cutinBossId = boss.id; cutinTimer = 0; cutinPhase = 'slidein'; gameState = 'cutin'; lastBossId = boss.id; }
   }
   else { boss = null; WAVES = buildWaves(); wave = 0; drops.length = 0; spawnWave(); }
   player.x = TILE * 10; player.y = TILE * 7;
   player.invTimer = 0; player.attacking = false; player.atkCooldown = 0;
-  player.dashing = false; player.dashCooldown = 0;
+  player.dashing = false; player.dashCooldown = 0.5;
   dmgNumbers.length = 0; particles.length = 0;
   if (cutinPhase === 'none') gameState = 'playing'; clearTimer = 0; deadTimer = 0;
   if (player.roomHeal) { player.hp = Math.min(player.hp + player.roomHeal, player.maxHp); showFloat("🌸 フロア開始HP+" + player.roomHeal, 1.5, MSG_COLORS.heal); }
   if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
   else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
   const floorTheme = getTheme(floor);
-  if (floorTheme.bgm) playBGM(floorTheme.bgm, 0.8);
+  if (!isBossFloor() && floorTheme.bgm) playBGM(floorTheme.bgm, 0.8);
   if (isBossFloor()) { stopBGM(1.2); setTimeout(() => playBGM('boss', 0.5), 2000); }
   startFade(-1, null);
 }
@@ -289,10 +283,10 @@ function resetGame() {
   dialogMsg = null; dialogCallback = null;
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
-  player.invDuration = 0.6; player.dashCooldown = 0; player.atkRangeBonus = 0;
+  player.invDuration = 0.6; player.dashCooldown = 0.5; player.atkRangeBonus = 0;
   player.weapon = WEAPON_DEFS[0]; player.weapons = [WEAPON_DEFS[0], null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
   player.roomHeal = 0; player.killHeal = 0; player.nectarMul = 0;
-  activeBlessings = []; activeDuos = []; drops.length = 0; projectiles.length = 0; particles.length = 0;
+  activeBlessings = []; activeDuos = []; idleTimer = 0; eliteNext = false; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();
   startFade(1, () => startFloor());
 }

@@ -77,6 +77,7 @@ function isGardenVisible(def) {
 }
 
 function drawGarden() {
+  if (currentBGM !== 'village') playBGM('village', 0.8);
   ctx.fillStyle = '#1a0a2e'; ctx.fillRect(0, 0, CW, CH);
   // Stars
   for (let i = 0; i < 30; i++) {
@@ -144,7 +145,7 @@ function drawGarden() {
 
 
 function drawTitle() {
-  if (currentBGM !== 'title') playBGM('title');
+  if (currentBGM !== 'title') playBGM('title', 0.8);
   ctx.fillStyle = '#fffde7';
   if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
   // Draw cute mipurin
@@ -165,6 +166,20 @@ function drawTitle() {
     ctx.fillStyle = '#e65100';
     ctx.font = "bold 32px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('Zキーでスタート', CW / 2, 560);
+  // BGM/SE音量調整UI
+  if (typeof titleVolSel === 'undefined') titleVolSel = -1;
+  if (titleVolSel >= 0) {
+    const labels = ['BGM', 'SE'];
+    const vols = [typeof bgmVolume!=='undefined'?bgmVolume:0.7, typeof seVolume!=='undefined'?seVolume:0.7];
+    for (let i = 0; i < 2; i++) {
+      const vy = CH - 75 + i * 28;
+      ctx.font = '16px "M PLUS Rounded 1c"'; ctx.textAlign = 'center';
+      ctx.fillStyle = titleVolSel === i ? '#ffd700' : '#fff';
+      ctx.fillText(labels[i] + '  ◀ ' + Math.round(vols[i]*100) + '% ▶', CW/2, vy);
+    }
+  }
+  ctx.font = '13px "M PLUS Rounded 1c"'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, CH - 15);
     ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
     ctx.fillStyle = '#ffd700'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ネクター: ' + nectar, CW / 2, 755);
   }

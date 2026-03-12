@@ -33,6 +33,11 @@ function update(dt) {
     return;
   }
   if (gameState === 'title') { titleBlink += dt; if (titleGuard > 0) { titleGuard -= dt; return; }
+        if (typeof titleVolSel === 'undefined') titleVolSel = -1;
+    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { titleVolSel = titleVolSel <= 0 ? 1 : titleVolSel - 1; Audio.menu_move(); }
+    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { titleVolSel = titleVolSel < 0 ? 0 : (titleVolSel + 1) % 2; Audio.menu_move(); }
+    if (titleVolSel >= 0 && (wasPressed('ArrowLeft') || wasPressed('KeyA'))) { if(titleVolSel===0) setBgmVol(bgmVolume-0.1); else setSeVol(seVolume-0.1); Audio.menu_move(); }
+    if (titleVolSel >= 0 && (wasPressed('ArrowRight') || wasPressed('KeyD'))) { if(titleVolSel===0) setBgmVol(bgmVolume+0.1); else setSeVol(seVolume+0.1); Audio.menu_move(); }
     if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
     if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; Audio.menu_select(); }
     return; }
@@ -89,6 +94,7 @@ function update(dt) {
     return;
   }
   if (gameState === 'shop') {
+    if (currentBGM !== 'shop') playBGM('shop', 0.8);
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); Audio.menu_move(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); Audio.menu_move(); }
     if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); Audio.menu_move(); }
@@ -194,7 +200,7 @@ function update(dt) {
       Audio.player_hurt();
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
       showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
-      if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(); }
+      if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
     }
   }
   if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
@@ -353,7 +359,7 @@ function update(dt) {
         const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
         if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
         } // パリィelse閉じ
-        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(); }
+        if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(0.8); }
       }
     }
   }
@@ -384,7 +390,8 @@ function update(dt) {
   }
 
   // Boss death
-  if (boss && boss.hp <= 0) {
+  if (boss && boss.hp > 0 && boss.hp <= boss.maxHp * 0.5 && currentBGM !== "nest_boss") { playBGM("nest_boss", 1.0); }
+    if (boss && boss.hp <= 0) {
     score += boss.score || 200; Audio.door_open(); showBubble("やったぁ！ ボスたおしたよ！"); if(typeof Audio.voice_boss_kill==="function") Audio.voice_boss_kill();
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     const bossPollenAmt = 5 + Math.floor(floor / 2); pollen += bossPollenAmt; showFloat('花粉 +' + bossPollenAmt, 2.0, MSG_COLORS.info); emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#f1c40f', 15, 100, 0.4);
@@ -403,7 +410,7 @@ function update(dt) {
   // Wave clear
   if (!boss && enemies.length === 0 && gameState === 'playing') {
     wave++;
-    if (wave >= WAVES.length) { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); }
+    if (wave >= WAVES.length) { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; Audio.door_open(); stopBGM(0.8); }
     else { gameState = 'waveWait'; clearTimer = 0; }
   }
 

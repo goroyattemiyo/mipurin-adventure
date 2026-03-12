@@ -125,8 +125,8 @@ function startFloor() {
   if (isBossFloor()) { showFloat('⚠ ボスフロア！ きをつけて！', 2.5, MSG_COLORS.boss); }
   else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
   const floorTheme = getTheme(floor);
-  if (floorTheme.bgm) playBGM(floorTheme.bgm);
-  if (isBossFloor()) playBGM('boss');
+  if (floorTheme.bgm) playBGM(floorTheme.bgm, 0.8);
+  if (isBossFloor()) { stopBGM(1.2); setTimeout(() => playBGM('boss', 0.5), 2000); }
   startFade(-1, null);
 }
 

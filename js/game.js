@@ -129,4 +129,3 @@ let weaponPopup = { active: false, weapon: null, sparkle: false };
 let titleGuard = 0;
 
 let cutinTimer = 0, cutinBossId = '', cutinPhase = 'none', lastBossId = '';
-let loopCount = 0, runNectar = 0;

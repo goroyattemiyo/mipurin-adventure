@@ -15,7 +15,7 @@ const GARDEN_DEFS = [
   { id: 'nectar', name: '🍯 蜜の花壇', desc: 'ネクター +10%', cost: [30, 80, 180], max: 3, icon: '🍯', unlock: 'nectar' }
 ];
 let gardenCursor = 0;
-let runNectar = 0; // nectar earned this run
+let runNectar = 0, loopCount = 0; // nectar earned this run
 
 function saveMeta() {
   try {

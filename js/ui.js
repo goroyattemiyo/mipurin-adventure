@@ -115,8 +115,8 @@ function drawCollectionTab() {
   }
 }
 
-
 let equipCursor = 0;
+let equipSlotRects = [];
 const EQUIP_TOTAL_SLOTS = 6;
 let equipBounce = 0;
 let equipPetals = [];
@@ -192,6 +192,14 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   const mainSlot = { x: mipX - 130, y: mipY + 10, w: 110, h: 80 };
   const subSlot = { x: mipX - 130, y: mipY + 110, w: 110, h: 80 };
   const charmSlot = { x: cx + 10, y: mipY + 130, w: 90, h: 70 };
+  equipSlotRects = [
+    { id:'main', x:mainSlot.x, y:mainSlot.y, w:mainSlot.w, h:mainSlot.h },
+    { id:'sub', x:subSlot.x, y:subSlot.y, w:subSlot.w, h:subSlot.h },
+    { id:'bp0', x:bpX, y:bpY+5, w:66, h:70 },
+    { id:'bp1', x:bpX+72, y:bpY+5, w:66, h:70 },
+    { id:'bp2', x:bpX, y:bpY+83, w:66, h:70 },
+    { id:'bp3', x:bpX+72, y:bpY+83, w:66, h:70 }
+  ];
   drawSlotHex(mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, equipCursor === 0);
   drawSlotHex(subSlot.x, subSlot.y, subSlot.w, subSlot.h, equipCursor === 1);
   if (equipCursor === 0) drawConnector(mainSlot.x + mainSlot.w, mainSlot.y + mainSlot.h/2, mipX + 20, mipY + 60, '#ffd700');
@@ -276,6 +284,19 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   }
   ctx.fillStyle = '#f8bbd0'; ctx.font = '15px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\u2191\u2193:\u3048\u3089\u3076  Z:\u5F37\u5316  X:\u3044\u308C\u304B\u3048  Tab:\u3068\u3058\u308B', cx, panelY + panelH - 10);
+  if (mouse.dragItem && typeof touchActive !== 'undefined' && !touchActive) {
+    for (let si = 0; si < equipSlotRects.length; si++) {
+      if (si === mouse.dragFrom) { ctx.save(); ctx.globalAlpha = 0.3; const ds = equipSlotRects[si]; ctx.fillStyle = '#000'; ctx.fillRect(ds.x, ds.y, ds.w, ds.h); ctx.restore(); continue; }
+      const ds = equipSlotRects[si]; const hx = mouse.x >= ds.x && mouse.x <= ds.x+ds.w && mouse.y >= ds.y && mouse.y <= ds.y+ds.h;
+      if (hx) { ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 3; ctx.strokeRect(ds.x-2, ds.y-2, ds.w+4, ds.h+4); }
+    }
+    ctx.save(); ctx.globalAlpha = 0.75;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(mouse.x - 50, mouse.y - 15, 100, 30);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(mouse.x - 50, mouse.y - 15, 100, 30);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
+    ctx.fillText((mouse.dragItem.icon||'\u2694') + ' ' + mouse.dragItem.name, mouse.x, mouse.y + 5);
+    ctx.restore();
+  }
   ctx.restore();
 }
 

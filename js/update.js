@@ -83,10 +83,10 @@ function update(dt) {
     }
     return;
   }
-  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; }
+  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; } mouse.dragItem = null; mouse.dragFrom = null;
   if (inventoryOpen) {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { inventoryTab = (inventoryTab + 2) % 3; Audio.menu_move(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { inventoryTab = (inventoryTab + 2) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
     if (inventoryTab === 2) {
    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { equipCursor = (equipCursor + 5) % 6; Audio.menu_move(); equipBounce = 1; }
    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { equipCursor = (equipCursor + 1) % 6; Audio.menu_move(); equipBounce = 1; }
@@ -114,6 +114,38 @@ function update(dt) {
      }
     }
    }
+      if (typeof touchActive === 'undefined' || !touchActive) {
+        if (mouse.clicked && !mouse.dragItem && equipSlotRects.length > 0) {
+          for (let si = 0; si < equipSlotRects.length; si++) {
+            const s = equipSlotRects[si];
+            if (mouse.x >= s.x && mouse.x <= s.x+s.w && mouse.y >= s.y && mouse.y <= s.y+s.h) {
+              const w = si < 2 ? player.weapons[si] : player.backpack[si-2];
+              if (w) { mouse.dragItem = w; mouse.dragFrom = si; equipCursor = si; }
+              break;
+            }
+          }
+        }
+        if (mouse.dragItem && !mouse.down) {
+          let dropTarget = -1;
+          for (let si = 0; si < equipSlotRects.length; si++) {
+            const s = equipSlotRects[si];
+            if (mouse.x >= s.x && mouse.x <= s.x+s.w && mouse.y >= s.y && mouse.y <= s.y+s.h) { dropTarget = si; break; }
+          }
+          if (dropTarget >= 0 && dropTarget !== mouse.dragFrom) {
+            const fromW = mouse.dragFrom < 2 ? player.weapons[mouse.dragFrom] : player.backpack[mouse.dragFrom-2];
+            const toW = dropTarget < 2 ? player.weapons[dropTarget] : player.backpack[dropTarget-2];
+            let canDrop = true;
+            if (mouse.dragFrom < 2 && dropTarget >= 2 && !player.weapons[1 - mouse.dragFrom]) canDrop = false;
+            if (canDrop) {
+              if (mouse.dragFrom < 2) player.weapons[mouse.dragFrom] = toW; else player.backpack[mouse.dragFrom-2] = toW;
+              if (dropTarget < 2) player.weapons[dropTarget] = fromW; else player.backpack[dropTarget-2] = fromW;
+              player.weapon = player.weapons[player.weaponIdx] || player.weapons[1-player.weaponIdx];
+              Audio.menu_select(); showFloat('\u2694 \u3044\u308C\u304B\u3048\u305F\uFF01', 1.5, MSG_COLORS.info);
+            } else { showFloat('\u6B66\u5668\u304C\u306A\u304F\u306A\u3063\u3061\u3083\u3046\uFF01', 1.5, MSG_COLORS.warn); }
+          }
+          mouse.dragItem = null; mouse.dragFrom = null;
+        }
+      }
    return;
     }
     return;

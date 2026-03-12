@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v6.16.1 (2026-03-12) Sprint G Phase 2: Mouse Drag & Drop
+- 装備タブでマウスD&D実装 (武器を掴んでスロット間移動)
+- ドラッグ中: 元スロット暗転、有効ドロップ先を緑ハイライト、武器名追従
+- Bug予防7件対策: canvas外mouseup, 空スロット掴み防止, 同一スロットスキップ,
+  武器0本防止, インベントリ閉じ時ドラッグリセット, タブ切替時リセット, タッチ競合回避
+- game.js: window mouseup + mouseleave リスナー追加
+- ui.js: equipSlotRects グローバル座標管理 + ドラッグ描画
+- update.js: D&Dロジック (hitTest + swap + guard)
+
 ## v6.16.0b (2026-03-12) Workflow v3: コミット前MD必須ルール
 - patch_workflow.md v3: コミット前にREADME/ROADMAP/STATUS/CHANGELOG更新を必須化
 - MD更新なしのコミットを禁止するルール追加

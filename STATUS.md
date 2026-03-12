@@ -1,4 +1,4 @@
-# STATUS v6.16.0
+# STATUS v6.16.1
 
 | Feature | Status |
 | --- | --- |
@@ -8,26 +8,20 @@
 | Garden meta-progression | Done |
 | Mobile touch UI | Done |
 | Loop system (2nd run) | Done |
-| Enemy color shift | Done |
-| runNectar fix | Done |
-| Blessing reroll (X+15pol) | Done |
-| Ending UI split | Done |
-| Dev tools (check_globals v2, check_concat) | Done |
 | Equipment tab UI (RPG style) | Done |
 | Weapon upgrade (Lv0-3) | Done |
 | Backpack (4 slots) | Done |
 | Mouse input base | Done |
-| **Synapse bug-prevention workflow** | **Done** |
-| Mouse drag-and-drop (Phase 2) | Planned |
+| **Mouse drag-and-drop (Phase 2)** | **Done** |
+| Synapse bug-prevention workflow v3 | Done |
 | Tap-select equip (Phase 3) | Planned |
 | Weapon growth tree | Planned |
 | CI / automated tests | Planned |
 
-## Development Method Score
-| Item | Before | After |
-| --- | --- | --- |
-| Patch safety | 14 | 18 |
-| Quality tools | 18 | 18 |
-| Bug prevention | 0 | 12 |
-| Documentation | 10 | 12 |
-| **Total (dev)** | **75** | **~82** |
+## Scores (estimated)
+| Category | Score |
+| --- | --- |
+| Game quality | 70 |
+| Progress | 76 |
+| Development method | 82 |
+| **Total** | **75.4** |

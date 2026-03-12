@@ -2,7 +2,7 @@
 
 ## Current: Sprint G - Equipment System
 - [x] Phase 1: mouse state, backpack, equip tab UI, weapon upgrade (keyboard)
-- [ ] Phase 2: mouse drag-and-drop (PC)
+- [x] Phase 2: mouse drag-and-drop (PC)
 - [ ] Phase 3: tap-select equip (mobile)
 
 ## Completed
@@ -13,10 +13,10 @@
 - Sprint E: Title/death/ending UI polish
 - Sprint F: Mobile touch support
 - Sprint F2: Loop system + runNectar fix + dev tools
+- Sprint G Phase 1-2: Equipment system + mouse D&D
 
 ## Next
-- Sprint G Phase 2: Mouse D&D equip (PC)
 - Sprint G Phase 3: Tap-select equip (mobile)
-- Sprint H: Weapon growth tree + new weapons
-- Sprint I: 2nd loop exclusive content (new boss forms, hidden blessings)
+- Sprint H: Weapon growth tree + charm slot + new weapons
+- Sprint I: 2nd loop exclusive content
 - Sprint J: Performance optimization + CI

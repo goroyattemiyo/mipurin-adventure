@@ -88,8 +88,8 @@ function update(dt) {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { inventoryTab = (inventoryTab + 2) % 3; Audio.menu_move(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); }
     if (inventoryTab === 2) {
-   if (wasPressed('ArrowUp') || wasPressed('KeyW')) { equipCursor = (equipCursor + 5) % 6; Audio.menu_move(); }
-   if (wasPressed('ArrowDown') || wasPressed('KeyS')) { equipCursor = (equipCursor + 1) % 6; Audio.menu_move(); }
+   if (wasPressed('ArrowUp') || wasPressed('KeyW')) { equipCursor = (equipCursor + 5) % 6; Audio.menu_move(); equipBounce = 1; }
+   if (wasPressed('ArrowDown') || wasPressed('KeyS')) { equipCursor = (equipCursor + 1) % 6; Audio.menu_move(); equipBounce = 1; }
    if (wasPressed('KeyZ')) {
     const selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
     if (selW && upgradeWeapon(selW)) {
@@ -100,7 +100,7 @@ function update(dt) {
    if (wasPressed('KeyX')) {
     if (equipCursor < 2) {
      const emptyBp = player.backpack.indexOf(null);
-     if (emptyBp !== -1 && player.weapons[equipCursor]) {
+     if (emptyBp !== -1 && player.weapons[equipCursor] && player.weapons[1 - equipCursor]) {
       player.backpack[emptyBp] = player.weapons[equipCursor]; player.weapons[equipCursor] = null;
       if (equipCursor === player.weaponIdx) { player.weaponIdx = player.weapons[0] ? 0 : 1; player.weapon = player.weapons[player.weaponIdx]; }
       Audio.menu_select(); showFloat('\u30D0\u30C3\u30AF\u30D1\u30C3\u30AF\u3078', 1.5, MSG_COLORS.info);

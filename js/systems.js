@@ -82,7 +82,7 @@ function buildShop() {
   // Random weapon
   const _wpPool = WEAPON_DEFS.filter(w => !w.minFloor || floor >= w.minFloor); const wep = _wpPool[Math.floor(rng() * _wpPool.length)];
   shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {
-      player.weapons[player.weaponIdx] = {...wep}; player.weapon = player.weapons[player.weaponIdx];
+      player.weapons[player.weaponIdx] = initWeapon({...wep}); player.weapon = player.weapons[player.weaponIdx];
       if (typeof weaponCollection !== 'undefined') { weaponCollection.add(wep.id); saveCollection(); }
       Audio.level_up();
     } });

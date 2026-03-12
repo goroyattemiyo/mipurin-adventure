@@ -124,7 +124,6 @@ function setBgmVol(v) { bgmVolume = clamp(v,0,1); try{localStorage.setItem('mipu
 // SE volume controls chip-tune master; BGM volume controls bgmAudio separately
 function setSeVol(v) { seVolume = clamp(v,0,1); try{localStorage.setItem('mipurin_sevol',seVolume);}catch(e){} Audio.setVol(seVolume); }
 
-let blessingAnimTimer = 0, hpBounceTimer = 0, floorClearAnimTimer = 0;
 let titleVolSel = -1;
 let weaponPopup = { active: false, weapon: null, sparkle: false };
 let titleGuard = 0;

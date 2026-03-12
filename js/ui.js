@@ -296,6 +296,7 @@ function drawBlessing() {
     ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, byLocal + bh - 25);
     ctx.restore();
   }
+  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
   ctx.textAlign = 'left';
 }
 

@@ -311,7 +311,7 @@ function updateDrops(dt) {
     }
     const db = { x: d.x - 8, y: d.y - 8, w: 16, h: 16 };
     if (rectOverlap(pb, db)) {
-      if (d.type === 'pollen') { emitParticles(d.x, d.y, '#f1c40f', 4, 50, 0.3); const amt = 1 + Math.floor(floor / 3); pollen += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
+      if (d.type === 'pollen') { emitParticles(d.x, d.y, '#f1c40f', 4, 50, 0.3); const amt = 1 + Math.floor(floor / 3); pollen += amt; runNectar += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
       if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); if(Math.random()<0.4) showBubble("わぁい♪",0.8); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); showFloat('\uD83C\uDF6F HP+1', 1.2, '#2ecc71'); }
       drops.splice(i, 1);
     }

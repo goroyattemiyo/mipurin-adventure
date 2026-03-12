@@ -1,4 +1,4 @@
-﻿// ===== UI SCREENS MODULE =====
+// ===== UI SCREENS MODULE =====
 // Full-screen UI: title, prologue, ending, garden
 // Extracted from ui.js for Phase 2 expansion
 function drawPrologue() {
@@ -32,40 +32,63 @@ function drawPrologue() {
 
 function drawEnding() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-  const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal'; ctx.save(); ctx.globalAlpha = 0.9;
-  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a'; if (endingImgs[endImgKey]) { const eiw = Math.min(CW * 0.6, 700), eih = eiw * 0.75; ctx.drawImage(endingImgs[endImgKey], CW/2 - eiw/2, 40, eiw, eih); } else if (mipurinReady) {
-    const sz = 200;
-    ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, 120, sz, sz);
+  const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal';
+  // --- Image: left side ---
+  ctx.save(); ctx.globalAlpha = 0.9;
+  const imgX = 40, imgY = 80, imgW = CW * 0.4, imgH = imgW * 0.85;
+  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a';
+  if (endingImgs[endImgKey]) {
+    ctx.drawImage(endingImgs[endImgKey], imgX, imgY, imgW, imgH);
+  } else if (mipurinReady) {
+    ctx.drawImage(mipurinImg, 0, 0, 250, 250, imgX + imgW/2 - 100, imgY + imgH/2 - 100, 200, 200);
   }
   ctx.restore();
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-  const endTitle = endType === 'true' ? '✨ クリスタルの再生 ✨' : endType === 'good' ? '🌸 かけらの光 🌸' : '小さな希望';
-  ctx.fillText(endTitle, CW/2, 380);
-  ctx.fillStyle = '#fff'; ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
-  if (endType === 'true') {
-    ctx.fillText('すべてのかけらが集まり、クリスタルが光を取り戻した。', CW/2, 430);
-    ctx.fillText('女王さまの声が聞こえた──「ありがとう、ミプリン」', CW/2, 460);
-  } else if (endType === 'good') {
-    ctx.fillText('たくさんのかけらを集め、花の国に色が戻りはじめた。', CW/2, 430);
-    ctx.fillText('フローラの花壇に見たことのない花が咲いた。', CW/2, 460);
-  } else {
-    ctx.fillText('闇の蛾を倒し、花粉が少しずつ戻りはじめた。', CW/2, 430);
-    ctx.fillText('クリスタルはまだ砕けたまま… でも希望の光は灯った。', CW/2, 460);
+  // --- Text: right side panel ---
+  const px = CW * 0.47, py = 60, pw = CW * 0.5, ph = CH - 120;
+  ctx.fillStyle = 'rgba(20,5,15,0.72)';
+  ctx.beginPath();
+  const cr = 16;
+  ctx.moveTo(px+cr,py); ctx.lineTo(px+pw-cr,py); ctx.quadraticCurveTo(px+pw,py,px+pw,py+cr);
+  ctx.lineTo(px+pw,py+ph-cr); ctx.quadraticCurveTo(px+pw,py+ph,px+pw-cr,py+ph);
+  ctx.lineTo(px+cr,py+ph); ctx.quadraticCurveTo(px,py+ph,px,py+ph-cr);
+  ctx.lineTo(px,py+cr); ctx.quadraticCurveTo(px,py,px+cr,py); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,200,100,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+  const tcx = px + pw / 2;
+  ctx.textAlign = 'center';
+  // Loop badge
+  if (typeof loopCount !== 'undefined' && loopCount > 0) {
+    ctx.fillStyle = '#ff6b6b'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(loopCount + '\u5468\u76EE\u30AF\u30EA\u30A2\uFF01', tcx, py + 35);
   }
-  ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('スコア: ' + score + '  花粉: ' + pollen + '  フロア: ' + floor, CW/2, 520);
-  ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW/2, 580);
-  ctx.fillText('祝福: ' + activeBlessings.length + '  共鳴: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), CW/2, 550);
-  ctx.fillStyle = '#ffd700'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  // Title
+  const endTitle = endType === 'true' ? '\u2728 \u30AF\u30EA\u30B9\u30BF\u30EB\u306E\u518D\u751F \u2728' : endType === 'good' ? '\uD83C\uDF38 \u304B\u3051\u3089\u306E\u5149 \uD83C\uDF38' : '\u5C0F\u3055\u306A\u5E0C\u671B';
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(endTitle, tcx, py + 75);
+  // Story
+  ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  if (endType === 'true') {
+    ctx.fillText('\u3059\u3079\u3066\u306E\u304B\u3051\u3089\u304C\u96C6\u307E\u308A\u3001\u30AF\u30EA\u30B9\u30BF\u30EB\u304C\u5149\u3092\u53D6\u308A\u623B\u3057\u305F\u3002', tcx, py + 115);
+    ctx.fillText('\u5973\u738B\u3055\u307E\u306E\u58F0\u304C\u805E\u3053\u3048\u305F\u2500\u2500\u300C\u3042\u308A\u304C\u3068\u3046\u3001\u30DF\u30D7\u30EA\u30F3\u300D', tcx, py + 145);
+  } else if (endType === 'good') {
+    ctx.fillText('\u305F\u304F\u3055\u3093\u306E\u304B\u3051\u3089\u3092\u96C6\u3081\u3001\u82B1\u306E\u56FD\u306B\u8272\u304C\u623B\u308A\u306F\u3058\u3081\u305F\u3002', tcx, py + 115);
+    ctx.fillText('\u30D5\u30ED\u30FC\u30E9\u306E\u82B1\u58C7\u306B\u898B\u305F\u3053\u3068\u306E\u306A\u3044\u82B1\u304C\u54B2\u3044\u305F\u3002', tcx, py + 145);
+  } else {
+    ctx.fillText('\u95C7\u306E\u86FE\u3092\u5012\u3057\u3001\u82B1\u7C89\u304C\u5C11\u3057\u305A\u3064\u623B\u308A\u306F\u3058\u3081\u305F\u3002', tcx, py + 115);
+    ctx.fillText('\u30AF\u30EA\u30B9\u30BF\u30EB\u306F\u307E\u3060\u7815\u3051\u305F\u307E\u307E\u2026 \u3067\u3082\u5E0C\u671B\u306E\u5149\u306F\u706F\u3063\u305F\u3002', tcx, py + 145);
+  }
+  // Stats
+  ctx.fillStyle = '#ccc'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('\u30B9\u30B3\u30A2: ' + score + '  \u82B1\u7C89: ' + pollen + '  \u30D5\u30ED\u30A2: ' + floor, tcx, py + 200);
+  ctx.fillStyle = '#ffd700'; ctx.fillText('\u7372\u5F97\u30CD\u30AF\u30BF\u30FC: +' + runNectar, tcx, py + 235);
+  ctx.fillText('\u795D\u798F: ' + activeBlessings.length + '  \u5171\u9CF4: ' + (typeof activeDuos !== 'undefined' ? activeDuos.length : 0), tcx, py + 265);
+  // Prompt
+  ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
   const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
-  if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW/2, 620);
+  ctx.fillStyle = '#ffd700';
+  if (blinkOn) ctx.fillText('Z\u30AD\u30FC\u3067\u30BF\u30A4\u30C8\u30EB\u3078', tcx, py + ph - 80);
+  ctx.fillStyle = '#87ceeb';
+  if (blinkOn) ctx.fillText('X\u30AD\u30FC\u3067\u5F37\u304F\u3066\u30CB\u30E5\u30FC\u30B2\u30FC\u30E0\uFF08' + (typeof loopCount !== 'undefined' ? loopCount + 1 : 1) + '\u5468\u76EE\uFF09', tcx, py + ph - 50);
   ctx.textAlign = 'left';
-  // Consumable use message
-  // [REMOVED] old consumableMsg draw - replaced by drawFloatMessages()
-  // Weapon swap message
-  // drawFloatMessages(); ← moved to draw() end
-  // drawDialogWindow(); ← moved to draw() end
-  // Fade overlay
   if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }
 

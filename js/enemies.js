@@ -1,3 +1,18 @@
+// === Loop color shift ===
+function loopHueShift(hexColor, loop) {
+  if (!loop) return hexColor;
+  const m = hexColor.match(/^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+  if (!m) return hexColor;
+  let r = parseInt(m[1],16)/255, g = parseInt(m[2],16)/255, b = parseInt(m[3],16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+  let h = 0, s = max ? d/max : 0, v = max;
+  if (d) { if (max===r) h=(g-b)/d+(g<b?6:0); else if(max===g) h=(b-r)/d+2; else h=(r-g)/d+4; h/=6; }
+  h = (h + loop * 0.083) % 1;
+  const hi = Math.floor(h*6), f = h*6-hi, p = v*(1-s), q = v*(1-f*s), t = v*(1-(1-f)*s);
+  let ro,go,bo;
+  switch(hi%6){ case 0:ro=v;go=t;bo=p;break; case 1:ro=q;go=v;bo=p;break; case 2:ro=p;go=v;bo=t;break; case 3:ro=p;go=q;bo=v;break; case 4:ro=t;go=p;bo=v;break; default:ro=v;go=p;bo=q; }
+  return '#'+[ro,go,bo].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
 // ===== ENEMIES =====
 const enemies = [];
 const dmgNumbers = [];
@@ -68,9 +83,15 @@ function drawProjectiles() {
 function spawnEnemy(type, col, row) {
   const def = ENEMY_DEFS[type]; if (!def) return;
   const sc = 1 + Math.log2(1 + floor) * 0.35;
+  const lc = (typeof loopCount !== 'undefined') ? loopCount : 0;
+  const hpScale = (1 + lc * 0.5);
+  const dmgScale = (1 + lc * 0.3);
+  const eColor = lc > 0 && def.color ? loopHueShift(def.color, lc) : (def.color || '#fff');
   enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
-    hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc), dmg: Math.ceil(def.dmg * (floor <= 1 ? 1 : (1 + floor * 0.06))),
+    hp: Math.ceil(def.hp * sc * hpScale), maxHp: Math.ceil(def.hp * sc * hpScale),
+    dmg: Math.ceil(def.dmg * (floor <= 1 ? 1 : (1 + floor * 0.06)) * dmgScale),
     score: Math.ceil(def.score * (1 + floor * 0.05)),
+    color: eColor,
     vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
     chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
 }
@@ -123,9 +144,9 @@ function spawnBoss() { Audio.boss_appear();
   // Boss dialog will be triggered after spawn
   const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
   const def = BOSS_DEFS[bi];
-  const sc = 1 + floor * 0.12;
+  const lc = (typeof loopCount !== 'undefined') ? loopCount : 0; const sc = (1 + floor * 0.12) * (1 + lc * 0.5);
   boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 4, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
-    dmg: Math.ceil(def.dmg * (1 + floor * 0.08)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
+    dmg: Math.ceil(def.dmg * (1 + floor * 0.08) * (1 + lc * 0.3)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
     chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0 };
 }
 

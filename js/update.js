@@ -29,7 +29,23 @@ function update(dt) {
   if (typeof updateBubbles === "function") updateBubbles(dt);
 
   if (gameState === 'ending') {
-    if (wasPressed('KeyZ')) { totalClears++; checkGardenUnlocks(); nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0))); saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title'; }
+    if (wasPressed('KeyZ')) {
+      totalClears++; checkGardenUnlocks();
+      nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0)));
+      saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title';
+    }
+    if (wasPressed('KeyX')) {
+      // 2nd run - carry over weapons, blessings, pollen
+      totalClears++; checkGardenUnlocks();
+      nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0)));
+      saveMeta();
+      loopCount++;
+      floor = 0; runNectar = 0; score = 0;
+      player.hp = player.maxHp;
+      player.invTimer = 0; player.attacking = false;
+      stopBGM();
+      nextFloor();
+    }
     return;
   }
   if (gameState === 'title') { titleBlink += dt; if (titleGuard > 0) { titleGuard -= dt; return; }
@@ -85,6 +101,7 @@ function update(dt) {
     return;
   }
   if (gameState === 'blessing') {
+    if (wasPressed('KeyX') && pollen >= 15) { pollen -= 15; blessingChoices = pickBlessings(); selectCursor = 0; blessingAnimTimer = 0; Audio.menu_select(); showFloat('\uD83C\uDF3C \u82B1\u7C89-15 \u30EA\u30ED\u30FC\u30EB\uFF01', 1.5, '#f1c40f'); return; }
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
     if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
@@ -111,6 +128,7 @@ function update(dt) {
   }
   if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }
   if (gameState === 'floorClear') { clearTimer += dt; if (clearTimer > 1.5) {
+    runNectar += floor;
       if (floor >= MAX_FLOOR && isBossFloor()) { stopBGM(); playBGM('ending'); gameState = 'ending'; return; }
     if (eliteNext) { eliteNext = false; const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend'); const picks = []; const used = new Set(); while (picks.length < 3 && picks.length < rarePlus.length) { const b = rarePlus[Math.floor(rng() * rarePlus.length)]; if (!used.has(b.id)) { used.add(b.id); picks.push(b); } } blessingChoices = picks.length >= 3 ? picks : pickBlessings(); selectCursor = 0; showFloat('💀 エリートクリア！レア祝福確定！', 2.5, MSG_COLORS.boss); gameState = 'dialog'; showDialog('ミプリン', ['強敵を倒した！ すごい祝福がもらえるよ！'], function() { blessingAnimTimer = 0; gameState = 'blessing'; }); } else { blessingChoices = pickBlessings(); selectCursor = 0; gameState = 'dialog'; showDialog('ミプリン', ['祝福の花が咲いた！ ひとつ えらんでね！'], function() { blessingAnimTimer = 0; gameState = 'blessing'; }); }
   } return; }
@@ -395,6 +413,7 @@ function update(dt) {
 
     if (boss && boss.hp <= 0) {
     score += boss.score || 200; Audio.door_open(); showBubble("やったぁ！ ボスたおしたよ！"); if(typeof Audio.voice_boss_kill==="function") Audio.voice_boss_kill();
+    runNectar += 10;
     emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 20, 120, 0.6);
     const bossPollenAmt = 5 + Math.floor(floor / 2); pollen += bossPollenAmt; showFloat('花粉 +' + bossPollenAmt, 2.0, MSG_COLORS.info); emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#f1c40f', 15, 100, 0.4);
     hitStopTimer = 0.15; shakeTimer = 0.5; shakeIntensity = 15; emitParticles(boss.x + boss.w/2, boss.y + boss.h/2, '#ffd700', 30, 150, 0.8);
@@ -421,9 +440,4 @@ function update(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
-
-
-
-
-
 

@@ -571,6 +571,9 @@ function draw() {
   if (fadeAlpha > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
   drawFloatMessages();
   drawDialogWindow();
+  // Touch UI (Sprint F)
+  if (typeof updateTouch === 'function') updateTouch();
+  if (typeof drawTouchUI === 'function') drawTouchUI();
 }
 
 // ===== MAIN LOOP =====

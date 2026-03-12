@@ -35,8 +35,8 @@ function drawInventory() {
   }
   ctx.textAlign = 'left';
   if (inventoryTab === 0) drawInventoryItems();
-  else drawCollectionTab();
-  if (inventoryTab === 2) drawEquipTab(panelX, panelY + 50, panelW, panelH - 50);
+  else if (inventoryTab === 1) drawCollectionTab();
+  if (inventoryTab === 2) drawEquipTab(80, 110, CW - 160, CH - 160);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';

@@ -1,4 +1,4 @@
-// ===== DRAWING =====
+﻿// ===== DRAWING =====
 function drawRoom() {
   const th = getTheme(floor);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
@@ -450,20 +450,75 @@ function drawGameState() {
       ctx.fillText('Z: おきにいりに  Q: もうひとつに  X: すてる', CW / 2, CH / 2 + 40);
       ctx.textAlign = 'left';
     }
-    if (gameState === 'dead') { ctx.fillStyle = 'rgba(50,15,40,0.65)'; ctx.fillRect(0, 0, CW, CH);
-    // Mipurin fallen
-    if (deadImgReady) { ctx.save(); ctx.globalAlpha = 0.9; const sz = 260; ctx.beginPath(); ctx.arc(CW/2, CH/2 + 180, sz/2, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(deadMipurinImg, CW/2 - sz/2, CH/2 + 50, sz, sz); ctx.restore(); } else if (mipurinReady) { ctx.save(); ctx.globalAlpha = 0.6; const sz = 80; ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - sz/2, CH/2 + 30, sz, sz); ctx.restore(); }
-    ctx.fillStyle = COL.hpLost; ctx.font = "bold 60px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('おやすみ、ミプリン…', CW / 2, CH / 2 - 40);
-    ctx.fillStyle = '#ddd'; ctx.font = "32px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('スコア: ' + score + '　フロア: ' + floor + '　花粉: ' + pollen, CW / 2, CH / 2 + 10);
-    ctx.fillStyle = '#ffd700'; ctx.fillText('獲得ネクター: +' + runNectar, CW / 2, CH / 2 + 40);
-    ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+    if (gameState === 'dead') {
+      // === Dark overlay ===
+      ctx.fillStyle = 'rgba(30,10,25,0.78)'; ctx.fillRect(0, 0, CW, CH);
+
+      // === Mipurin image (bottom half) ===
+      if (deadImgReady) {
+        ctx.save(); ctx.globalAlpha = 0.85;
+        const dsz = 280;
+        ctx.beginPath(); ctx.arc(CW/2, CH - dsz/2 - 30, dsz/2, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(deadMipurinImg, CW/2 - dsz/2, CH - dsz - 30, dsz, dsz);
+        ctx.restore();
+      } else if (mipurinReady) {
+        ctx.save(); ctx.globalAlpha = 0.5;
+        const dsz = 100;
+        ctx.drawImage(mipurinImg, 0, 0, 250, 250, CW/2 - dsz/2, CH - dsz - 60, dsz, dsz);
+        ctx.restore();
+      }
+
+      // === Text panel (upper area) ===
+      const panelX = CW/2 - 320, panelY = 100, panelW = 640, panelH = 360;
+      ctx.fillStyle = 'rgba(20,5,15,0.72)';
+      ctx.beginPath();
+      const pr = 20;
+      ctx.moveTo(panelX + pr, panelY);
+      ctx.lineTo(panelX + panelW - pr, panelY);
+      ctx.quadraticCurveTo(panelX + panelW, panelY, panelX + panelW, panelY + pr);
+      ctx.lineTo(panelX + panelW, panelY + panelH - pr);
+      ctx.quadraticCurveTo(panelX + panelW, panelY + panelH, panelX + panelW - pr, panelY + panelH);
+      ctx.lineTo(panelX + pr, panelY + panelH);
+      ctx.quadraticCurveTo(panelX, panelY + panelH, panelX, panelY + panelH - pr);
+      ctx.lineTo(panelX, panelY + pr);
+      ctx.quadraticCurveTo(panelX, panelY, panelX + pr, panelY);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,100,120,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+
+      // Title
+      ctx.fillStyle = COL.hpLost;
+      ctx.font = "bold 64px 'M PLUS Rounded 1c', sans-serif";
+      ctx.textAlign = 'center';
+      ctx.fillText('おやすみ、ミプリン…', CW/2, panelY + 80);
+
+      // Score
+      ctx.fillStyle = '#ddd';
+      ctx.font = "28px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('スコア: ' + score + '  フロア: ' + floor + '  花粉: ' + pollen, CW/2, panelY + 145);
+
+      // Nectar
+      ctx.fillStyle = '#ffd700';
+      ctx.font = "bold 26px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('獲得ネクター: +' + runNectar, CW/2, panelY + 195);
+
+      // Death line
       const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
-  ctx.font = '18px "M PLUS Rounded 1c"'; ctx.fillStyle = '#ffb7c5'; ctx.textAlign = 'center';
-  ctx.fillText(DEATH_LINES[Math.floor(deadTimer*1.7)%DEATH_LINES.length], CW/2, CH/2 + 95);
-  if (deadTimer > 2.0) { const blinkOn = Math.floor(Date.now() / 500) % 2 === 0; if (blinkOn) ctx.fillText('Zキーでタイトルへ', CW / 2, CH / 2 + 130); }
-    else { ctx.fillText('しばらくおまちください...', CW / 2, CH / 2 + 130); }
-    ctx.textAlign = 'left'; }
+      ctx.font = "italic 22px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillStyle = '#ffb7c5';
+      ctx.fillText('\u300C' + DEATH_LINES[Math.floor(deadTimer * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 260);
+
+      // Retry prompt
+      ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
+      if (deadTimer > 2.0) {
+        const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+        ctx.fillStyle = blinkOn ? '#fff' : 'rgba(255,255,255,0.3)';
+        ctx.fillText('Zキーでタイトルへ', CW/2, panelY + 320);
+      } else {
+        ctx.fillStyle = '#888';
+        ctx.fillText('しばらくおまちください...', CW/2, panelY + 320);
+      }
+      ctx.textAlign = 'left';
+    }
 }
 
 function draw() {

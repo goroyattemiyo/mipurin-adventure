@@ -53,16 +53,6 @@ function getFloorBounds(floor) {
 }
 // ===== PARTICLES =====
 const particles = [];
-function showBubble(text, duration) {
-  bubbles.push({ text: text, timer: duration || 1.5, alpha: 1.0 });
-}
-function updateBubbles(dt) {
-  for (let i = bubbles.length - 1; i >= 0; i--) {
-    bubbles[i].timer -= dt;
-    if (bubbles[i].timer < 0.3) bubbles[i].alpha = bubbles[i].timer / 0.3;
-    if (bubbles[i].timer <= 0) bubbles.splice(i, 1);
-  }
-}
 const bubbles = [];
 function showBubble(text, duration) {
   bubbles.push({ text: text, timer: duration || 1.5, alpha: 1.0 });

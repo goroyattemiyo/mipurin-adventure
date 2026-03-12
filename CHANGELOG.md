@@ -1,33 +1,43 @@
-﻿# CHANGELOG — ミプリンの冒険
+# CHANGELOG — ミプリンの冒険
+
+## v6.15.0 (2026-03-12)
+
+### 新機能
+- **周回システム**: エンディングでXキーで2周目開始。武器/祝福/花粉引継ぎ
+- **敵周回スケーリング**: HP×(1+loop×0.5), ATK×(1+loop×0.3)
+- **敵色違い**: loopHueShift()で周回ごとに色相30度シフト
+- **花粉リロール**: 祝福選択画面でXキー+花粉15消費で選び直し
+- **モバイルタッチ操作**: touch.js新規（仮想ジョイスティック+ボタン, マルチタッチ）
+
+### バグ修正
+- **runNectar未加算**: 花粉拾得/ボス撃破/フロアクリアの3箇所で加算するよう修正
+- **エンディングUI重なり**: 画像左側/テキスト右側パネルに分離
+- **ゲームオーバーUI重なり**: テキスト上部パネル/画像下部に分離
+- **タイトル画面**: 情報パネル統合, 灰色(#888)テキスト廃止, blinkネスト修正
+- **ボスシルエット誤表示**: 非ボスダイアログでの表示を抑制
+
+### UI/UX
+- エンディング画面に周回バッジ表示（N周目クリア！）
+- 祝福選択画面に花粉リロールガイド表示
+- render.jsコメント63行削減（30.2KB→28.5KB）
 
 ## v6.14.1 (2026-03-12)
 
-### Bug Fixes (18件)
-- F1: render.js camX/camY未定義クラッシュ修正
-- F2: update.js updateBubble→updateBubbles タイポ修正
-- F4: game.js タイマー変数正式宣言 (blessingAnimTimer等)
-- F5: enemies.js stopBGM()フェード(0.8)統一
-- F6: systems.js ボスフロアBGM競合修正
-- F7: update.js idleTimerリセット位置修正
-- F8: systems.js dashCooldown初期値0.5修正
-- F9: systems.js resetGame() idleTimer=0
-- F10: systems.js resetGame() eliteNext=false
-- F11+F13: ui_screens.js タイトルUI blink修正+Escape
-- F12: game.js titleVolSel正式宣言
-- F14: index.html タイトルv6.14.1
-- F16: update.js 重複BGMチェック除去
-- F18: systems.js 未使用bossLines除去
-- F20: update.js パーティクル数削減
+### バグ修正（18件）
+- F1: render.js camX/camY 未定義クラッシュ
+- F2: update.js updateBubble→updateBubbles タイポ
+- F4: game.js タイマー変数宣言
+- F5: stopBGM フェード統一
+- F6: enemies.js ボスフロアBGM競合
+- F7/F9: idleTimer リセット
+- F8: dashCooldown 初期値0.5
+- F10: eliteNext リセット
+- F11/F13: ui_screens.js blinkネスト + Escape処理
+- F12: titleVolSel 宣言
+- F14: index.html バージョン更新
+- F16: 重複BGMチェック削除
+- F18: 未使用bossLines削除
+- F20: パーティクル数削減
 
-### UI/UX
-- ゲームオーバー画面: レイアウト分離（テキスト上部/画像下部）
-- タイトル画面: 情報パネル統合、配色・フォント改善
-- ボスシルエット: 非ボスダイアログ表示修正（cutinTimer guard）
-- 吹き出し: クランプ, 復帰/回復/クリア時セリフ, 死亡セリフ安定化
-
-## 過去バージョン
-- v6.10.2: HUDテキスト重なり修正
-- v6.10.1: フォントレンダリング改善
-- v6.10.0: Sprint C — 花壇6種, NPCフローラ, 3種エンディング
-- v6.9.x: Sprint B — ノードマップ
-- v6.8.0: Sprint A — 10ファイル分割 + 78祝福 + 15デュオ
+### QoL
+- 吹き出しエッジクランプ, 回復/クリア吹き出し, 死亡台詞ローテーション安定化

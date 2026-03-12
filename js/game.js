@@ -1,4 +1,4 @@
-const VERSION = 'v6.14.1';
+const VERSION = 'v6.16.0';
 /*============================================================
   ミプリンの冒険 v6.10 — かわいい蜂の冒険RPG
   明るいテーマ・日本語UI・プロローグ・BGM対応
@@ -127,5 +127,25 @@ function setSeVol(v) { seVolume = clamp(v,0,1); try{localStorage.setItem('mipuri
 let titleVolSel = -1;
 let weaponPopup = { active: false, weapon: null, sparkle: false };
 let titleGuard = 0;
+
+// === Mouse state (Sprint G) ===
+const mouse = { x: 0, y: 0, down: false, clicked: false, dragItem: null, dragFrom: null };
+function screenToCanvasMouse(ex, ey) {
+  const rect = cvs.getBoundingClientRect();
+  return { x: (ex - rect.left) / rect.width * CW, y: (ey - rect.top) / rect.height * CH };
+}
+cvs.addEventListener('mousedown', e => {
+  const p = screenToCanvasMouse(e.clientX, e.clientY);
+  mouse.x = p.x; mouse.y = p.y; mouse.down = true; mouse.clicked = true;
+});
+cvs.addEventListener('mousemove', e => {
+  const p = screenToCanvasMouse(e.clientX, e.clientY);
+  mouse.x = p.x; mouse.y = p.y;
+});
+cvs.addEventListener('mouseup', e => {
+  const p = screenToCanvasMouse(e.clientX, e.clientY);
+  mouse.x = p.x; mouse.y = p.y; mouse.down = false;
+});
+// === End Mouse state ===
 
 let cutinTimer = 0, cutinBossId = '', cutinPhase = 'none', lastBossId = '';

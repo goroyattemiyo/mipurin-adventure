@@ -1,53 +1,22 @@
-# ROADMAP - ミプリンの冒険
+# ROADMAP
 
-## 開発方針
-Synapse System (Orchestrator-Coder-Reviewer) で品質管理。
-パッチ前後に check_globals.js + check_concat.js を必ず実行。
+## Current: Sprint G - Equipment System
+- [x] Phase 1: mouse state, backpack, equip tab UI, weapon upgrade (keyboard)
+- [ ] Phase 2: mouse drag-and-drop (PC)
+- [ ] Phase 3: tap-select equip (mobile)
 
-## 完了済み
+## Completed
+- Sprint A: Blessings (78 + 15 duo)
+- Sprint B: Node map (2-tier tree)
+- Sprint C: Garden meta-progression
+- Sprint D: Enemy sprites + boss silhouettes
+- Sprint E: Title/death/ending UI polish
+- Sprint F: Mobile touch support
+- Sprint F2: Loop system + runNectar fix + dev tools
 
-### Sprint A-E: 基盤構築 (v6.0-v6.10)
-ファイル分割, 祝福78種+共鳴15種, ノードマップ, 花壇, 3種エンディング, プロローグ
-
-### Sprint F Phase 1: モバイルタッチ (v6.14.1)
-touch.js 新規, 仮想ジョイスティック+ボタン, マルチタッチ, keys[]注入
-
-### v6.15.0: 周回+メタ進行+リロール
-周回システム, runNectarバグ修正, 花粉リロール, エンディングUI分離, 敵色違い
-
-### v6.15.1: 開発基盤強化
-変数重複解消(loopCount/runNectar統合), check_globals.js v2(スコープ解析),
-check_concat.js(連結構文), VARIABLE_MAP.md, patch_workflow.md
-
-## 次期 Sprint
-
-### Sprint G - 武器装備システム拡張 (優先度: 高)
-- G-1: 武器強化（花粉消費で3段階レベルアップ, ATK/速度/範囲上昇）
-- G-2: 装備UI（TABインベントリ内で武器詳細/比較/強化）
-- G-3: 武器スロット拡張検討（2→3枠 or アクセサリ枠）
-- G-4: 武器合成（2本→新武器, レシピ制）
-- 影響ファイル: data.js, systems.js, ui.js, update.js
-
-### Sprint F Phase 2 - モバイルUI強化 (優先度: 中)
-- メニュー直接タップ（祝福カード, ショップ, ノードマップ）
-- 影響ファイル: touch.js, ui.js
-
-### Sprint H - 残バグ+ポリッシュ (優先度: 中)
-- Q6: ダメージバブル + voice_hurt パターン不一致
-- F15: 図鑑タブスクロール未実装
-- F19: SE/BGM完全分離
-- 周回2周目新要素（敵パターン変化, 花壇効果2倍）
-
-## スコアリング (100点満点)
-| 項目 | 配点 | 現在 |
-|------|------|------|
-| ゲームクオリティ (40%) | 40 | 27.2 |
-| 進捗度 (30%) | 30 | 21.6 |
-| 開発方法 (30%) | 30 | 18.3 |
-| 合計 | 100 | 67.1 |
-
-## 80点到達条件
-- Sprint H バグ3件修正 (+3)
-- check_globals.js 偽陽性ゼロ (+2)
-- 周回リワード改善（花壇効果2倍） (+4)
-- 武器強化基盤（G-1） (+4)
+## Next
+- Sprint G Phase 2: Mouse D&D equip (PC)
+- Sprint G Phase 3: Tap-select equip (mobile)
+- Sprint H: Weapon growth tree + new weapons
+- Sprint I: 2nd loop exclusive content (new boss forms, hidden blessings)
+- Sprint J: Performance optimization + CI

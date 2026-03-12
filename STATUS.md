@@ -1,29 +1,23 @@
-# STATUS - ミプリンの冒険
-**最終更新**: 2026-03-12 | **バージョン**: v6.15.1 | **ブランチ**: v2
+# STATUS v6.16.0
 
-## 現在のフェーズ
-Sprint G（武器装備システム）設計中
-
-## 総合スコア: 67.1/100
-- ゲームクオリティ: 68/100
-- 進捗度: 72/100
-- 開発方法: 61/100
-
-## 直近の完了項目
-- runNectar/loopCount 重複宣言解消 (systems.jsに統合)
-- check_globals.js v2 (スコープ解析, 偽陽性削減)
-- check_concat.js (連結構文チェック)
-- VARIABLE_MAP.md + patch_workflow.md
-- 周回システム, 花粉リロール, エンディングUI分離
-- モバイルタッチ操作 (touch.js)
-- ゲームオーバー/タイトル/エンディング UI修正
-
-## 既知の問題
-- Q6: ダメージバブル + voice_hurt パターン不一致
-- F15: 図鑑タブスクロール未実装
-- F19: SE/BGM完全分離（部分対応済み）
-
-## 次のアクション
-1. Sprint G-1: 武器強化システム設計+実装
-2. Sprint G-2: 装備UI実装
-3. ブラウザ+スマホ動作確認
+| Feature | Status |
+| --- | --- |
+| Core combat (15F + 4 Boss) | Done |
+| Blessing 78 + Duo 15 | Done |
+| Node map (2-tier) | Done |
+| Garden meta-progression | Done |
+| Mobile touch UI | Done |
+| Loop system (2nd run) | Done |
+| Enemy color shift | Done |
+| runNectar fix | Done |
+| Blessing reroll (X+15pol) | Done |
+| Ending UI split | Done |
+| Dev tools (check_globals v2, check_concat) | Done |
+| **Equipment tab UI (Phase 1)** | **Done** |
+| **Weapon upgrade (Lv0-3)** | **Done** |
+| **Backpack (4 slots)** | **Done** |
+| **Mouse input base** | **Done** |
+| Mouse drag-and-drop (Phase 2) | Planned |
+| Tap-select equip (Phase 3) | Planned |
+| Weapon growth tree | Planned |
+| CI / automated tests | Planned |

@@ -278,6 +278,31 @@ const WEAPON_DEFS = [
 
 
 // ===== WEAPON COLLECTION =====
+
+// === Weapon Upgrade System (Sprint G) ===
+const WEAPON_UPGRADE_COST = [10, 25, 50];
+const WEAPON_UPGRADE_MAX = 3;
+function initWeapon(w) {
+  if (!w || w._initDone) return w;
+  w.level = w.level || 0;
+  w._baseDmgMul = w.dmgMul;
+  w._baseSpeed = w.speed;
+  w._baseRange = w.range;
+  w._initDone = true;
+  return w;
+}
+function upgradeWeapon(w) {
+  if (!w || w.level >= WEAPON_UPGRADE_MAX) return false;
+  const cost = WEAPON_UPGRADE_COST[w.level];
+  if (pollen < cost) return false;
+  pollen -= cost;
+  w.level++;
+  w.dmgMul = w._baseDmgMul + w.level * 0.2;
+  w.speed = Math.max(0.08, w._baseSpeed - w.level * 0.03);
+  w.range = w._baseRange + w.level * 4;
+  return true;
+}
+// === End Weapon Upgrade ===
 let weaponCollection = new Set();
 function saveCollection() { try { localStorage.setItem('mipurin_weaponcol', JSON.stringify([...weaponCollection])); } catch(e) {} }
 function loadCollection() { try { const d = localStorage.getItem('mipurin_weaponcol'); if (d) weaponCollection = new Set(JSON.parse(d)); } catch(e) {} }
@@ -488,7 +513,8 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   attacking: false, atkTimer: 0, atkDuration: 0.15, atkCooldown: 0,
   atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.22, dashCooldown: 0,
   dashSpeed: 700, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
-  weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null] };
+  weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null],
+  backpack: [null, null, null, null] };
 
 let idleTimer = 0;
 const MONOLOGUES = [

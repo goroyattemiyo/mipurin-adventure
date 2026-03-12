@@ -123,6 +123,117 @@ function drawCollectionTab() {
   }
 }
 
+// === Equipment Tab (Sprint G Phase 1) ===
+let equipCursor = 0; // 0-1: weapon slots, 2-5: backpack slots
+let equipMode = 'select'; // select | upgrade
+function drawEquipTab(panelX, panelY, panelW, panelH) {
+  const cx = panelX + panelW / 2;
+  // Title
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2694\uFE0F \u305D\u3046\u3073', cx, panelY + 35);
+
+  // === Left: Equipped weapons ===
+  const eqX = panelX + 30, eqY = panelY + 60;
+  ctx.fillStyle = '#ccc'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  ctx.fillText('\u88C5\u5099\u30B9\u30ED\u30C3\u30C8', eqX, eqY);
+  for (let i = 0; i < 2; i++) {
+    const sy = eqY + 15 + i * 90;
+    const sel = equipCursor === i;
+    const w = player.weapons[i];
+    // Slot background
+    ctx.fillStyle = sel ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)';
+    ctx.fillRect(eqX, sy, 220, 78);
+    ctx.strokeStyle = sel ? '#ffd700' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(eqX, sy, 220, 78);
+    // Slot label
+    ctx.fillStyle = i === player.weaponIdx ? '#ffd700' : '#888';
+    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+    ctx.fillText(i === 0 ? '\u30E1\u30A4\u30F3' : '\u30B5\u30D6', eqX + 5, sy + 16);
+    if (w) {
+      ctx.fillStyle = '#fff'; ctx.font = "bold 16px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText((w.icon || '\u2694') + ' ' + w.name, eqX + 5, sy + 38);
+      // Level stars
+      const lvl = w.level || 0;
+      ctx.fillStyle = '#ffd700'; ctx.font = "14px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl), eqX + 5, sy + 56);
+      // Stats
+      ctx.fillStyle = '#aaa'; ctx.font = "13px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('ATK:' + w.dmgMul.toFixed(1) + ' SPD:' + w.speed.toFixed(2) + ' RNG:' + w.range, eqX + 5, sy + 72);
+    } else {
+      ctx.fillStyle = '#666'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('--- \u7A7A ---', eqX + 60, sy + 45);
+    }
+  }
+
+  // === Right: Backpack ===
+  const bpX = panelX + panelW - 260, bpY = panelY + 60;
+  ctx.fillStyle = '#ccc'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  ctx.fillText('\uD83C\uDF92 \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpX, bpY);
+  for (let i = 0; i < 4; i++) {
+    const sy = bpY + 15 + i * 70;
+    const sel = equipCursor === i + 2;
+    const w = player.backpack[i];
+    ctx.fillStyle = sel ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)';
+    ctx.fillRect(bpX, sy, 230, 60);
+    ctx.strokeStyle = sel ? '#ffd700' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(bpX, sy, 230, 60);
+    if (w) {
+      ctx.fillStyle = '#fff'; ctx.font = "bold 15px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+      ctx.fillText((w.icon || '\u2694') + ' ' + w.name, bpX + 5, sy + 25);
+      const lvl = w.level || 0;
+      ctx.fillStyle = '#ffd700'; ctx.font = "13px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl), bpX + 5, sy + 42);
+      ctx.fillStyle = '#aaa';
+      ctx.fillText('ATK:' + w.dmgMul.toFixed(1) + ' RNG:' + w.range, bpX + 100, sy + 42);
+    } else {
+      ctx.fillStyle = '#555'; ctx.font = "14px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+      ctx.fillText('--- \u7A7A ---', bpX + 115, sy + 35);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // === Center: Selected weapon detail + upgrade ===
+  const detX = panelX + 270, detY = panelY + 80, detW = 200;
+  const selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
+  if (selW) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(detX, detY, detW, 190);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.strokeRect(detX, detY, detW, 190);
+    ctx.fillStyle = '#fff'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillText((selW.icon || '\u2694') + ' ' + selW.name, detX + detW/2, detY + 28);
+    ctx.fillStyle = '#ccc'; ctx.font = "14px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('Lv.' + (selW.level || 0) + ' / ' + WEAPON_UPGRADE_MAX, detX + detW/2, detY + 52);
+    ctx.fillText('ATK\u500D\u7387: ' + selW.dmgMul.toFixed(1), detX + detW/2, detY + 76);
+    ctx.fillText('\u901F\u5EA6: ' + selW.speed.toFixed(2), detX + detW/2, detY + 96);
+    ctx.fillText('\u7BC4\u56F2: ' + selW.range, detX + detW/2, detY + 116);
+    if (selW.desc) {
+      ctx.fillStyle = '#aaa'; ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText(selW.desc.substring(0, 18), detX + detW/2, detY + 140);
+    }
+    // Upgrade button
+    const lvl = selW.level || 0;
+    if (lvl < WEAPON_UPGRADE_MAX) {
+      const cost = WEAPON_UPGRADE_COST[lvl];
+      const canAfford = pollen >= cost;
+      ctx.fillStyle = canAfford ? 'rgba(46,204,113,0.25)' : 'rgba(255,100,100,0.15)';
+      ctx.fillRect(detX + 10, detY + 155, detW - 20, 28);
+      ctx.strokeStyle = canAfford ? '#2ecc71' : '#e74c3c'; ctx.lineWidth = 2;
+      ctx.strokeRect(detX + 10, detY + 155, detW - 20, 28);
+      ctx.fillStyle = canAfford ? '#2ecc71' : '#e74c3c'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('Z: \u5F37\u5316 (\uD83C\uDF3C' + cost + ')', detX + detW/2, detY + 174);
+    } else {
+      ctx.fillStyle = '#ffd700'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('\u2705 \u6700\u5927\u5F37\u5316\u6E08', detX + detW/2, detY + 174);
+    }
+  }
+
+  // === Controls hint ===
+  ctx.fillStyle = '#888'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('\u2191\u2193: \u9078\u629E  Z: \u5F37\u5316  X: \u88C5\u5099\u2194\u30D0\u30C3\u30AF\u30D1\u30C3\u30AF\u5165\u66FF', cx, panelY + panelH - 15);
+  ctx.textAlign = 'left';
+}
+// === End Equipment Tab ===
+
 
 function drawFloatMessages() {
   if (msgQueue.length === 0) return;

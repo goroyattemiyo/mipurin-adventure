@@ -284,7 +284,8 @@ function resetGame() {
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0.5; player.atkRangeBonus = 0;
-  player.weapon = WEAPON_DEFS[0]; player.weapons = [WEAPON_DEFS[0], null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
+  player.weapon = initWeapon({...WEAPON_DEFS[0]}); player.weapons = [initWeapon({...WEAPON_DEFS[0]}), null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
+  player.backpack = [null, null, null, null];
   player.roomHeal = 0; player.killHeal = 0; player.nectarMul = 0;
   activeBlessings = []; activeDuos = []; idleTimer = 0; eliteNext = false; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();

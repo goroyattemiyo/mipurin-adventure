@@ -83,7 +83,7 @@ function update(dt) {
     }
     return;
   }
-  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 0; } mouse.dragItem = null; mouse.dragFrom = null;
+  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 2; } mouse.dragItem = null; mouse.dragFrom = null;
   if (inventoryOpen) {
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { inventoryTab = (inventoryTab + 2) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;

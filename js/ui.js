@@ -157,17 +157,17 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.fillText('\uD83C\uDF38 \u30DF\u30D7\u30EA\u30F3\u306E\u305D\u3046\u3073 \uD83C\uDF38', cx, panelY + 32);
   ctx.fillStyle = '#f8bbd0'; ctx.font = '16px ' + F;
   ctx.fillText('\uD83C\uDF3C\u82B1\u7C89: ' + pollen, cx, panelY + 55);
-  const mipX = cx - 70, mipY = panelY + 100;
+  const mipX = panelX + 30, mipY = panelY + 80;
   const bob = Math.sin(Date.now() / 600) * 4;
   const bounce = equipBounce > 0 ? Math.sin(equipBounce * Math.PI) * 8 : 0;
   if (typeof mipurinReady !== 'undefined' && mipurinReady) {
     ctx.save(); ctx.globalAlpha = 0.95;
     const mf = MIPURIN_FRAMES['down'];
-    ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, mipX, mipY + bob - bounce, 140, 140);
+    ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, mipX, mipY + bob - bounce, 120, 120);
     ctx.restore();
   } else {
     ctx.fillStyle = '#ffd700'; ctx.font = '60px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('\uD83D\uDC1D', mipX + 70, mipY + 90 + bob - bounce);
+    ctx.fillText('\uD83D\uDC1D', mipX + 60, mipY + 75 + bob - bounce);
   }
   function drawSlotHex(sx, sy, sw, sh, selected) {
     const hcx = sx + sw/2, hcy = sy + sh/2, hr = Math.min(sw, sh)/2;
@@ -189,9 +189,9 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     ctx.globalAlpha = 0.7; ctx.fillText('\uD83C\uDF3F', mx, my);
     ctx.restore();
   }
-  const mainSlot = { x: mipX - 130, y: mipY + 10, w: 110, h: 80 };
-  const subSlot = { x: mipX - 130, y: mipY + 110, w: 110, h: 80 };
-  const charmSlot = { x: cx + 10, y: mipY + 130, w: 90, h: 70 };
+  const mainSlot = { x: mipX + 140, y: mipY, w: 110, h: 70 };
+  const subSlot = { x: mipX + 140, y: mipY + 90, w: 110, h: 70 };
+  const charmSlot = { x: mipX + 140, y: mipY + 180, w: 90, h: 60 };
   equipSlotRects = [
     { id:'main', x:mainSlot.x, y:mainSlot.y, w:mainSlot.w, h:mainSlot.h },
     { id:'sub', x:subSlot.x, y:subSlot.y, w:subSlot.w, h:subSlot.h },
@@ -202,8 +202,8 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ];
   drawSlotHex(mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, equipCursor === 0);
   drawSlotHex(subSlot.x, subSlot.y, subSlot.w, subSlot.h, equipCursor === 1);
-  if (equipCursor === 0) drawConnector(mainSlot.x + mainSlot.w, mainSlot.y + mainSlot.h/2, mipX + 20, mipY + 60, '#ffd700');
-  if (equipCursor === 1) drawConnector(subSlot.x + subSlot.w, subSlot.y + subSlot.h/2, mipX + 20, mipY + 100, '#87ceeb');
+    if (equipCursor === 0) drawConnector(mipX + 120, mipY + 30, mainSlot.x, mainSlot.y + mainSlot.h/2, '#ffd700');
+    if (equipCursor === 1) drawConnector(mipX + 120, mipY + 80, subSlot.x, subSlot.y + subSlot.h/2, '#87ceeb');
   function drawWeaponInSlot(w, sx, sy, sw, sh, label, isActive) {
     ctx.textAlign = 'center';
     ctx.fillStyle = isActive ? '#ffd700' : '#888'; ctx.font = 'bold 11px ' + F;
@@ -228,7 +228,7 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.fillStyle = '#888'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\uD83D\uDD2E ???', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h/2 + 4);
   ctx.restore();
-  const bpX = panelX + panelW - 170, bpY = panelY + 75;
+    const bpX = panelX + panelW - 200 + (bi % 2) * 80, bpY = mipY + 10 + Math.floor(bi / 2) * 85;
   ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpX + 65, bpY - 5);
   for (let i = 0; i < 4; i++) {
@@ -236,7 +236,7 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     const sx = bpX + col * 72, sy = bpY + 5 + row * 78;
     const sel = equipCursor === i + 2;
     drawSlotHex(sx, sy, 66, 70, sel);
-    if (sel) drawConnector(sx, sy + 35, mipX + 140, mipY + 70, '#f8bbd0');
+      if (sel) drawConnector(mipX + 100, mipY + 60, sx, sy + 35, '#f8bbd0');
     const w = player.backpack[i];
     ctx.textAlign = 'center';
     if (w) {

@@ -563,7 +563,7 @@ function draw() {
 
   ctx.restore();
   // Boss silhouette during dialog
-  if (gameState === 'dialog' && lastBossId && bossSilhouettes[lastBossId] && !boss) { ctx.save(); ctx.globalAlpha = 0.25 + Math.sin(Date.now() / 400) * 0.05; ctx.drawImage(bossSilhouettes[lastBossId], 0, 0, CW, CH); ctx.restore(); }
+  if (gameState === 'dialog' && lastBossId && bossSilhouettes[lastBossId] && !boss && cutinTimer > 0) { ctx.save(); ctx.globalAlpha = 0.18 + Math.sin(Date.now() / 400) * 0.04; ctx.drawImage(bossSilhouettes[lastBossId], 0, 0, CW, CH); ctx.restore(); }
   drawGameState(); drawBlessing(); drawShop();
 
   drawInventory();

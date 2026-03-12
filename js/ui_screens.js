@@ -1,4 +1,4 @@
-// ===== UI SCREENS MODULE =====
+﻿// ===== UI SCREENS MODULE =====
 // Full-screen UI: title, prologue, ending, garden
 // Extracted from ui.js for Phase 2 expansion
 function drawPrologue() {
@@ -146,46 +146,76 @@ function drawGarden() {
 
 function drawTitle() {
   if (currentBGM !== 'title') playBGM('title', 0.8);
+  // === Background ===
   ctx.fillStyle = '#fffde7';
   if (titleBgReady) { ctx.drawImage(titleBgImg, 0, 0, CW, CH); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, CW, CH); } else { ctx.fillRect(0, 0, CW, CH); }
-  // Draw cute mipurin
+
+  // === Mipurin sprite ===
   if (mipurinReady) {
-    const f = MIPURIN_FRAMES.down; const sz = 240;
-    ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, CW / 2 - sz / 2, 120, sz, sz);
+    const f = MIPURIN_FRAMES.down; const sz = 220;
+    ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, CW/2 - sz/2, 80, sz, sz);
   }
-  // Title text
-  ctx.fillStyle = '#ff9800';
-  ctx.font = "bold 140px 'M PLUS Rounded 1c', sans-serif";
+
+  // === Title ===
   ctx.textAlign = 'center';
-  ctx.fillText('ミプリンの冒険', CW / 2, 440);
-  ctx.fillStyle = '#795548';
-  ctx.font = "24px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText(VERSION, CW / 2, 480);
-  // Blink
+  ctx.fillStyle = '#ff9800';
+  ctx.font = "bold 120px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('ミプリンの冒険', CW/2, 390);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(VERSION, CW/2, 420);
+
+  // === Start prompt (blink) ===
   if (Math.sin(titleBlink * 3) > -0.3) {
-    ctx.fillStyle = '#e65100';
-    ctx.font = "bold 32px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('Zキーでスタート', CW / 2, 560);
-  // BGM/SE音量調整UI
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('Zキーでスタート', CW/2, 500);
+  }
+
+  // === Info panel (bottom) ===
+  const panelY = 560;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  const pw = 700, px = CW/2 - pw/2, ph = CH - panelY - 20;
+  ctx.beginPath();
+  const cr = 16;
+  ctx.moveTo(px + cr, panelY); ctx.lineTo(px + pw - cr, panelY);
+  ctx.quadraticCurveTo(px + pw, panelY, px + pw, panelY + cr);
+  ctx.lineTo(px + pw, panelY + ph - cr);
+  ctx.quadraticCurveTo(px + pw, panelY + ph, px + pw - cr, panelY + ph);
+  ctx.lineTo(px + cr, panelY + ph);
+  ctx.quadraticCurveTo(px, panelY + ph, px, panelY + ph - cr);
+  ctx.lineTo(px, panelY + cr);
+  ctx.quadraticCurveTo(px, panelY, px + cr, panelY);
+  ctx.closePath(); ctx.fill();
+
+  // Controls (1 line, compact)
+  ctx.fillStyle = '#e0d6c2';
+  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('移動: WASD / 矢印　　攻撃: Z　　ダッシュ: X　　アイテム: 1·2·3', CW/2, panelY + 40);
+
+  // Garden + Nectar (1 line)
+  ctx.fillStyle = '#ffd700';
+  ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('🌸 ネクター: ' + nectar + '　　　Xキーで花壇メニュー', CW/2, panelY + 80);
+
+  // === Volume control ===
   if (typeof titleVolSel === 'undefined') titleVolSel = -1;
   if (titleVolSel >= 0) {
     const labels = ['BGM', 'SE'];
-    const vols = [typeof bgmVolume!=='undefined'?bgmVolume:0.7, typeof seVolume!=='undefined'?seVolume:0.7];
+    const vols = [typeof bgmVolume !== 'undefined' ? bgmVolume : 0.7, typeof seVolume !== 'undefined' ? seVolume : 0.7];
     for (let i = 0; i < 2; i++) {
-      const vy = CH - 75 + i * 28;
-      ctx.font = '16px "M PLUS Rounded 1c"'; ctx.textAlign = 'center';
-      ctx.fillStyle = titleVolSel === i ? '#ffd700' : '#fff';
-      ctx.fillText(labels[i] + '  ◀ ' + Math.round(vols[i]*100) + '% ▶', CW/2, vy);
+      const vy = panelY + 120 + i * 30;
+      ctx.fillStyle = titleVolSel === i ? '#ffd700' : '#ccc';
+      ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText(labels[i] + '  \u25C0 ' + Math.round(vols[i] * 100) + '% \u25B6', CW/2, vy);
     }
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, panelY + 130);
   }
-  ctx.font = '13px "M PLUS Rounded 1c"'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, CH - 15);
-    ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('Xキーで花壇メニュー', CW / 2, 595);
-    ctx.fillStyle = '#ffd700'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ネクター: ' + nectar, CW / 2, 755);
-  }
-  ctx.fillStyle = '#888';
-  ctx.font = "32px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('移動: WASD  攻撃: Z  ダッシュ: X', CW / 2, 640);
-  ctx.fillText('アイテム: 1/2/3', CW / 2, 670);
+
   ctx.textAlign = 'left';
+  // Fade overlay
+  if (typeof fadeDir !== 'undefined' && fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }

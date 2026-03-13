@@ -21,3 +21,13 @@
 - Sprint H: Weapon growth tree + charm slot + new weapons
 - Sprint I: 2nd loop exclusive content
 - Sprint J: Performance optimization + CI
+## Development Methodology Update (2026-03-13)
+- Added `test_game.py` — Python auto test suite (100 checks)
+  - Run before every commit: `python test_game.py`
+  - Covers: file size, syntax, globals, functions, tab logic, equip logic, touch, cross-refs, regression
+  - Target: 100% PASS before push
+- Equipment UI redesigned to 2-pane (v6.18.0)
+  - LEFT: character + 3 equip slots (main/sub/charm)
+  - RIGHT: owned weapon list with sprites
+  - D&D completely removed
+  - Mobile: tap slot or list row

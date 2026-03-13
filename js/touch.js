@@ -75,7 +75,7 @@ function updateJoystickKeys() {
 
 // === Equipment touch support ===
 const EQUIP_TAP_THRESHOLD = 200;
-let equipTouchStart = { x: 0, y: 0, time: 0, slotIdx: -1 };
+let equipTouchStart = { x:0, y:0, time:0, slotIdx:-1 };
 
 function hitTestEquipSlot(cx, cy) {
   if (!equipSlotRects || equipSlotRects.length === 0) return -1;
@@ -155,10 +155,28 @@ function onTouchStart(e) {
         }
         var slotHit = hitTestEquipSlot(pos.x, pos.y);
         if (slotHit >= 0) {
-          equipTouchStart = { x: pos.x, y: pos.y, time: Date.now(), slotIdx: slotHit };
-          equipCursor = slotHit;
+          
+          equipCursor = slotHit; if (typeof equipMode !== 'undefined') equipMode = 'slot';
           if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
           return;
+        }
+        // List item tap (right pane)
+        if (typeof getAllOwnedWeapons === 'function' && typeof equipMode !== 'undefined') {
+          var allW = getAllOwnedWeapons();
+          if (allW.length > 0) {
+            var pW2 = CW - 160, pX2 = 80, pY2 = 110;
+            var lW2 = Math.floor(pW2 * 0.45);
+            var rX2 = pX2 + lW2 + 20, rY2 = pY2 + 95;
+            var rW2 = pW2 - lW2 - 35, rH2 = 52;
+            for (var li = 0; li < allW.length; li++) {
+              var ry2 = rY2 + li * rH2;
+              if (pos.x >= rX2 && pos.x <= rX2 + rW2 && pos.y >= ry2 && pos.y <= ry2 + rH2) {
+                equipMode = 'list'; equipListCursor = li;
+                if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+                return;
+              }
+            }
+          }
         }
       }
       // In inventory, also check Tab/Esc buttons
@@ -203,20 +221,7 @@ function onTouchMove(e) {
     var t = e.changedTouches[ti];
     var pos = screenToCanvas(t.clientX, t.clientY);
 
-    // Equipment drag
-    if (typeof inventoryOpen !== 'undefined' && inventoryOpen && inventoryTab === 2) {
-      if (equipTouchStart.slotIdx >= 0 && !mouse.dragItem) {
-        var dist = Math.hypot(pos.x - equipTouchStart.x, pos.y - equipTouchStart.y);
-        var elapsed = Date.now() - equipTouchStart.time;
-        if (dist > 10 || elapsed > EQUIP_TAP_THRESHOLD) {
-          var si = equipTouchStart.slotIdx;
-          var item = si < 2 ? player.weapons[si] : player.backpack[si - 2];
-          if (item) { mouse.dragItem = item; mouse.dragFrom = si; }
-        }
-      }
-      if (mouse.dragItem) { mouse.x = pos.x; mouse.y = pos.y; }
-      continue;
-    }
+    // Equipment touch (no D&D)
 
     // Joystick move
     if (t.identifier === joystick.touchId) {
@@ -235,25 +240,7 @@ function onTouchEnd(e) {
     var t = e.changedTouches[ti];
     var pos = screenToCanvas(t.clientX, t.clientY);
 
-    // Equipment drop
-    if (typeof inventoryOpen !== 'undefined' && inventoryOpen && inventoryTab === 2) {
-      if (mouse.dragItem && mouse.dragFrom !== null) {
-        var dropSlot = hitTestEquipSlot(pos.x, pos.y);
-        if (dropSlot >= 0 && dropSlot !== mouse.dragFrom) {
-          var fromIdx = mouse.dragFrom;
-          var getItem = function(idx) { return idx < 2 ? player.weapons[idx] : player.backpack[idx - 2]; };
-          var setItem = function(idx, item) { if (idx < 2) player.weapons[idx] = item; else player.backpack[idx - 2] = item; };
-          var a = getItem(fromIdx), b = getItem(dropSlot);
-          setItem(fromIdx, b); setItem(dropSlot, a);
-          player.weapon = player.weapons[player.weaponIdx] || player.weapons[0];
-          if (typeof Audio !== 'undefined' && Audio.item_get) Audio.item_get();
-          if (typeof showFloat === 'function') showFloat('\uD83D\uDD04 \u5165\u308C\u66FF\u3048\u5B8C\u4E86', 1.2, '#87ceeb');
-          if (typeof equipBounce !== 'undefined') equipBounce = 1;
-        }
-        mouse.dragItem = null; mouse.dragFrom = null;
-      }
-      equipTouchStart = { x: 0, y: 0, time: 0, slotIdx: -1 };
-    }
+    // Equipment touch end (no D&D)
 
     // Joystick release
     if (t.identifier === joystick.touchId) {
@@ -324,5 +311,6 @@ function updateTouch() {
   if (!touchActive) return;
   updateJoystickKeys();
 }
+
 
 

@@ -3,33 +3,66 @@
 <head>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ミプリンの冒険 v6.14.1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ミプリンの冒険</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#1a1a2e;overflow:hidden;display:flex;justify-content:center;align-items:center}
-canvas{touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+html,body{
+  width:100%;height:100dvh;height:100vh;
+  background:#1a1a2e;overflow:hidden;
+  display:flex;justify-content:center;align-items:center;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:auto;
+}
+canvas{
+  touch-action:none;-webkit-touch-callout:none;
+  user-select:none;-webkit-user-select:none;
   background:#000;
-  width:min(100vw, 133.33vh);
-  height:min(75vw, 100vh);
+  width:min(100vw, calc(100dvh * 4 / 3));
+  height:min(calc(100vw * 3 / 4), 100dvh);
+}
+@supports not (height:100dvh){
+  html,body{height:100vh}
+  canvas{
+    width:min(100vw, calc(100vh * 4 / 3));
+    height:min(calc(100vw * 3 / 4), 100vh);
+  }
+}
+/* Portrait overlay */
+@media (orientation:portrait){
+  body::after{
+    content:'📱 横に回転してね！';
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(26,26,46,0.95);
+    color:#ffd700;
+    font:bold 28px 'M PLUS Rounded 1c',sans-serif;
+    display:flex;justify-content:center;align-items:center;
+    z-index:9999;
+    text-align:center;
+    padding:40px;
+    line-height:1.6;
+  }
 }
 </style>
 </head>
 <body>
 <canvas id="c" width="1280" height="960"></canvas>
-<script src='js/game.js?v=1622'></script>
-<script src='js/data.js?v=1622'></script>
-<script src='js/bgm.js?v=1622'></script>
-<script src='js/enemies.js?v=1622'></script>
-<script src='js/blessings.js?v=1622'></script>
-<script src='js/systems.js?v=1622'></script>
-<script src='js/nodemap.js?v=1622'></script>
-<script src='js/equip_ui.js?v=1622'></script>
-<script src='js/ui.js?v=1622'></script>
-<script src='js/ui_screens.js?v=1622'></script>
-<script src='js/combat.js?v=1622'></script>
-<script src='js/update.js?v=1622'></script>
-<script src='js/render.js?v=1622'></script>
-<script src='js/touch.js?v=1622'></script>
+<script src='js/game.js?v=1623'></script>
+<script src='js/data.js?v=1623'></script>
+<script src='js/bgm.js?v=1623'></script>
+<script src='js/enemies.js?v=1623'></script>
+<script src='js/blessings.js?v=1623'></script>
+<script src='js/systems.js?v=1623'></script>
+<script src='js/nodemap.js?v=1623'></script>
+<script src='js/equip_ui.js?v=1623'></script>
+<script src='js/ui.js?v=1623'></script>
+<script src='js/ui_screens.js?v=1623'></script>
+<script src='js/combat.js?v=1623'></script>
+<script src='js/update.js?v=1623'></script>
+<script src='js/render.js?v=1623'></script>
+<script src='js/touch.js?v=1623'></script>
 </body>
 </html>

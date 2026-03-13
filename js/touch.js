@@ -85,14 +85,23 @@ function onTouchStart(e) {
   e.preventDefault();
   if (!touchActive) {
     touchActive = true;
-    // Init audio on first touch (iOS Safari requirement)
-    if (typeof Audio !== 'undefined' && typeof Audio.hit === 'function') {
-      try {
-        const _actx = new (window.AudioContext || window.webkitAudioContext)();
-        if (_actx.state === 'suspended') _actx.resume();
-        _actx.close();
-      } catch(ex) {}
-    }
+    // Fullscreen on first touch (Android Chrome / supported browsers)
+    try {
+      const el = document.documentElement;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (rfs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        rfs.call(el).then(() => {
+          try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+        }).catch(()=>{});
+      }
+    } catch(e){}
+    // Resume AudioContext after fullscreen transition
+    try {
+      if (typeof ChipBGM !== 'undefined') ChipBGM.resume();
+      const _actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_actx.state === 'suspended') _actx.resume();
+      _actx.close();
+    } catch(ex) {}
   }
 
   for (let i = 0; i < e.changedTouches.length; i++) {

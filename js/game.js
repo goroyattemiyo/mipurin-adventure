@@ -1,4 +1,4 @@
-const VERSION = 'v6.17.0';
+const VERSION = 'v6.17.0a';
 /*============================================================
   ミプリンの冒険 v6.10 — かわいい蜂の冒険RPG
   明るいテーマ・日本語UI・プロローグ・BGM対応
@@ -151,4 +151,5 @@ cvs.addEventListener('mouseleave', () => { mouse.down = false; });
 // === End Mouse state ===
 
 let cutinTimer = 0, cutinBossId = '', cutinPhase = 'none', lastBossId = '';
+
 

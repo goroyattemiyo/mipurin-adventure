@@ -1,4 +1,4 @@
-// ===== EQUIPMENT UI MODULE (v6.17.0 Center Layout) =====
+// ===== EQUIPMENT UI MODULE (v6.17.0a Icon-Only Slots) =====
 let equipCursor = 0;
 let equipSlotRects = [];
 const EQUIP_TOTAL_SLOTS = 6;
@@ -28,13 +28,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   const grad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
   grad.addColorStop(0, 'rgba(26,10,46,0.92)'); grad.addColorStop(1, 'rgba(45,27,78,0.92)');
   ctx.fillStyle = grad; ctx.fillRect(panelX, panelY, panelW, panelH);
-  // Stars
   for (let i = 0; i < 20; i++) {
     const sx = panelX + (i * 137 + 50) % panelW, sy = panelY + (i * 97 + 30) % (panelH - 40);
     ctx.fillStyle = 'rgba(255,255,200,' + (0.15 + Math.sin(Date.now()/1000 + i) * 0.1) + ')';
     ctx.beginPath(); ctx.arc(sx, sy, 1.2, 0, Math.PI * 2); ctx.fill();
   }
-  // Petals
   for (const p of equipPetals) {
     ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(panelX + p.x, panelY + p.y); ctx.rotate(p.r);
     ctx.fillStyle = p.color; ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.6, 0, 0, Math.PI * 2); ctx.fill();
@@ -46,13 +44,12 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.fillStyle = '#f8bbd0'; ctx.font = '16px ' + F;
   ctx.fillText('\uD83C\uDF3C\u82B1\u7C89: ' + pollen, cx, panelY + 55);
 
-  // === CENTER CHARACTER (responsive) ===
+  // === CENTER CHARACTER ===
   const mipSize = Math.min(panelW * 0.25, panelH * 0.32, 250);
   const mipX = cx - mipSize / 2;
   const mipY = panelY + 70;
   const bob = Math.sin(Date.now() / 600) * 4;
   const bounce = equipBounce > 0 ? Math.sin(equipBounce * Math.PI) * 8 : 0;
-  // Glow behind character
   ctx.save(); ctx.globalAlpha = 0.12;
   const glowR = mipSize * 0.6;
   const glowGrad = ctx.createRadialGradient(cx, mipY + mipSize/2, 0, cx, mipY + mipSize/2, glowR);
@@ -60,7 +57,6 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.fillStyle = glowGrad;
   ctx.beginPath(); ctx.arc(cx, mipY + mipSize/2, glowR, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
-  // Draw character
   if (typeof mipurinReady !== 'undefined' && mipurinReady) {
     ctx.save(); ctx.globalAlpha = 0.95;
     const mf = MIPURIN_FRAMES['down'];
@@ -92,117 +88,137 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     ctx.globalAlpha = 0.7; ctx.fillText('\uD83C\uDF3F', mx, my);
     ctx.restore();
   }
-  function drawWeaponInSlot(w, sx, sy, sw, sh, label, isActive) {
+
+  // === ICON-ONLY slot drawing ===
+  function drawSlotIcon(w, sx, sy, sw, sh, label, isActive, selected) {
+    drawSlotHex(sx, sy, sw, sh, selected);
     ctx.textAlign = 'center';
-    ctx.fillStyle = isActive ? '#ffd700' : '#888'; ctx.font = 'bold 11px ' + F;
-    ctx.fillText(label, sx + sw/2, sy + 14);
+    // Small label above slot
+    ctx.fillStyle = isActive ? 'rgba(255,215,0,0.6)' : 'rgba(255,255,255,0.3)';
+    ctx.font = '10px ' + F;
+    ctx.fillText(label, sx + sw/2, sy - 3);
     if (w) {
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ' + F;
-      ctx.fillText((w.icon||'\u2694') + ' ' + w.name, sx + sw/2, sy + 34);
-      const lvl = w.level || 0;
-      ctx.fillStyle = '#ffd700'; ctx.font = '12px ' + F;
-      ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl), sx + sw/2, sy + 52);
-      ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F;
-      ctx.fillText('ATK:' + w.dmgMul.toFixed(1), sx + sw/2, sy + 68);
+      // Icon only - large centered
+      ctx.fillStyle = '#fff'; ctx.font = '28px ' + F;
+      ctx.fillText(w.icon || '\u2694', sx + sw/2, sy + sh/2 + 10);
+      // Active indicator dot
+      if (isActive) {
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath(); ctx.arc(sx + sw - 8, sy + 10, 4, 0, Math.PI * 2); ctx.fill();
+      }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = '12px ' + F;
-      ctx.fillText('--- \u7A7A ---', sx + sw/2, sy + 40);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '22px ' + F;
+      ctx.fillText('\u2795', sx + sw/2, sy + sh/2 + 8);
     }
   }
 
-  // === SLOT POSITIONS (body-part based) ===
+  // === SLOT POSITIONS ===
   const mipCx = cx, mipCy = mipY + mipSize / 2;
-  // Main weapon: left of character (near hand)
-  const mainSlot = { x: mipX - 130, y: mipCy - 55, w: 110, h: 70 };
-  // Sub weapon: lower-left of character
-  const subSlot  = { x: mipX - 120, y: mipCy + 25, w: 110, h: 70 };
-  // Charm: right of character
-  const charmSlot = { x: mipX + mipSize + 20, y: mipCy - 30, w: 90, h: 60 };
-  // Backpack: below charm, right side
-  const bpBaseX = mipX + mipSize + 10, bpBaseY = mipCy + 50;
+  const slotS = 70;
+  const mainSlot = { x: mipX - slotS - 40, y: mipCy - slotS/2 - 20, w: slotS, h: slotS };
+  const subSlot  = { x: mipX - slotS - 30, y: mipCy + 15, w: slotS, h: slotS };
+  const charmSlot = { x: mipX + mipSize + 40, y: mipCy - 35, w: slotS, h: slotS };
+  const bpBaseX = mipX + mipSize + 30, bpBaseY = mipCy + 50;
 
   equipSlotRects = [
     { id:'main', x:mainSlot.x, y:mainSlot.y, w:mainSlot.w, h:mainSlot.h },
     { id:'sub',  x:subSlot.x,  y:subSlot.y,  w:subSlot.w,  h:subSlot.h },
-    { id:'bp0',  x:bpBaseX,      y:bpBaseY,      w:66, h:70 },
-    { id:'bp1',  x:bpBaseX + 72, y:bpBaseY,      w:66, h:70 },
-    { id:'bp2',  x:bpBaseX,      y:bpBaseY + 78, w:66, h:70 },
-    { id:'bp3',  x:bpBaseX + 72, y:bpBaseY + 78, w:66, h:70 }
+    { id:'bp0',  x:bpBaseX,      y:bpBaseY,      w:66, h:66 },
+    { id:'bp1',  x:bpBaseX + 74, y:bpBaseY,      w:66, h:66 },
+    { id:'bp2',  x:bpBaseX,      y:bpBaseY + 74, w:66, h:66 },
+    { id:'bp3',  x:bpBaseX + 74, y:bpBaseY + 74, w:66, h:66 }
   ];
 
-  // Draw main/sub slots + connectors
-  drawSlotHex(mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, equipCursor === 0);
-  drawSlotHex(subSlot.x, subSlot.y, subSlot.w, subSlot.h, equipCursor === 1);
-  // Connectors from character body to slots
+  // Draw main/sub with icon only
+  drawSlotIcon(player.weapons[0], mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, '\u30E1\u30A4\u30F3', player.weaponIdx === 0, equipCursor === 0);
+  drawSlotIcon(player.weapons[1], subSlot.x, subSlot.y, subSlot.w, subSlot.h, '\u30B5\u30D6', player.weaponIdx === 1, equipCursor === 1);
+
+  // Connectors
   if (equipCursor === 0) drawConnector(mipX, mipCy - 20, mainSlot.x + mainSlot.w, mainSlot.y + mainSlot.h/2, '#ffd700');
   if (equipCursor === 1) drawConnector(mipX, mipCy + 20, subSlot.x + subSlot.w, subSlot.y + subSlot.h/2, '#87ceeb');
 
-  drawWeaponInSlot(player.weapons[0], mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, '\u30E1\u30A4\u30F3', player.weaponIdx === 0);
-  drawWeaponInSlot(player.weapons[1], subSlot.x, subSlot.y, subSlot.w, subSlot.h, '\u30B5\u30D6', player.weaponIdx === 1);
-
-  // Charm slot (locked, coming soon)
+  // Charm slot (locked)
   ctx.save(); ctx.globalAlpha = 0.4;
   drawSlotHex(charmSlot.x, charmSlot.y, charmSlot.w, charmSlot.h, false);
-  ctx.fillStyle = '#888'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83D\uDD2E ???', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h/2 + 4);
+  ctx.fillStyle = '#888'; ctx.font = '24px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83D\uDD2E', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h/2 + 8);
+  ctx.fillStyle = '#666'; ctx.font = '9px ' + F;
+  ctx.fillText('???', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h - 2);
   ctx.restore();
-  // Charm connector
   drawConnector(mipX + mipSize, mipCy, charmSlot.x, charmSlot.y + charmSlot.h/2, '#e056fd');
 
-  // === BACKPACK ===
-  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpBaseX + 65, bpBaseY - 8);
+  // === BACKPACK (icon only) ===
+  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 13px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpBaseX + 68, bpBaseY - 8);
   for (let i = 0; i < 4; i++) {
     const col = i % 2, row = Math.floor(i / 2);
-    const sx = bpBaseX + col * 72, sy = bpBaseY + row * 78;
+    const sx = bpBaseX + col * 74, sy = bpBaseY + row * 74;
     const sel = equipCursor === i + 2;
-    drawSlotHex(sx, sy, 66, 70, sel);
-    if (sel) drawConnector(mipX + mipSize, mipCy + 30, sx, sy + 35, '#f8bbd0');
+    drawSlotHex(sx, sy, 66, 66, sel);
+    if (sel) drawConnector(mipX + mipSize, mipCy + 30, sx, sy + 33, '#f8bbd0');
     const w = player.backpack[i];
     ctx.textAlign = 'center';
     if (w) {
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + F;
-      ctx.fillText((w.icon||'\u2694'), sx + 33, sy + 28);
-      ctx.fillStyle = '#ddd'; ctx.font = '10px ' + F;
-      ctx.fillText(w.name.substring(0,5), sx + 33, sy + 44);
-      const lvl = w.level || 0;
-      ctx.fillStyle = '#ffd700'; ctx.font = '10px ' + F;
-      ctx.fillText('\u2B50'.repeat(lvl), sx + 33, sy + 58);
+      ctx.fillStyle = '#fff'; ctx.font = '24px ' + F;
+      ctx.fillText(w.icon || '\u2694', sx + 33, sy + 40);
     } else {
-      ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#f8bbd0'; ctx.font = '24px sans-serif';
-      ctx.fillText('\uD83C\uDF38', sx + 33, sy + 42); ctx.restore();
+      ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#f8bbd0'; ctx.font = '22px sans-serif';
+      ctx.fillText('\uD83C\uDF38', sx + 33, sy + 40); ctx.restore();
     }
   }
 
   // === DETAIL PANEL (bottom center) ===
-  const detW = 380, detH = 140;
-  const detX = cx - detW / 2, detY = panelY + panelH - detH - 30;
+  const detW = 400, detH = 150;
+  const detX = cx - detW / 2, detY = panelY + panelH - detH - 28;
   const selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
-  ctx.fillStyle = 'rgba(255,240,245,0.08)'; ctx.fillRect(detX, detY, detW, detH);
-  ctx.strokeStyle = 'rgba(248,187,208,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(detX, detY, detW, detH);
+  ctx.fillStyle = 'rgba(255,240,245,0.08)';
+  ctx.beginPath();
+  const cr = 10;
+  ctx.moveTo(detX + cr, detY); ctx.lineTo(detX + detW - cr, detY);
+  ctx.arcTo(detX + detW, detY, detX + detW, detY + cr, cr);
+  ctx.lineTo(detX + detW, detY + detH - cr);
+  ctx.arcTo(detX + detW, detY + detH, detX + detW - cr, detY + detH, cr);
+  ctx.lineTo(detX + cr, detY + detH);
+  ctx.arcTo(detX, detY + detH, detX, detY + detH - cr, cr);
+  ctx.lineTo(detX, detY + cr);
+  ctx.arcTo(detX, detY, detX + cr, detY, cr);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(248,187,208,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+
   if (selW) {
     const dcx = detX + detW / 2;
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px ' + F; ctx.textAlign = 'center';
-    ctx.fillText((selW.icon||'\u2694') + ' ' + selW.name, dcx, detY + 24);
-    ctx.fillStyle = '#f8bbd0'; ctx.font = '13px ' + F;
-    ctx.fillText('Lv.' + (selW.level||0) + ' / ' + WEAPON_UPGRADE_MAX, dcx, detY + 44);
-    // Stats in a row
-    ctx.fillStyle = '#ffe0b2'; ctx.font = '13px ' + F;
-    const statsY = detY + 66;
-    ctx.textAlign = 'center';
-    ctx.fillText('\u2694 ATK ' + selW.dmgMul.toFixed(1), dcx - 110, statsY);
-    ctx.fillText('\u26A1 SPD ' + selW.speed.toFixed(2), dcx, statsY);
-    ctx.fillText('\uD83C\uDFAF RNG ' + selW.range, dcx + 110, statsY);
-    if (selW.desc) { ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F; ctx.fillText(selW.desc.substring(0, 30), dcx, statsY + 18); }
-    // Upgrade button
+    // Name + icon
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 20px ' + F; ctx.textAlign = 'center';
+    ctx.fillText((selW.icon||'\u2694') + ' ' + selW.name, dcx, detY + 28);
+    // Level stars
     const lvl = selW.level || 0;
+    ctx.fillStyle = '#ffd700'; ctx.font = '14px ' + F;
+    ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl), dcx, detY + 48);
+    // Stats row
+    ctx.fillStyle = '#ffe0b2'; ctx.font = '13px ' + F;
+    const statsY = detY + 70;
+    ctx.fillText('\u2694 ATK ' + selW.dmgMul.toFixed(1), dcx - 120, statsY);
+    ctx.fillText('\u26A1 SPD ' + selW.speed.toFixed(2), dcx, statsY);
+    ctx.fillText('\uD83C\uDFAF RNG ' + selW.range, dcx + 120, statsY);
+    // Description
+    if (selW.desc) { ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F; ctx.fillText(selW.desc.substring(0, 36), dcx, statsY + 18); }
+    // Upgrade button
     const btnW = 180, btnH = 30;
-    const btnX = dcx - btnW / 2, btnY = detY + detH - 38;
+    const btnX = dcx - btnW / 2, btnY = detY + detH - 40;
     if (lvl < WEAPON_UPGRADE_MAX) {
       const cost = WEAPON_UPGRADE_COST[lvl]; const ok = pollen >= cost;
-      ctx.fillStyle = ok ? 'rgba(46,204,113,0.2)' : 'rgba(255,100,100,0.12)';
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.strokeStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.lineWidth = 2; ctx.strokeRect(btnX, btnY, btnW, btnH);
+      ctx.fillStyle = ok ? 'rgba(46,204,113,0.18)' : 'rgba(255,100,100,0.10)';
+      ctx.beginPath();
+      ctx.moveTo(btnX + 6, btnY); ctx.lineTo(btnX + btnW - 6, btnY);
+      ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + 6, 6);
+      ctx.lineTo(btnX + btnW, btnY + btnH - 6);
+      ctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - 6, btnY + btnH, 6);
+      ctx.lineTo(btnX + 6, btnY + btnH);
+      ctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - 6, 6);
+      ctx.lineTo(btnX, btnY + 6);
+      ctx.arcTo(btnX, btnY, btnX + 6, btnY, 6);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 13px ' + F; ctx.textAlign = 'center';
       ctx.fillText('Z: \u5F37\u5316 (\uD83C\uDF3C' + cost + ')', dcx, btnY + 20);
     } else {
@@ -211,12 +227,12 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     }
   } else {
     ctx.fillStyle = '#888'; ctx.font = '14px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('\u2190 \u30B9\u30ED\u30C3\u30C8\u3092\u3048\u3089\u3093\u3067\u306D', cx, detY + 70);
+    ctx.fillText('\u2190 \u30B9\u30ED\u30C3\u30C8\u3092\u3048\u3089\u3093\u3067\u306D', cx, detY + 75);
   }
 
   // --- Controls hint ---
-  ctx.fillStyle = '#f8bbd0'; ctx.font = '15px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\u2191\u2193:\u3048\u3089\u3076  Z:\u5F37\u5316  X:\u3044\u308C\u304B\u3048  Tab:\u3068\u3058\u308B', cx, panelY + panelH - 10);
+  ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\u2191\u2193:\u3048\u3089\u3076  Z:\u5F37\u5316  X:\u3044\u308C\u304B\u3048  Tab:\u3068\u3058\u308B', cx, panelY + panelH - 8);
 
   // --- Drag overlay (mouse) ---
   if (mouse.dragItem && typeof touchActive !== 'undefined' && !touchActive) {

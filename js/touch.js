@@ -254,3 +254,180 @@ function updateTouch() {
   if (!touchActive) return;
   updateJoystickKeys();
 }
+// === PHASE 3: Equipment Touch Support ===
+const EQUIP_TAP_THRESHOLD = 200; // ms for tap vs drag
+let equipTouchStart = { x: 0, y: 0, time: 0, slotIdx: -1 };
+
+function hitTestEquipSlot(cx, cy) {
+  if (!equipSlotRects || equipSlotRects.length === 0) return -1;
+  for (let i = 0; i < equipSlotRects.length; i++) {
+    const s = equipSlotRects[i];
+    if (cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h) return i;
+  }
+  return -1;
+}
+
+function hitTestInvTab(cx, cy) {
+  // Tab bar: 3 tabs centered at CW/2, y=60, each 160x40
+  for (let i = 0; i < 3; i++) {
+    const tx = CW / 2 - 120 + i * 240 - 80;
+    if (cx >= tx && cx <= tx + 160 && cy >= 40 && cy <= 80) return i;
+  }
+  return -1;
+}
+
+function hitTestUpgradeBtn(cx, cy) {
+  // Detail panel upgrade button area (approximate from equip_ui.js)
+  // detX = panelX + 15 = 95, detY = panelY + panelH - 195
+  // panelX=80, panelY=110, panelW=CW-160, panelH=CH-160
+  const panelX = 80, panelY = 110, panelH = CH - 160;
+  const detX = panelX + 15, detY = panelY + panelH - 195, detW = 175;
+  const btnY = detY + 132;
+  return cx >= detX + 8 && cx <= detX + detW - 8 && cy >= btnY && cy <= btnY + 28;
+}
+
+// Override onTouchStart to handle equipment screen
+const _origOnTouchStart = onTouchStart;
+onTouchStart = function(e) {
+  if (typeof inventoryOpen !== 'undefined' && inventoryOpen) {
+    e.preventDefault();
+    if (!touchActive) touchActive = true;
+    
+    for (let ti = 0; ti < e.changedTouches.length; ti++) {
+      const t = e.changedTouches[ti];
+      const pos = screenToCanvas(t.clientX, t.clientY);
+      
+      // Tab tap
+      const tabHit = hitTestInvTab(pos.x, pos.y);
+      if (tabHit >= 0) {
+        inventoryTab = tabHit;
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        return;
+      }
+      
+      // Close button (top-left X)
+      if (pos.x < 80 && pos.y < 80) {
+        inventoryOpen = false;
+        return;
+      }
+      
+      if (inventoryTab === 2) {
+        // Upgrade button tap
+        if (hitTestUpgradeBtn(pos.x, pos.y)) {
+          const selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
+          if (selW && typeof upgradeWeapon === 'function') {
+            if (upgradeWeapon(selW)) {
+              if (typeof Audio !== 'undefined' && Audio.level_up) Audio.level_up();
+              if (typeof equipBounce !== 'undefined') equipBounce = 1;
+              if (typeof showFloat === 'function') showFloat('⚡ 強化成功！', 1.5, '#2ecc71');
+            }
+          }
+          return;
+        }
+        
+        // Slot tap
+        const slotHit = hitTestEquipSlot(pos.x, pos.y);
+        if (slotHit >= 0) {
+          equipTouchStart = { x: pos.x, y: pos.y, time: Date.now(), slotIdx: slotHit };
+          equipCursor = slotHit;
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          return;
+        }
+      }
+    }
+    return;
+  }
+  _origOnTouchStart.call(this, e);
+};
+
+// Override onTouchMove for drag
+const _origOnTouchMove = onTouchMove;
+onTouchMove = function(e) {
+  if (typeof inventoryOpen !== 'undefined' && inventoryOpen && inventoryTab === 2) {
+    e.preventDefault();
+    for (let ti = 0; ti < e.changedTouches.length; ti++) {
+      const t = e.changedTouches[ti];
+      const pos = screenToCanvas(t.clientX, t.clientY);
+      
+      // Start drag if moved enough and held long enough
+      if (equipTouchStart.slotIdx >= 0 && !mouse.dragItem) {
+        const dist = Math.hypot(pos.x - equipTouchStart.x, pos.y - equipTouchStart.y);
+        const elapsed = Date.now() - equipTouchStart.time;
+        if (dist > 10 || elapsed > EQUIP_TAP_THRESHOLD) {
+          const si = equipTouchStart.slotIdx;
+          const item = si < 2 ? player.weapons[si] : player.backpack[si - 2];
+          if (item) {
+            mouse.dragItem = item;
+            mouse.dragFrom = si;
+          }
+        }
+      }
+      
+      // Update mouse position for drag visual
+      if (mouse.dragItem) {
+        mouse.x = pos.x;
+        mouse.y = pos.y;
+      }
+    }
+    return;
+  }
+  _origOnTouchMove.call(this, e);
+};
+
+// Override onTouchEnd for drop
+const _origOnTouchEnd = onTouchEnd;
+onTouchEnd = function(e) {
+  if (typeof inventoryOpen !== 'undefined' && inventoryOpen && inventoryTab === 2) {
+    e.preventDefault();
+    for (let ti = 0; ti < e.changedTouches.length; ti++) {
+      const t = e.changedTouches[ti];
+      const pos = screenToCanvas(t.clientX, t.clientY);
+      
+      if (mouse.dragItem && mouse.dragFrom !== null) {
+        const dropSlot = hitTestEquipSlot(pos.x, pos.y);
+        if (dropSlot >= 0 && dropSlot !== mouse.dragFrom) {
+          // Swap items
+          const fromIdx = mouse.dragFrom;
+          const getItem = (idx) => idx < 2 ? player.weapons[idx] : player.backpack[idx - 2];
+          const setItem = (idx, item) => { if (idx < 2) player.weapons[idx] = item; else player.backpack[idx - 2] = item; };
+          
+          const a = getItem(fromIdx), b = getItem(dropSlot);
+          setItem(fromIdx, b);
+          setItem(dropSlot, a);
+          
+          // Update active weapon reference
+          player.weapon = player.weapons[player.weaponIdx] || player.weapons[0];
+          
+          if (typeof Audio !== 'undefined' && Audio.item_get) Audio.item_get();
+          if (typeof showFloat === 'function') showFloat('🔄 入れ替え完了', 1.2, '#87ceeb');
+          if (typeof equipBounce !== 'undefined') equipBounce = 1;
+        }
+        mouse.dragItem = null;
+        mouse.dragFrom = null;
+      }
+      
+      equipTouchStart = { x: 0, y: 0, time: 0, slotIdx: -1 };
+    }
+    
+    // Also handle button releases for non-equipment touches
+    for (let ti = 0; ti < e.changedTouches.length; ti++) {
+      const t = e.changedTouches[ti];
+      for (const btn of TOUCH_BUTTONS) {
+        if (btn.touchId === t.identifier) {
+          btn.pressed = false;
+          btn.touchId = null;
+          keys[btn.id] = false;
+        }
+      }
+      if (t.identifier === joystick.touchId) {
+        joystick.active = false;
+        joystick.touchId = null;
+        joystick.dx = 0;
+        joystick.dy = 0;
+        for (const k of JOYSTICK_KEYS) { keys[k] = false; joystickKeysActive[k] = false; }
+      }
+    }
+    return;
+  }
+  _origOnTouchEnd.call(this, e);
+};

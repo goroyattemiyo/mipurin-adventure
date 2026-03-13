@@ -98,3 +98,20 @@
 - eliteNextリセット, ui_screens.js blinkネスト
 - titleVolSel宣言, 重複BGMチェック削除
 - 未使用bossLines削除, パーティクル数削減
+
+## v6.16.3a (2026-03-13)
+### Bug Fix
+- `currentBGM is not defined` ReferenceError 修正 (bgm.js)
+  - グローバル `currentBGM` 変数を復活、playBGM/stopBGM/fadeOutBGM で同期
+  - drawTitle, drawGarden の毎フレーム再生防止ガードが正常動作
+
+### Feature: Sprint G Phase 3 - モバイルタップ装備
+- touch.js にタッチ装備操作を追加 (8.0→14.2 KB)
+  - スロットタップ選択 (equipSlotRects hit-test)
+  - インベントリタブタップ切替
+  - 強化ボタンタップ実行
+  - ドラッグ＆ドロップ武器入替 (長押し200ms + 移動10px判定)
+  - 装備画面中は通常ボタン処理をスキップ
+
+### Cache
+- v=1622

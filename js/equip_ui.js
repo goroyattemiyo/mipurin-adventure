@@ -89,26 +89,40 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     ctx.restore();
   }
 
-  // === ICON-ONLY slot drawing ===
+  // === ICON-ONLY slot drawing (sprite image) ===
   function drawSlotIcon(w, sx, sy, sw, sh, label, isActive, selected) {
     drawSlotHex(sx, sy, sw, sh, selected);
     ctx.textAlign = 'center';
     // Small label above slot
-    ctx.fillStyle = isActive ? 'rgba(255,215,0,0.6)' : 'rgba(255,255,255,0.3)';
-    ctx.font = '10px ' + F;
-    ctx.fillText(label, sx + sw/2, sy - 3);
+    ctx.fillStyle = isActive ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.35)';
+    ctx.font = 'bold 11px ' + F;
+    ctx.fillText(label, sx + sw/2, sy - 4);
     if (w) {
-      // Icon only - large centered
-      ctx.fillStyle = '#fff'; ctx.font = '28px ' + F;
-      ctx.fillText(w.icon || '\u2694', sx + sw/2, sy + sh/2 + 10);
-      // Active indicator dot
+      // Try sprite image first (weapon_<id>)
+      const spriteId = 'weapon_' + w.id;
+      const imgSize = Math.min(sw, sh) - 14;
+      const imgX = sx + (sw - imgSize) / 2;
+      const imgY = sy + (sh - imgSize) / 2 + 2;
+      if (typeof hasSprite === 'function' && hasSprite(spriteId)) {
+        drawSpriteImg(spriteId, imgX, imgY, imgSize, imgSize);
+      } else {
+        // Fallback: emoji from name (first char cluster)
+        ctx.fillStyle = '#fff'; ctx.font = '28px ' + F;
+        const emoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
+        ctx.fillText(emoji ? emoji[0] : '\u2694', sx + sw/2, sy + sh/2 + 10);
+      }
+      // Active indicator
       if (isActive) {
         ctx.fillStyle = '#ffd700';
-        ctx.beginPath(); ctx.arc(sx + sw - 8, sy + 10, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx + sw - 6, sy + 8, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx + sw - 6, sy + 8, 2, 0, Math.PI * 2); ctx.fill();
       }
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '22px ' + F;
+      ctx.save(); ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#fff'; ctx.font = '22px ' + F;
       ctx.fillText('\u2795', sx + sw/2, sy + sh/2 + 8);
+      ctx.restore();
     }
   }
 
@@ -159,8 +173,14 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     const w = player.backpack[i];
     ctx.textAlign = 'center';
     if (w) {
-      ctx.fillStyle = '#fff'; ctx.font = '24px ' + F;
-      ctx.fillText(w.icon || '\u2694', sx + 33, sy + 40);
+      const bpSpriteId = 'weapon_' + w.id;
+      if (typeof hasSprite === 'function' && hasSprite(bpSpriteId)) {
+        drawSpriteImg(bpSpriteId, sx + 9, sy + 9, 48, 48);
+      } else {
+        ctx.fillStyle = '#fff'; ctx.font = '24px ' + F;
+        const bpEmoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
+        ctx.fillText(bpEmoji ? bpEmoji[0] : '\u2694', sx + 33, sy + 40);
+      }
     } else {
       ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#f8bbd0'; ctx.font = '22px sans-serif';
       ctx.fillText('\uD83C\uDF38', sx + 33, sy + 40); ctx.restore();
@@ -250,3 +270,4 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   }
   ctx.restore();
 }
+

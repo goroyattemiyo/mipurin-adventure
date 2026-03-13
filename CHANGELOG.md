@@ -115,3 +115,18 @@
 
 ### Cache
 - v=1622
+
+## v6.16.4 (2026-03-13)
+### Mobile UX Overhaul (Council審議結果)
+- **全画面表示**: Fullscreen API + orientation.lock + PWA meta tags
+- **CSS**: 100dvh対応, viewport-fit=cover, dvh非対応ブラウザfallback
+- **縦持ちオーバーレイ**: CSS @media (orientation:portrait) で回転案内表示
+- **ボタンサイズ拡大**: Z:r60, X:r50, 1/2/3:r36, Q:r36, Tab/Esc:r32 (48dp基準)
+- **ジョイスティック**: knobRadius 30→42
+- **コンテキスト適応型UI**: gameStateに応じてボタン表示を切替
+- **touch.jsリファクタ**: オーバーライドチェーン廃止→統合ハンドラ (442→~220行)
+- **SE毒抜き**: player_hurt/boss_appear/game_over/attack の sawtooth→triangle/sine
+  - 本格SE再設計はSprint Iに計上
+
+### Bug Fix
+- boss_appear末尾のsawtooth残り除去 (sawtooth完全ゼロ)

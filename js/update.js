@@ -83,10 +83,23 @@ function update(dt) {
     }
     return;
   }
-  if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 2; }
+  if (wasPressed('Tab')) {
+    if (!inventoryOpen) {
+      inventoryOpen = true;
+      if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+    } else {
+      inventoryTab = (inventoryTab + 1) % 3;
+      if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+      if (inventoryTab === 2) { equipMode = 'slot'; equipCursor = 0; equipListCursor = 0; }
+    }
+  }
+  if (inventoryOpen && wasPressed('Escape')) {
+    inventoryOpen = false;
+    if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+  }
   if (inventoryOpen) {
    
-    if (wasPressed('Tab')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); }
+    
     if (inventoryTab === 2) {
       const allWeps = getAllOwnedWeapons();
       if (typeof equipMode === 'undefined') equipMode = 'slot';

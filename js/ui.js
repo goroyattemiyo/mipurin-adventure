@@ -40,7 +40,7 @@ function drawInventory() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillText('← → でタブ切替  /  TAB で閉じる', CW / 2, CH - 30);
+  ctx.fillText('TAB: タブ切替 / もういちどTABで閉じる', CW / 2, CH - 30);
   ctx.textAlign = 'left';
 }
 
@@ -318,4 +318,5 @@ function drawShop() {
 function drawDmgNumbers() {
   for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }
 }
+
 

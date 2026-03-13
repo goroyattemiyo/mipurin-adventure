@@ -85,8 +85,8 @@ function update(dt) {
   }
   if (wasPressed('Tab')) { inventoryOpen = !inventoryOpen; if (!inventoryOpen) inventoryTab = 2; } mouse.dragItem = null; mouse.dragFrom = null;
   if (inventoryOpen) {
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { inventoryTab = (inventoryTab + 2) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
+    mouse.dragItem = null; mouse.dragFrom = null;
+    if (wasPressed('Tab')) { inventoryTab = (inventoryTab + 1) % 3; Audio.menu_move(); } mouse.dragItem = null; mouse.dragFrom = null;
     if (inventoryTab === 2) {
    if (wasPressed('ArrowUp') || wasPressed('KeyW')) { equipCursor = (equipCursor + 5) % 6; Audio.menu_move(); equipBounce = 1; }
    if (wasPressed('ArrowDown') || wasPressed('KeyS')) { equipCursor = (equipCursor + 1) % 6; Audio.menu_move(); equipBounce = 1; }
@@ -232,3 +232,4 @@ function update(dt) {
   if (gameState === "playing") updateCombat(dt);
 
 }
+

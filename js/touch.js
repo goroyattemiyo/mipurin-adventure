@@ -19,7 +19,7 @@ const joystick = {
   active: false,
   cx: 170, cy: CH - 190,
   radius: 70,
-  knobRadius: 30,
+  knobRadius: 42,
   deadzone: 0.15,
   dx: 0, dy: 0,
   touchId: null
@@ -27,14 +27,14 @@ const joystick = {
 
 // --- Buttons ---
 const TOUCH_BUTTONS = [
-  { id: 'KeyZ',   label: 'Z',  baseX: 0.906, baseY: 0.833, r: 42, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'KeyX',   label: 'X',  baseX: 0.836, baseY: 0.875, r: 35, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit1', label: '1',  baseX: 0.781, baseY: 0.938, r: 25, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit2', label: '2',  baseX: 0.844, baseY: 0.938, r: 25, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit3', label: '3',  baseX: 0.906, baseY: 0.938, r: 25, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'KeyQ',   label: 'Q',  baseX: 0.766, baseY: 0.833, r: 28, color: '#e056fd', alwaysShow: false, pressed: false, touchId: null },
-  { id: 'Tab',    label: '\u2630', baseX: 0.961, baseY: 0.052, r: 25, color: '#aaa', alwaysShow: true, pressed: false, touchId: null },
-  { id: 'Escape', label: '\u2716', baseX: 0.039, baseY: 0.052, r: 25, color: '#f66', alwaysShow: true, pressed: false, touchId: null }
+  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.790, r: 60, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyX',   label: 'X',  baseX: 0.800, baseY: 0.870, r: 50, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit1', label: '1',  baseX: 0.720, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit2', label: '2',  baseX: 0.800, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit3', label: '3',  baseX: 0.880, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyQ',   label: 'Q',  baseX: 0.700, baseY: 0.790, r: 36, color: '#e056fd', alwaysShow: false, pressed: false, touchId: null },
+  { id: 'Tab',    label: '\u2630', baseX: 0.955, baseY: 0.060, r: 32, color: '#aaa', alwaysShow: true, pressed: false, touchId: null },
+  { id: 'Escape', label: '\u2716', baseX: 0.045, baseY: 0.060, r: 32, color: '#f66', alwaysShow: true, pressed: false, touchId: null }
 ];
 
 // Compute absolute positions from ratios
@@ -114,7 +114,7 @@ function onTouchStart(e) {
       if (!isBtnVisible(btn)) continue;
       const bp = getTouchBtnPos(btn);
       const dist = Math.hypot(pos.x - bp.x, pos.y - bp.y);
-      if (dist < btn.r + 12) {
+      if (dist < btn.r + 18) {
         btn.pressed = true;
         btn.touchId = t.identifier;
         keys[btn.id] = true;

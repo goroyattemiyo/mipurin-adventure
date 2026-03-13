@@ -4,6 +4,7 @@
 - [x] Phase 1: mouse state, backpack, equip tab UI, weapon upgrade (keyboard)
 - [x] Phase 2: mouse drag-and-drop (PC)
 - [ ] Phase 3: tap-select equip (mobile)
+- [x] Hybrid BGM module (MP3+WebAudio chiptune)
 
 ## Completed
 - Sprint A: Blessings (78 + 15 duo)

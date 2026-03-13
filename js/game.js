@@ -1,4 +1,4 @@
-const VERSION = 'v6.16.1';
+const VERSION = 'v6.16.2';
 /*============================================================
   ミプリンの冒険 v6.10 — かわいい蜂の冒険RPG
   明るいテーマ・日本語UI・プロローグ・BGM対応
@@ -120,7 +120,7 @@ const Audio = (() => {
 let bgmVolume = 0.7, seVolume = 0.7;
 try { const bv = localStorage.getItem('mipurin_bgmvol'); if (bv !== null) bgmVolume = parseFloat(bv); } catch(e) {}
 try { const sv = localStorage.getItem('mipurin_sevol'); if (sv !== null) seVolume = parseFloat(sv); } catch(e) {}
-function setBgmVol(v) { bgmVolume = clamp(v,0,1); try{localStorage.setItem('mipurin_bgmvol',bgmVolume);}catch(e){} if(bgmAudio) bgmAudio.volume = bgmVolume * 0.3; }
+function setBgmVol(v) { bgmVolume = clamp(v,0,1); try{localStorage.setItem('mipurin_bgmvol',bgmVolume);}catch(e){} if(typeof ChipBGM!=='undefined') ChipBGM.setVolume(bgmVolume); }
 // SE volume controls chip-tune master; BGM volume controls bgmAudio separately
 function setSeVol(v) { seVolume = clamp(v,0,1); try{localStorage.setItem('mipurin_sevol',seVolume);}catch(e){} Audio.setVol(seVolume); }
 

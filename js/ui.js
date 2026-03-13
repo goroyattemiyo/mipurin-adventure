@@ -192,13 +192,14 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   const mainSlot = { x: mipX + 140, y: mipY, w: 110, h: 70 };
   const subSlot = { x: mipX + 140, y: mipY + 90, w: 110, h: 70 };
   const charmSlot = { x: mipX + 140, y: mipY + 180, w: 90, h: 60 };
+  const bpBaseX = panelX + panelW - 200, bpBaseY = mipY + 10;
   equipSlotRects = [
     { id:'main', x:mainSlot.x, y:mainSlot.y, w:mainSlot.w, h:mainSlot.h },
     { id:'sub', x:subSlot.x, y:subSlot.y, w:subSlot.w, h:subSlot.h },
-    { id:'bp0', x:bpX, y:bpY+5, w:66, h:70 },
-    { id:'bp1', x:bpX+72, y:bpY+5, w:66, h:70 },
-    { id:'bp2', x:bpX, y:bpY+83, w:66, h:70 },
-    { id:'bp3', x:bpX+72, y:bpY+83, w:66, h:70 }
+    { id:'bp0', x:bpBaseX, y:bpBaseY+5, w:66, h:70 },
+    { id:'bp1', x:bpBaseX+72, y:bpBaseY+5, w:66, h:70 },
+    { id:'bp2', x:bpBaseX, y:bpBaseY+83, w:66, h:70 },
+    { id:'bp3', x:bpBaseX+72, y:bpBaseY+83, w:66, h:70 }
   ];
   drawSlotHex(mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, equipCursor === 0);
   drawSlotHex(subSlot.x, subSlot.y, subSlot.w, subSlot.h, equipCursor === 1);
@@ -228,12 +229,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.fillStyle = '#888'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\uD83D\uDD2E ???', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h/2 + 4);
   ctx.restore();
-    const bpX = panelX + panelW - 200 + (bi % 2) * 80, bpY = mipY + 10 + Math.floor(bi / 2) * 85;
   ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpX + 65, bpY - 5);
+  ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpBaseX + 65, bpBaseY - 5);
   for (let i = 0; i < 4; i++) {
     const col = i % 2, row = Math.floor(i / 2);
-    const sx = bpX + col * 72, sy = bpY + 5 + row * 78;
+    const sx = bpBaseX + col * 72, sy = bpBaseY + 5 + row * 78;
     const sel = equipCursor === i + 2;
     drawSlotHex(sx, sy, 66, 70, sel);
       if (sel) drawConnector(mipX + 100, mipY + 60, sx, sy + 35, '#f8bbd0');

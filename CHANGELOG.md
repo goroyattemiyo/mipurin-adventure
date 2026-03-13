@@ -1,4 +1,19 @@
 # CHANGELOG
+## v6.16.2 (2026-03-13)
+### feat: Hybrid BGM Module + bpX fix
+- js/bgm.js: WebAudio chiptune + MP3 hybrid BGM system
+  - MP3優先モード（デフォルト）/ チップチューンモード（切替可能）
+  - パブリックドメイン3曲: ジムノペディ(サティ), 春(ヴィヴァルディ), 運命(ベートーヴェン)
+  - scheduleAhead方式スケジューラ, visibilitychange対応
+  - playBGM/stopBGM/fadeOutBGM インターフェース互換
+- data.js: 旧BGM関数をbgm.jsに移行（26.8KB, -2.4KB削減）
+- game.js: setBgmVol → ChipBGM.setVolume連携
+- ui.js: bpX未定義エラー修正（bpBaseX定義をequipSlotRects前に移動）
+- index.html: bgm.js追加, cache bust v=1620
+- 全12ファイル構文OK, V1-V11全PASS
+### 技術的負債
+- ui.js 30.8KB, update.js 32.1KB → 次Sprint で分割必須
+
 
 ## v6.16.1a (2026-03-12)
 ### fix: 装備画面レイアウト修正

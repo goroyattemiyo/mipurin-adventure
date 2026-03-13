@@ -14,6 +14,7 @@
 | Mouse input base | Done |
 | **Mouse drag-and-drop (Phase 2)** | **Done** |
 | Hybrid BGM (MP3+WebAudio) | **Done** |
+| File split (30KB compliance) | **Done** |
 | Synapse bug-prevention workflow v3 | Done |
 | Tap-select equip (Phase 3) | Planned |
 | Weapon growth tree | Planned |
@@ -24,5 +25,5 @@
 | --- | --- |
 | Game quality | 70 |
 | Progress | 78 |
-| Development method | 82 |
+| Development method | 85 |
 | **Total** | **76.0** |

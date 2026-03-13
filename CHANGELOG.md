@@ -1,4 +1,14 @@
 # CHANGELOG
+## v6.16.3 (2026-03-13)
+### refactor: ファイル分割 (30KB上限遵守)
+- update.js (32.1KB) → update.js (15.6KB) + combat.js (16.7KB)
+  - 戦闘ロジック(入力/移動/攻撃/敵AI/ボス/ドロップ)をcombat.jsに分離
+  - updateCombat(dt) 関数でラップ
+- ui.js (30.8KB) → ui.js (20.1KB) + equip_ui.js (10.8KB)
+  - 装備タブ(drawEquipTab/花びら/スロット/D&D描画)をequip_ui.jsに分離
+- 全14ファイル構文OK, 全ファイル30KB以下達成
+- 技術的負債: render.js (28.0KB) 要監視
+
 ## v6.16.2 (2026-03-13)
 ### feat: Hybrid BGM Module + bpX fix
 - js/bgm.js: WebAudio chiptune + MP3 hybrid BGM system

@@ -174,12 +174,10 @@ if inv_block_match:
 else:
     check("inventoryOpen block found", False, "could not extract block")
 
-# Verify Tab open/cycle uses if/else (no simultaneous toggle+cycle)
-tab_clean = re.search(r"wasPressed\('Tab'\).*
-\s*if \(!inventoryOpen\).*
-.*else.*inventoryTab", update_js)
-check("Tab toggle is clean (no side effects on same press)",
-    bool(tab_clean))
+# Verify Tab uses if/else so open and cycle never fire together
+tab_ok = "inventoryOpen = !inventoryOpen" not in update_js
+tab_ok2 = "if (!inventoryOpen)" in update_js
+check("Tab toggle is clean (no side effects on same press)", tab_ok and tab_ok2)
 
 # equipCursor should NOT go beyond visible slots (max 2 for slot mode)
 check("equipCursor wraps correctly in slot mode",

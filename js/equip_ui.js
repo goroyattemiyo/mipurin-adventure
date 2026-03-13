@@ -1,61 +1,92 @@
-// ===== EQUIPMENT UI MODULE (v6.17.0a Icon-Only Slots) =====
-let equipCursor = 0;
+// ===== EQUIPMENT UI MODULE (v6.18 Two-Pane) =====
+let equipCursor = 0;       // 0=main, 1=sub, 2=charm (left pane slots)
+let equipListCursor = 0;   // right pane list index
+let equipMode = 'slot';    // 'slot' or 'list'
 let equipSlotRects = [];
-const EQUIP_TOTAL_SLOTS = 6;
 let equipBounce = 0;
 let equipPetals = [];
+const EQUIP_SLOT_COUNT = 3; // main, sub, charm
+
 function spawnEquipPetal() {
-  if (equipPetals.length >= 15) return;
-  equipPetals.push({ x: Math.random() * 500, y: -10, r: Math.random() * Math.PI * 2,
-    speed: 15 + Math.random() * 20, drift: (Math.random() - 0.5) * 30, size: 4 + Math.random() * 4,
-    alpha: 0.3 + Math.random() * 0.3, color: ['#ffb7c5','#ffd700','#fff0f5','#f8bbd0'][Math.floor(Math.random()*4)] });
+  if (equipPetals.length >= 12) return;
+  equipPetals.push({ x: Math.random() * 600, y: -10, r: Math.random() * Math.PI * 2,
+    speed: 12 + Math.random() * 18, drift: (Math.random() - 0.5) * 25, size: 3 + Math.random() * 4,
+    alpha: 0.2 + Math.random() * 0.25, color: ['#ffb7c5','#ffd700','#fff0f5','#f8bbd0'][Math.floor(Math.random()*4)] });
 }
 function updateEquipPetals(dt) {
   for (let i = equipPetals.length - 1; i >= 0; i--) {
     const p = equipPetals[i]; p.y += p.speed * dt; p.x += p.drift * dt; p.r += dt;
     if (p.y > 500) equipPetals.splice(i, 1);
   }
-  if (Math.random() < 0.15) spawnEquipPetal();
+  if (Math.random() < 0.12) spawnEquipPetal();
 }
+
+// Get all weapons player owns (equipped + backpack)
+function getAllOwnedWeapons() {
+  const list = [];
+  if (player.weapons[0]) list.push({ w: player.weapons[0], src: 'main', idx: 0 });
+  if (player.weapons[1]) list.push({ w: player.weapons[1], src: 'sub', idx: 1 });
+  for (let i = 0; i < player.backpack.length; i++) {
+    if (player.backpack[i]) list.push({ w: player.backpack[i], src: 'bp', idx: i });
+  }
+  return list;
+}
+
+// Get currently selected slot's weapon
+function getSlotWeapon(slotIdx) {
+  if (slotIdx === 0) return player.weapons[0];
+  if (slotIdx === 1) return player.weapons[1];
+  if (slotIdx === 2) return null; // charm: not yet
+  return null;
+}
+
 function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.save();
   const dt = 1/60;
   updateEquipPetals(dt);
   equipBounce = Math.max(0, equipBounce - dt * 4);
-  const cx = panelX + panelW / 2;
   const F = "'M PLUS Rounded 1c', sans-serif";
+
   // --- Background ---
   const grad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
-  grad.addColorStop(0, 'rgba(26,10,46,0.92)'); grad.addColorStop(1, 'rgba(45,27,78,0.92)');
+  grad.addColorStop(0, 'rgba(26,10,46,0.93)'); grad.addColorStop(1, 'rgba(45,27,78,0.93)');
   ctx.fillStyle = grad; ctx.fillRect(panelX, panelY, panelW, panelH);
-  for (let i = 0; i < 20; i++) {
+  // Stars
+  for (let i = 0; i < 15; i++) {
     const sx = panelX + (i * 137 + 50) % panelW, sy = panelY + (i * 97 + 30) % (panelH - 40);
     ctx.fillStyle = 'rgba(255,255,200,' + (0.15 + Math.sin(Date.now()/1000 + i) * 0.1) + ')';
     ctx.beginPath(); ctx.arc(sx, sy, 1.2, 0, Math.PI * 2); ctx.fill();
   }
+  // Petals
   for (const p of equipPetals) {
     ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(panelX + p.x, panelY + p.y); ctx.rotate(p.r);
     ctx.fillStyle = p.color; ctx.beginPath(); ctx.ellipse(0, 0, p.size, p.size * 0.6, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  // --- Title ---
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 26px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF38 \u30DF\u30D7\u30EA\u30F3\u306E\u305D\u3046\u3073 \uD83C\uDF38', cx, panelY + 32);
-  ctx.fillStyle = '#f8bbd0'; ctx.font = '16px ' + F;
-  ctx.fillText('\uD83C\uDF3C\u82B1\u7C89: ' + pollen, cx, panelY + 55);
 
-  // === CENTER CHARACTER ===
-  const mipSize = Math.min(panelW * 0.25, panelH * 0.32, 250);
-  const mipX = cx - mipSize / 2;
-  const mipY = panelY + 70;
-  const bob = Math.sin(Date.now() / 600) * 4;
-  const bounce = equipBounce > 0 ? Math.sin(equipBounce * Math.PI) * 8 : 0;
-  ctx.save(); ctx.globalAlpha = 0.12;
-  const glowR = mipSize * 0.6;
-  const glowGrad = ctx.createRadialGradient(cx, mipY + mipSize/2, 0, cx, mipY + mipSize/2, glowR);
+  // --- Title + pollen ---
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF38 \u305D\u3046\u3073 \uD83C\uDF38', panelX + panelW/2, panelY + 30);
+  ctx.fillStyle = '#f8bbd0'; ctx.font = '14px ' + F;
+  ctx.fillText('\uD83C\uDF3C ' + pollen, panelX + panelW/2, panelY + 48);
+
+  // ========== LEFT PANE: Character + Equip Slots ==========
+  const leftW = Math.floor(panelW * 0.45);
+  const leftX = panelX + 10;
+  const leftY = panelY + 60;
+
+  // Character
+  const mipSize = Math.min(leftW * 0.55, 160);
+  const mipX = leftX + (leftW - mipSize) / 2;
+  const mipY = leftY + 5;
+  const bob = Math.sin(Date.now() / 600) * 3;
+  const bounce = equipBounce > 0 ? Math.sin(equipBounce * Math.PI) * 6 : 0;
+  // Glow
+  ctx.save(); ctx.globalAlpha = 0.1;
+  const glowGrad = ctx.createRadialGradient(mipX + mipSize/2, mipY + mipSize/2, 0, mipX + mipSize/2, mipY + mipSize/2, mipSize * 0.55);
   glowGrad.addColorStop(0, '#ffd700'); glowGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = glowGrad;
-  ctx.beginPath(); ctx.arc(cx, mipY + mipSize/2, glowR, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mipX + mipSize/2, mipY + mipSize/2, mipSize * 0.55, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
   if (typeof mipurinReady !== 'undefined' && mipurinReady) {
     ctx.save(); ctx.globalAlpha = 0.95;
@@ -63,211 +94,191 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, mipX, mipY + bob - bounce, mipSize, mipSize);
     ctx.restore();
   } else {
-    ctx.fillStyle = '#ffd700'; ctx.font = (mipSize * 0.5) + 'px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('\uD83D\uDC1D', cx, mipY + mipSize * 0.65 + bob - bounce);
+    ctx.fillStyle = '#ffd700'; ctx.font = (mipSize * 0.45) + 'px ' + F; ctx.textAlign = 'center';
+    ctx.fillText('\uD83D\uDC1D', mipX + mipSize/2, mipY + mipSize * 0.6 + bob - bounce);
   }
 
-  // === SLOT HELPERS ===
-  function drawSlotHex(sx, sy, sw, sh, selected) {
-    const hcx = sx + sw/2, hcy = sy + sh/2, hr = Math.min(sw, sh)/2;
+  // --- Equipment Slots (below character) ---
+  const slotLabels = ['\u30E1\u30A4\u30F3', '\u30B5\u30D6', '\uD83D\uDD2E\u30C1\u30E3\u30FC\u30E0'];
+  const slotColors = ['#ffd700', '#87ceeb', '#e056fd'];
+  const slotW = Math.min(leftW - 20, 280);
+  const slotH = 54;
+  const slotStartY = mipY + mipSize + 12;
+  equipSlotRects = [];
+
+  for (let i = 0; i < 3; i++) {
+    const sx = leftX + (leftW - slotW) / 2;
+    const sy = slotStartY + i * (slotH + 8);
+    const selected = equipMode === 'slot' && equipCursor === i;
+    equipSlotRects.push({ id: i === 0 ? 'main' : i === 1 ? 'sub' : 'charm', x: sx, y: sy, w: slotW, h: slotH });
+
+    // Slot background
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)';
     ctx.beginPath();
-    for (let a = 0; a < 6; a++) { const ang = Math.PI/6 + a * Math.PI/3; const px = hcx + Math.cos(ang)*hr; const py = hcy + Math.sin(ang)*hr; a===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py); }
-    ctx.closePath();
-    ctx.fillStyle = selected ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.06)'; ctx.fill();
-    if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3 + Math.sin(Date.now()/200)*0.8; }
-    else { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; }
-    ctx.stroke();
-    if (selected) { ctx.save(); ctx.globalAlpha = 0.08 + Math.sin(Date.now()/300)*0.04; ctx.fillStyle = '#ffd700'; ctx.fill(); ctx.restore(); }
-  }
-  function drawConnector(sx, sy, tx, ty, color) {
-    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.globalAlpha = 0.5;
-    ctx.beginPath(); ctx.moveTo(sx, sy);
-    const mx = (sx + tx) / 2 + (ty - sy) * 0.15, my = (sy + ty) / 2;
-    ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#2ecc71'; ctx.font = '10px ' + F; ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.7; ctx.fillText('\uD83C\uDF3F', mx, my);
-    ctx.restore();
-  }
+    const r = 8;
+    ctx.moveTo(sx+r, sy); ctx.lineTo(sx+slotW-r, sy); ctx.arcTo(sx+slotW, sy, sx+slotW, sy+r, r);
+    ctx.lineTo(sx+slotW, sy+slotH-r); ctx.arcTo(sx+slotW, sy+slotH, sx+slotW-r, sy+slotH, r);
+    ctx.lineTo(sx+r, sy+slotH); ctx.arcTo(sx, sy+slotH, sx, sy+slotH-r, r);
+    ctx.lineTo(sx, sy+r); ctx.arcTo(sx, sy, sx+r, sy, r);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = selected ? slotColors[i] : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = selected ? 2.5 : 1; ctx.stroke();
 
-  // === ICON-ONLY slot drawing (sprite image) ===
-  function drawSlotIcon(w, sx, sy, sw, sh, label, isActive, selected) {
-    drawSlotHex(sx, sy, sw, sh, selected);
-    ctx.textAlign = 'center';
-    // Small label above slot
-    ctx.fillStyle = isActive ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.35)';
-    ctx.font = 'bold 11px ' + F;
-    ctx.fillText(label, sx + sw/2, sy - 4);
-    if (w) {
-      // Try sprite image first (weapon_<id>)
+    // Selection arrow
+    if (selected) {
+      ctx.fillStyle = slotColors[i]; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'left';
+      ctx.fillText('\u25B6', sx + 4, sy + slotH/2 + 6);
+    }
+
+    const w = getSlotWeapon(i);
+    ctx.textAlign = 'left';
+
+    if (i < 2 && w) {
+      // Weapon icon (sprite)
+      const iconSize = 40;
+      const iconX = sx + 22, iconY = sy + (slotH - iconSize) / 2;
       const spriteId = 'weapon_' + w.id;
-      const imgSize = Math.min(sw, sh) - 14;
-      const imgX = sx + (sw - imgSize) / 2;
-      const imgY = sy + (sh - imgSize) / 2 + 2;
       if (typeof hasSprite === 'function' && hasSprite(spriteId)) {
-        drawSpriteImg(spriteId, imgX, imgY, imgSize, imgSize);
+        drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
       } else {
-        // Fallback: emoji from name (first char cluster)
-        ctx.fillStyle = '#fff'; ctx.font = '28px ' + F;
+        ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
         const emoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
-        ctx.fillText(emoji ? emoji[0] : '\u2694', sx + sw/2, sy + sh/2 + 10);
+        ctx.fillText(emoji ? emoji[0] : '\u2694', iconX + iconSize/2, iconY + iconSize/2 + 8);
+        ctx.textAlign = 'left';
       }
-      // Active indicator
-      if (isActive) {
-        ctx.fillStyle = '#ffd700';
-        ctx.beginPath(); ctx.arc(sx + sw - 6, sy + 8, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(sx + sw - 6, sy + 8, 2, 0, Math.PI * 2); ctx.fill();
-      }
-    } else {
-      ctx.save(); ctx.globalAlpha = 0.2;
-      ctx.fillStyle = '#fff'; ctx.font = '22px ' + F;
-      ctx.fillText('\u2795', sx + sw/2, sy + sh/2 + 8);
+      // Name + level
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + F;
+      ctx.fillText(w.name, sx + 68, sy + 22);
+      ctx.fillStyle = '#ffd700'; ctx.font = '12px ' + F;
+      const lvl = w.level || 0;
+      ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + '  ATK ' + w.dmgMul.toFixed(1), sx + 68, sy + 40);
+      // Label
+      ctx.fillStyle = slotColors[i]; ctx.font = '10px ' + F; ctx.textAlign = 'right';
+      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
+      ctx.textAlign = 'left';
+    } else if (i === 2) {
+      // Charm slot (locked)
+      ctx.save(); ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#888'; ctx.font = '14px ' + F;
+      ctx.fillText('  \uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0 (???)', sx + 22, sy + slotH/2 + 5);
       ctx.restore();
-    }
-  }
-
-  // === SLOT POSITIONS ===
-  const mipCx = cx, mipCy = mipY + mipSize / 2;
-  const slotS = 70;
-  const mainSlot = { x: mipX - slotS - 40, y: mipCy - slotS/2 - 20, w: slotS, h: slotS };
-  const subSlot  = { x: mipX - slotS - 30, y: mipCy + 15, w: slotS, h: slotS };
-  const charmSlot = { x: mipX + mipSize + 40, y: mipCy - 35, w: slotS, h: slotS };
-  const bpBaseX = mipX + mipSize + 30, bpBaseY = mipCy + 50;
-
-  equipSlotRects = [
-    { id:'main', x:mainSlot.x, y:mainSlot.y, w:mainSlot.w, h:mainSlot.h },
-    { id:'sub',  x:subSlot.x,  y:subSlot.y,  w:subSlot.w,  h:subSlot.h },
-    { id:'bp0',  x:bpBaseX,      y:bpBaseY,      w:66, h:66 },
-    { id:'bp1',  x:bpBaseX + 74, y:bpBaseY,      w:66, h:66 },
-    { id:'bp2',  x:bpBaseX,      y:bpBaseY + 74, w:66, h:66 },
-    { id:'bp3',  x:bpBaseX + 74, y:bpBaseY + 74, w:66, h:66 }
-  ];
-
-  // Draw main/sub with icon only
-  drawSlotIcon(player.weapons[0], mainSlot.x, mainSlot.y, mainSlot.w, mainSlot.h, '\u30E1\u30A4\u30F3', player.weaponIdx === 0, equipCursor === 0);
-  drawSlotIcon(player.weapons[1], subSlot.x, subSlot.y, subSlot.w, subSlot.h, '\u30B5\u30D6', player.weaponIdx === 1, equipCursor === 1);
-
-  // Connectors
-  if (equipCursor === 0) drawConnector(mipX, mipCy - 20, mainSlot.x + mainSlot.w, mainSlot.y + mainSlot.h/2, '#ffd700');
-  if (equipCursor === 1) drawConnector(mipX, mipCy + 20, subSlot.x + subSlot.w, subSlot.y + subSlot.h/2, '#87ceeb');
-
-  // Charm slot (locked)
-  ctx.save(); ctx.globalAlpha = 0.4;
-  drawSlotHex(charmSlot.x, charmSlot.y, charmSlot.w, charmSlot.h, false);
-  ctx.fillStyle = '#888'; ctx.font = '24px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83D\uDD2E', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h/2 + 8);
-  ctx.fillStyle = '#666'; ctx.font = '9px ' + F;
-  ctx.fillText('???', charmSlot.x + charmSlot.w/2, charmSlot.y + charmSlot.h - 2);
-  ctx.restore();
-  drawConnector(mipX + mipSize, mipCy, charmSlot.x, charmSlot.y + charmSlot.h/2, '#e056fd');
-
-  // === BACKPACK (icon only) ===
-  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 13px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF6F \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF', bpBaseX + 68, bpBaseY - 8);
-  for (let i = 0; i < 4; i++) {
-    const col = i % 2, row = Math.floor(i / 2);
-    const sx = bpBaseX + col * 74, sy = bpBaseY + row * 74;
-    const sel = equipCursor === i + 2;
-    drawSlotHex(sx, sy, 66, 66, sel);
-    if (sel) drawConnector(mipX + mipSize, mipCy + 30, sx, sy + 33, '#f8bbd0');
-    const w = player.backpack[i];
-    ctx.textAlign = 'center';
-    if (w) {
-      const bpSpriteId = 'weapon_' + w.id;
-      if (typeof hasSprite === 'function' && hasSprite(bpSpriteId)) {
-        drawSpriteImg(bpSpriteId, sx + 9, sy + 9, 48, 48);
-      } else {
-        ctx.fillStyle = '#fff'; ctx.font = '24px ' + F;
-        const bpEmoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
-        ctx.fillText(bpEmoji ? bpEmoji[0] : '\u2694', sx + 33, sy + 40);
-      }
+      ctx.fillStyle = '#e056fd'; ctx.font = '10px ' + F; ctx.textAlign = 'right';
+      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
+      ctx.textAlign = 'left';
     } else {
-      ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#f8bbd0'; ctx.font = '22px sans-serif';
-      ctx.fillText('\uD83C\uDF38', sx + 33, sy + 40); ctx.restore();
+      ctx.fillStyle = '#555'; ctx.font = '14px ' + F;
+      ctx.fillText('  \u2795 \u7A7A\u304D\u30B9\u30ED\u30C3\u30C8', sx + 22, sy + slotH/2 + 5);
+      ctx.fillStyle = slotColors[i]; ctx.font = '10px ' + F; ctx.textAlign = 'right';
+      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
+      ctx.textAlign = 'left';
     }
   }
 
-  // === DETAIL PANEL (bottom center) ===
-  const detW = 400, detH = 150;
-  const detX = cx - detW / 2, detY = panelY + panelH - detH - 28;
-  const selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
-  ctx.fillStyle = 'rgba(255,240,245,0.08)';
+  // ========== RIGHT PANE: Weapon List ==========
+  const rightX = panelX + leftW + 20;
+  const rightY = panelY + 60;
+  const rightW = panelW - leftW - 35;
+  const rightH = panelH - 90;
+
+  // Right pane background
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.beginPath();
-  const cr = 10;
-  ctx.moveTo(detX + cr, detY); ctx.lineTo(detX + detW - cr, detY);
-  ctx.arcTo(detX + detW, detY, detX + detW, detY + cr, cr);
-  ctx.lineTo(detX + detW, detY + detH - cr);
-  ctx.arcTo(detX + detW, detY + detH, detX + detW - cr, detY + detH, cr);
-  ctx.lineTo(detX + cr, detY + detH);
-  ctx.arcTo(detX, detY + detH, detX, detY + detH - cr, cr);
-  ctx.lineTo(detX, detY + cr);
-  ctx.arcTo(detX, detY, detX + cr, detY, cr);
+  const rr = 10;
+  ctx.moveTo(rightX+rr, rightY); ctx.lineTo(rightX+rightW-rr, rightY); ctx.arcTo(rightX+rightW, rightY, rightX+rightW, rightY+rr, rr);
+  ctx.lineTo(rightX+rightW, rightY+rightH-rr); ctx.arcTo(rightX+rightW, rightY+rightH, rightX+rightW-rr, rightY+rightH, rr);
+  ctx.lineTo(rightX+rr, rightY+rightH); ctx.arcTo(rightX, rightY+rightH, rightX, rightY+rightH-rr, rr);
+  ctx.lineTo(rightX, rightY+rr); ctx.arcTo(rightX, rightY, rightX+rr, rightY, rr);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(248,187,208,0.3)'; ctx.lineWidth = 1; ctx.stroke();
 
-  if (selW) {
-    const dcx = detX + detW / 2;
-    // Name + icon
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 20px ' + F; ctx.textAlign = 'center';
-    ctx.fillText((selW.icon||'\u2694') + ' ' + selW.name, dcx, detY + 28);
-    // Level stars
-    const lvl = selW.level || 0;
-    ctx.fillStyle = '#ffd700'; ctx.font = '14px ' + F;
-    ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl), dcx, detY + 48);
-    // Stats row
-    ctx.fillStyle = '#ffe0b2'; ctx.font = '13px ' + F;
-    const statsY = detY + 70;
-    ctx.fillText('\u2694 ATK ' + selW.dmgMul.toFixed(1), dcx - 120, statsY);
-    ctx.fillText('\u26A1 SPD ' + selW.speed.toFixed(2), dcx, statsY);
-    ctx.fillText('\uD83C\uDFAF RNG ' + selW.range, dcx + 120, statsY);
-    // Description
-    if (selW.desc) { ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F; ctx.fillText(selW.desc.substring(0, 36), dcx, statsY + 18); }
-    // Upgrade button
-    const btnW = 180, btnH = 30;
-    const btnX = dcx - btnW / 2, btnY = detY + detH - 40;
-    if (lvl < WEAPON_UPGRADE_MAX) {
-      const cost = WEAPON_UPGRADE_COST[lvl]; const ok = pollen >= cost;
-      ctx.fillStyle = ok ? 'rgba(46,204,113,0.18)' : 'rgba(255,100,100,0.10)';
-      ctx.beginPath();
-      ctx.moveTo(btnX + 6, btnY); ctx.lineTo(btnX + btnW - 6, btnY);
-      ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + 6, 6);
-      ctx.lineTo(btnX + btnW, btnY + btnH - 6);
-      ctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - 6, btnY + btnH, 6);
-      ctx.lineTo(btnX + 6, btnY + btnH);
-      ctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - 6, 6);
-      ctx.lineTo(btnX, btnY + 6);
-      ctx.arcTo(btnX, btnY, btnX + 6, btnY, 6);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 13px ' + F; ctx.textAlign = 'center';
-      ctx.fillText('Z: \u5F37\u5316 (\uD83C\uDF3C' + cost + ')', dcx, btnY + 20);
+  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF92 \u3082\u3061\u3082\u306E\u30EA\u30B9\u30C8', rightX + rightW/2, rightY + 20);
+
+  const allWeapons = getAllOwnedWeapons();
+  const listStartY = rightY + 35;
+  const rowH = 52;
+  const maxVisible = Math.floor((rightH - 50) / rowH);
+
+  if (allWeapons.length === 0) {
+    ctx.fillStyle = '#666'; ctx.font = '14px ' + F;
+    ctx.fillText('\u3076\u304D\u304C\u306A\u3044\u3088', rightX + rightW/2, listStartY + 40);
+  }
+
+  for (let i = 0; i < Math.min(allWeapons.length, maxVisible); i++) {
+    const entry = allWeapons[i];
+    const w = entry.w;
+    const ry = listStartY + i * rowH;
+    const listSel = equipMode === 'list' && equipListCursor === i;
+
+    // Row background
+    ctx.fillStyle = listSel ? 'rgba(255,215,0,0.12)' : (i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)');
+    ctx.fillRect(rightX + 4, ry, rightW - 8, rowH - 4);
+    if (listSel) {
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+      ctx.strokeRect(rightX + 4, ry, rightW - 8, rowH - 4);
+    }
+
+    // Where is it equipped?
+    let badge = '';
+    if (entry.src === 'main') badge = '\u30E1\u30A4\u30F3';
+    else if (entry.src === 'sub') badge = '\u30B5\u30D6';
+    else badge = '\u30D0\u30C3\u30AF';
+
+    // Icon
+    const icoSize = 36;
+    const icoX = rightX + 10, icoY = ry + (rowH - icoSize) / 2 - 2;
+    const sprId = 'weapon_' + w.id;
+    if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+      drawSpriteImg(sprId, icoX, icoY, icoSize, icoSize);
     } else {
-      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px ' + F; ctx.textAlign = 'center';
-      ctx.fillText('\u2728 \u6700\u5927\u5F37\u5316\u6E08 \u2728', dcx, btnY + 20);
+      ctx.fillStyle = '#fff'; ctx.font = '22px ' + F; ctx.textAlign = 'center';
+      const em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
+      ctx.fillText(em ? em[0] : '\u2694', icoX + icoSize/2, icoY + icoSize/2 + 7);
     }
-  } else {
-    ctx.fillStyle = '#888'; ctx.font = '14px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('\u2190 \u30B9\u30ED\u30C3\u30C8\u3092\u3048\u3089\u3093\u3067\u306D', cx, detY + 75);
+
+    // Name
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ' + F;
+    ctx.fillText(w.name, rightX + 52, ry + 18);
+
+    // Stats
+    ctx.fillStyle = '#ffe0b2'; ctx.font = '11px ' + F;
+    const lvl = w.level || 0;
+    ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + '  ATK ' + w.dmgMul.toFixed(1) + '  SPD ' + w.speed.toFixed(2), rightX + 52, ry + 35);
+
+    // Badge
+    ctx.textAlign = 'right';
+    const badgeCol = entry.src === 'main' ? '#ffd700' : entry.src === 'sub' ? '#87ceeb' : '#aaa';
+    ctx.fillStyle = badgeCol; ctx.font = '10px ' + F;
+    ctx.fillText(badge, rightX + rightW - 10, ry + 16);
+
+    // Upgrade cost if selected
+    if (listSel && lvl < WEAPON_UPGRADE_MAX) {
+      const cost = WEAPON_UPGRADE_COST[lvl]; const ok = pollen >= cost;
+      ctx.fillStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('Z:\u5F37\u5316(' + cost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
+    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX) {
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('\u2728MAX', rightX + rightW - 10, ry + rowH - 10);
+    }
+    ctx.textAlign = 'left';
   }
 
-  // --- Controls hint ---
-  ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\u2191\u2193:\u3048\u3089\u3076  Z:\u5F37\u5316  X:\u3044\u308C\u304B\u3048  Tab:\u3068\u3058\u308B', cx, panelY + panelH - 8);
+  // ========== BOTTOM: Detail + Controls ==========
+  const selW = equipMode === 'list' && allWeapons[equipListCursor]
+    ? allWeapons[equipListCursor].w
+    : getSlotWeapon(equipCursor);
 
-  // --- Drag overlay (mouse) ---
-  if (mouse.dragItem && typeof touchActive !== 'undefined' && !touchActive) {
-    for (let si = 0; si < equipSlotRects.length; si++) {
-      if (si === mouse.dragFrom) { ctx.save(); ctx.globalAlpha = 0.3; const ds = equipSlotRects[si]; ctx.fillStyle = '#000'; ctx.fillRect(ds.x, ds.y, ds.w, ds.h); ctx.restore(); continue; }
-      const ds = equipSlotRects[si]; const hx = mouse.x >= ds.x && mouse.x <= ds.x+ds.w && mouse.y >= ds.y && mouse.y <= ds.y+ds.h;
-      if (hx) { ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 3; ctx.strokeRect(ds.x-2, ds.y-2, ds.w+4, ds.h+4); }
-    }
-    ctx.save(); ctx.globalAlpha = 0.75;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(mouse.x - 50, mouse.y - 15, 100, 30);
-    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.strokeRect(mouse.x - 50, mouse.y - 15, 100, 30);
-    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
-    ctx.fillText((mouse.dragItem.icon||'\u2694') + ' ' + mouse.dragItem.name, mouse.x, mouse.y + 5);
-    ctx.restore();
+  if (selW && selW.desc) {
+    ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(selW.desc, panelX + panelW/2, panelY + panelH - 28);
   }
+
+  // Controls
+  ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
+  const hint = equipMode === 'slot'
+    ? '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  \u2192:\u30EA\u30B9\u30C8\u3078  Z:\u5F37\u5316  Tab:\u3068\u3058\u308B'
+    : '\u2191\u2193:\u3048\u3089\u3076  \u2190:\u30B9\u30ED\u30C3\u30C8\u3078  Z:\u5F37\u5316  X:\u305D\u3046\u3073  Tab:\u3068\u3058\u308B';
+  ctx.fillText(hint, panelX + panelW/2, panelY + panelH - 10);
+
   ctx.restore();
 }
-

@@ -95,11 +95,16 @@ function hitTestInvTab(cx, cy) {
 }
 
 function hitTestUpgradeBtn(cx, cy) {
-  const panelX = 80, panelY = 110, panelH = CH - 160;
-  const detX = panelX + 15, detY = panelY + panelH - 195, detW = 175;
-  const btnY = detY + 132;
-  return cx >= detX + 8 && cx <= detX + detW - 8 && cy >= btnY && cy <= btnY + 28;
-}
+    if (!inventoryOpen || inventoryTab !== 2) return false;
+    // Match bottom-center detail panel from equip_ui.js
+    const panelW = 500, panelH = 440;
+    const panelX = (CW - panelW) / 2, panelY = (CH - panelH) / 2;
+    const pcx = panelX + panelW / 2;
+    const detH = 140, detY = panelY + panelH - detH - 30;
+    const btnW = 180, btnH = 30;
+    const btnX = pcx - btnW / 2, btnY = detY + detH - 38;
+    return cx >= btnX && cx <= btnX + btnW && cy >= btnY && cy <= btnY + btnH;
+  }
 
 // === Unified touch handlers ===
 function onTouchStart(e) {
@@ -319,3 +324,4 @@ function updateTouch() {
   if (!touchActive) return;
   updateJoystickKeys();
 }
+

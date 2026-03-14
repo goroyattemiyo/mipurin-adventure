@@ -225,6 +225,7 @@ function update(dt) {
     if (gameState === 'weaponDrop' && weaponPopup.active) {
    if (wasPressed('KeyZ')) {
     const w = {...weaponPopup.weapon};
+    if (!w.rarity && typeof rollRarity === 'function') w.rarity = rollRarity(floor);
     if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
     player.weapons[player.weaponIdx] = w; player.weapon = w;
     if (typeof weaponCollection !== 'undefined') weaponCollection.add(w.id);
@@ -233,6 +234,7 @@ function update(dt) {
    }
    if (wasPressed('KeyQ')) {
     const w = {...weaponPopup.weapon};
+    if (!w.rarity && typeof rollRarity === 'function') w.rarity = rollRarity(floor);
     if (weaponPopup.sparkle) w.dmgMul = (w.dmgMul || 1) + 0.2;
     const subIdx = 1 - player.weaponIdx;
     player.weapons[subIdx] = w;

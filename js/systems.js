@@ -82,7 +82,9 @@ function buildShop() {
   // Random weapon
   const _wpPool = WEAPON_DEFS.filter(w => !w.minFloor || floor >= w.minFloor); const wep = _wpPool[Math.floor(rng() * _wpPool.length)];
   shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {
-      player.weapons[player.weaponIdx] = initWeapon({...wep}); player.weapon = player.weapons[player.weaponIdx];
+      var _sw = initWeapon({...wep});
+      _sw.rarity = (typeof rollRarity === 'function') ? rollRarity(floor) : 'normal';
+      player.weapons[player.weaponIdx] = _sw; player.weapon = _sw;
       if (typeof weaponCollection !== 'undefined') { weaponCollection.add(wep.id); saveCollection(); }
       Audio.level_up();
     } });
@@ -164,7 +166,14 @@ const SPRITE_MAP = {
   weapon_pollen_shield: 'assets/sprites/weapon_pollen_shield.webp',
   weapon_vine_whip: 'assets/sprites/weapon_vine_whip.webp',
   weapon_feather_shuriken: 'assets/sprites/weapon_feather_shuriken.webp',
-  weapon_queen_staff: 'assets/sprites/weapon_queen_staff.webp'
+  weapon_queen_staff: 'assets/sprites/weapon_queen_staff.webp',
+  // Tier2 weapon sprites (alias to Tier1 until unique art)
+  weapon_golden_needle: 'assets/sprites/weapon_needle.webp',
+  weapon_amber_cannon: 'assets/sprites/weapon_honey_cannon.webp',
+  weapon_holy_shield: 'assets/sprites/weapon_pollen_shield.webp',
+  weapon_cursed_thorn: 'assets/sprites/weapon_vine_whip.webp',
+  weapon_storm_wing: 'assets/sprites/weapon_feather_shuriken.webp',
+  weapon_queen_true_staff: 'assets/sprites/weapon_queen_staff.webp',
 };
 
 const spriteCache = {};

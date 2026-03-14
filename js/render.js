@@ -143,7 +143,10 @@ function drawEntity(e, color, isP) {
     ctx.translate(e.x + e.w / 2, e.y + e.h / 2 + bob);
     ctx.rotate(tilt);
     ctx.scale(squash, 2 - squash);
+    var _lc = (typeof loopCount !== 'undefined') ? loopCount : 0;
+    if (_lc > 0) ctx.filter = 'hue-rotate(' + (_lc * 30) + 'deg)';
     drawSpriteImg(spriteId, -e.w / 2, -e.h / 2, e.w, e.h);
+    if (_lc > 0) ctx.filter = 'none';
     if (e.hitFlash > 0) {
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-e.w / 2, -e.h / 2, e.w, e.h);
@@ -323,7 +326,10 @@ function drawBoss() {
   if (hasSprite(bossId)) {
     drawBossPhaseEffect(boss);
     const bob = getEnemyBob(boss);
+    var _blc = (typeof loopCount !== 'undefined') ? loopCount : 0;
+    if (_blc > 0) ctx.filter = 'hue-rotate(' + (_blc * 30) + 'deg)';
     drawSpriteImg(bossId, boss.x, boss.y + bob, boss.w, boss.h);
+    if (_blc > 0) ctx.filter = 'none';
     if (boss.hitFlash > 0) {
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(boss.x, boss.y + bob, boss.w, boss.h);
@@ -394,7 +400,23 @@ function drawGameState() {
   if (gameState === 'weaponDrop' && weaponPopup.active) {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
       ctx.fillStyle = '#ffd700'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-      ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
+      // Rarity light pillar
+    var _wpR = weaponPopup.weapon.rarity || 'normal';
+    var _pillarCol = _wpR === 'legend' ? '#e67e22' : _wpR === 'miracle' ? '#e056fd' : _wpR === 'great' ? '#ffd700' : _wpR === 'fine' ? '#87ceeb' : null;
+    if (_pillarCol) {
+      ctx.save();
+      var _pa = 0.3 + Math.sin(Date.now() / 300) * 0.15;
+      ctx.globalAlpha = _pa;
+      var _pg = ctx.createLinearGradient(CW/2, 0, CW/2, CH);
+      _pg.addColorStop(0, _pillarCol); _pg.addColorStop(0.5, 'transparent'); _pg.addColorStop(1, _pillarCol);
+      ctx.fillStyle = _pg;
+      ctx.fillRect(CW/2 - 30, 0, 60, CH);
+      ctx.restore();
+    }
+    // Rarity name color
+    var _nameCol = _wpR === 'legend' ? '#e67e22' : _wpR === 'miracle' ? '#e056fd' : _wpR === 'great' ? '#ffd700' : _wpR === 'fine' ? '#87ceeb' : '#fff';
+    ctx.fillStyle = _nameCol; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
       ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
       ctx.fillText('ATK: ' + weaponPopup.weapon.atk + '  ' + (weaponPopup.weapon.desc || ''), CW / 2, CH / 2);
       ctx.fillText('Z: おきにいりに  Q: もうひとつに  X: すてる', CW / 2, CH / 2 + 40);

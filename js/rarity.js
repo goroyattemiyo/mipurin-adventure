@@ -28,4 +28,13 @@ function rollRarity(floorNum) {
 }
 
 function getRarityDef(r) { return RARITY_DEFS[r] || RARITY_DEFS.normal; }
+// === Rarity Sprite Filter ===
+function getRarityFilter(rarity) {
+  if (rarity === 'fine')    return 'hue-rotate(180deg) saturate(1.3)';
+  if (rarity === 'great')   return 'hue-rotate(40deg) saturate(1.5) brightness(1.2)';
+  if (rarity === 'miracle') return 'hue-rotate(270deg) saturate(1.8)';
+  if (rarity === 'legend')  return 'hue-rotate(15deg) saturate(2.0) brightness(1.3)';
+  return 'none';
+}
+// === End Rarity Sprite Filter ===
 // === End Rarity System ===

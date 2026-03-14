@@ -139,7 +139,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
       const iconX = sx + 22, iconY = sy + (slotH - iconSize) / 2;
       const spriteId = 'weapon_' + w.id;
       if (typeof hasSprite === 'function' && hasSprite(spriteId)) {
-        drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
+        ctx.save();
+          var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+          if (_esf !== 'none') ctx.filter = _esf;
+          drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
+          ctx.restore();
       } else {
         ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
         const emoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
@@ -240,7 +244,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     const icoX = rightX + 10, icoY = ry + (rowH - icoSize) / 2 - 2;
     const sprId = 'weapon_' + w.id;
     if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-      drawSpriteImg(sprId, icoX, icoY, icoSize, icoSize);
+      ctx.save();
+          var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+          if (_elf !== 'none') ctx.filter = _elf;
+          drawSpriteImg(sprId, icoX, icoY, icoSize, icoSize);
+          ctx.restore();
     } else {
       ctx.fillStyle = '#fff'; ctx.font = '22px ' + F; ctx.textAlign = 'center';
       const em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);

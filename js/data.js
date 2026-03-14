@@ -13,6 +13,30 @@ function recordEnemy(name, defeated) {
   if (defeated) collection[lk].defeated++;
 }
 
+// === Enemy Variant Names ===
+const ENEMY_VARIANT_NAMES = {
+  mushroom:  ['どくキノコ',       'あおキノコ',       'きんキノコ',       'やみキノコ'],
+  blob:      ['はちみつスライム', 'スライムベス',     'メタルスライム',   'キングスライム'],
+  spider:    ['あみぐもちゃん',   'くろぐもちゃん',   'どくぐもちゃん',   'おにぐもちゃん'],
+  bat:       ['やみコウモリ',     'あかコウモリ',     'こおりコウモリ',   'きんコウモリ'],
+  beetle:    ['かぶとむしナイト', 'くわがたナイト',   'ダイヤナイト',     'りゅうナイト'],
+  wasp:      ['わるいハチ',       'どくバチ',         'おおスズメバチ',   'キラーホーネット'],
+  flower:    ['パクパクフラワー', 'もえもえフラワー', 'こおりフラワー',   'やみフラワー'],
+  worm:      ['もぐもぐイモムシ', 'ぴかぴかイモムシ', 'とげとげイモムシ', 'おおイモムシ'],
+  ghost:     ['ひとだまホタル',   'あおびホタル',     'おにびホタル',     'れいこんホタル'],
+  golem:     ['いわいわゴーレム', 'こおりゴーレム',   'マグマゴーレム',   'クリスタルゴーレム'],
+  vine:      ['つるつるツタ',     'もえるツタ',       'こおるツタ',       'やみのツタ'],
+  darkbee:   ['ダークビー',       'シャドービー',     'ファントムビー',   'デスビー']
+};
+function getVariantName(shape, loop) {
+  var names = ENEMY_VARIANT_NAMES[shape];
+  if (!names) return null;
+  var idx = Math.min(loop || 0, names.length - 1);
+  return names[idx];
+}
+// === End Enemy Variant Names ===
+
+
 // ===== INVENTORY SCREEN =====
 let inventoryOpen = false, inventoryTab = 0;
 

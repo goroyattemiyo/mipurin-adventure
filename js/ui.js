@@ -201,7 +201,7 @@ function drawCollectionTab() {
     if (known) {
       var dispColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
       ctx.fillStyle = dispColor; ctx.font = 'bold 16px ' + F;
-      var displayName = ek.name + (lp > 0 ? ' [\u8272\u9055\u3044 ' + lp + ']' : '');
+      var displayName = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : (ek.name + (lp > 0 ? ' [Loop ' + lp + ']' : ''));
       ctx.fillText(displayName, txX, ey + 20);
       ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
       ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36);
@@ -212,7 +212,7 @@ function drawCollectionTab() {
       }
     } else {
       ctx.fillStyle = '#555'; ctx.font = 'bold 16px ' + F;
-      var unknownName = '??? ' + (lp > 0 ? '[Loop ' + lp + ']' : '');
+      var unknownName = (lp > 0) ? '??? [Loop ' + lp + ']' : '???';
       ctx.fillText(unknownName, txX, ey + 20);
       ctx.fillStyle = '#444'; ctx.font = '12px ' + F;
       ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36);
@@ -471,7 +471,11 @@ function drawWeaponCollection() {
       // Icon
       var sprId = 'weapon_' + w.id;
       if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        ctx.save();
+        var _wrf = (typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity || 'normal') : 'none';
+        if (_wrf !== 'none') ctx.filter = _wrf;
         drawSpriteImg(sprId, wx + 4, wy + 8, 48, 48);
+        ctx.restore();
       } else {
         ctx.fillStyle = '#fff'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
         var em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
@@ -479,7 +483,7 @@ function drawWeaponCollection() {
         ctx.textAlign = 'left';
       }
       // Name
-      ctx.fillStyle = w.color || '#fff'; ctx.font = 'bold 13px ' + F;
+      ctx.fillStyle = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : (w.color || '#fff'); ctx.font = 'bold 13px ' + F;
       var shortName = w.name.length > 10 ? w.name.slice(0, 10) + '..' : w.name;
       ctx.fillText(shortName, wx + 56, wy + 25);
       // Stats
@@ -489,6 +493,11 @@ function drawWeaponCollection() {
       if (isTier2) {
         ctx.fillStyle = '#ffd700'; ctx.font = 'bold 10px ' + F;
         ctx.fillText('T2', wx + cardW - 20, wy + 14);
+      }
+      if (w.rarity && w.rarity !== 'normal' && typeof getRarityDef === 'function') {
+        var _rd = getRarityDef(w.rarity);
+        ctx.fillStyle = _rd.color; ctx.font = 'bold 10px ' + F;
+        ctx.fillText(_rd.name, wx + cardW - 22, wy + cardH - 6);
       }
       // Desc
       ctx.fillStyle = '#999'; ctx.font = '10px ' + F;

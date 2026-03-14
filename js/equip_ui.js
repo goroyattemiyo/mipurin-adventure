@@ -147,7 +147,7 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
         ctx.textAlign = 'left';
       }
       // Name + level
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + F;
+      ctx.fillStyle = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff'; ctx.font = 'bold 15px ' + F;
       ctx.fillText(w.name, sx + 68, sy + 22);
       ctx.fillStyle = '#ffd700'; ctx.font = '12px ' + F;
       const lvl = w.level || 0;
@@ -249,8 +249,9 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
 
     // Name
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px ' + F;
-    ctx.fillText(w.name, rightX + 52, ry + 18);
+    var _rCol = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff';
+    ctx.fillStyle = _rCol; ctx.font = 'bold 14px ' + F;
+    ctx.fillText(w.name + (w.rarity && w.rarity !== 'normal' && typeof getRarityDef === 'function' ? ' [' + getRarityDef(w.rarity).name + ']' : ''), rightX + 52, ry + 18);
 
     // Stats
     ctx.fillStyle = '#ffe0b2'; ctx.font = '11px ' + F;

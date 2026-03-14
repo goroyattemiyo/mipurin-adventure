@@ -13,7 +13,6 @@ let inventoryOpen = false, inventoryTab = 0;
 
 
 
-
 // ===== PALETTE =====
 const COL = { bg: '#a8d5ba', wall: '#6b8f71', floor: '#c8e6c9', floorAlt: '#b2dfb5',
   player: '#ffd700', playerOutline: '#b8860b',
@@ -231,7 +230,6 @@ const WEAPON_DEFS = [
   { id: 'storm_wing', name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 84, speed: 0.1, dur: 0.08, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
   { id: 'queen_true_staff', name: '💎 女王の真杖', dmgMul: 2.5, range: 76, speed: 0.5, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe', tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
 
-
 // ===== WEAPON COLLECTION =====
 
 // === Weapon Upgrade System (Sprint G) ===
@@ -312,37 +310,6 @@ loadCollection();
 weaponCollection.add(WEAPON_DEFS[0].id); saveCollection();
 
 
-// === Weapon Rarity System (Phase 1) ===
-const RARITY_DEFS = {
-  normal:  { name: 'ふつう',   color: '#ffffff', weight: 50 },
-  fine:    { name: 'きれい',   color: '#87ceeb', weight: 30 },
-  great:   { name: 'すてき',   color: '#ffd700', weight: 15 },
-  miracle: { name: 'きせき',   color: '#e056fd', weight: 4 },
-  legend:  { name: 'でんせつ', color: '#e67e22', weight: 1 }
-};
-
-function rollRarity(floorNum) {
-  var bonus = Math.min(floorNum * 0.5, 8);
-  var weights = {};
-  var keys = Object.keys(RARITY_DEFS);
-  for (var i = 0; i < keys.length; i++) {
-    var k = keys[i];
-    weights[k] = RARITY_DEFS[k].weight;
-    if (k !== 'normal') weights[k] += bonus;
-  }
-  var total = 0;
-  for (var j = 0; j < keys.length; j++) total += weights[keys[j]];
-  var roll = Math.random() * total;
-  var acc = 0;
-  for (var m = 0; m < keys.length; m++) {
-    acc += weights[keys[m]];
-    if (roll < acc) return keys[m];
-  }
-  return 'normal';
-}
-
-function getRarityDef(r) { return RARITY_DEFS[r] || RARITY_DEFS.normal; }
-// === End Rarity System ===
 
 // ===== CONSUMABLES =====
 const CONSUMABLE_DEFS = [
@@ -396,7 +363,6 @@ function drawDrops() {
     ctx.globalAlpha = 1;
   }
 }
-
 
 
 
@@ -535,7 +501,6 @@ function updateMessages(dt) {
     if (targetChars > dialogMsg.charIdx) dialogMsg.charIdx = Math.min(targetChars, dialogMsg.lines[dialogMsg.lineIdx].length);
   }
 }
-
 
 // ===== End Message System =====
 

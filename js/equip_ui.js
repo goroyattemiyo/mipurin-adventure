@@ -36,7 +36,7 @@ function getAllOwnedWeapons() {
 function getSlotWeapon(slotIdx) {
   if (slotIdx === 0) return player.weapons[0];
   if (slotIdx === 1) return player.weapons[1];
-  if (slotIdx === 2) return null; // charm: not yet
+  if (slotIdx === 2) return player.charm || null; // charm slot
   return null;
 }
 
@@ -157,11 +157,23 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
       ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
       ctx.textAlign = 'left';
     } else if (i === 2) {
-      // Charm slot (locked)
-      ctx.save(); ctx.globalAlpha = 0.4;
-      ctx.fillStyle = '#888'; ctx.font = '14px ' + F;
-      ctx.fillText('  \uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0 (???)', sx + 22, sy + slotH/2 + 5);
-      ctx.restore();
+      // Charm slot (active)
+      var ch = player.charm;
+      if (ch) {
+        ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
+        ctx.fillText(ch.icon || '\uD83D\uDD2E', sx + 42, sy + slotH/2 + 9);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + F;
+        ctx.fillText(ch.name, sx + 68, sy + 22);
+        ctx.fillStyle = '#e056fd'; ctx.font = '12px ' + F;
+        var rarTxt = ch.rarity === 'legend' ? '\u2605LEGEND' : ch.rarity === 'rare' ? '\u2605RARE' : 'COMMON';
+        ctx.fillText(rarTxt + '  ' + ch.desc, sx + 68, sy + 40);
+      } else {
+        ctx.save(); ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#888'; ctx.font = '14px ' + F;
+        ctx.fillText('  \uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0 (\u672A\u88C5\u5099)', sx + 22, sy + slotH/2 + 5);
+        ctx.restore();
+      }
       ctx.fillStyle = '#e056fd'; ctx.font = '10px ' + F; ctx.textAlign = 'right';
       ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
       ctx.textAlign = 'left';
@@ -276,7 +288,7 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   // Controls
   ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
   const hint = equipMode === 'slot'
-    ? '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  \u2192:\u30EA\u30B9\u30C8\u3078  Z:\u5F37\u5316  Tab:\u3068\u3058\u308B'
+    ? equipCursor === 2 ? '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  Tab:\u3068\u3058\u308B' : '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  \u2192:\u30EA\u30B9\u30C8\u3078  Z:\u5F37\u5316  Tab:\u3068\u3058\u308B'
     : '\u2191\u2193:\u3048\u3089\u3076  \u2190:\u30B9\u30ED\u30C3\u30C8\u3078  Z:\u5F37\u5316  X:\u305D\u3046\u3073  Tab:\u3068\u3058\u308B';
   ctx.fillText(hint, panelX + panelW/2, panelY + panelH - 10);
 

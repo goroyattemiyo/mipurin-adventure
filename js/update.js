@@ -106,8 +106,8 @@ function update(dt) {
       if (equipMode === 'slot') {
         if (wasPressed('ArrowUp') || wasPressed('KeyW')) { equipCursor = (equipCursor + 2) % 3; Audio.menu_move(); equipBounce = 1; }
         if (wasPressed('ArrowDown') || wasPressed('KeyS')) { equipCursor = (equipCursor + 1) % 3; Audio.menu_move(); equipBounce = 1; }
-        if (wasPressed('ArrowRight') || wasPressed('KeyD')) { if (allWeps.length > 0) { equipMode = 'list'; equipListCursor = 0; Audio.menu_move(); } }
-        if (wasPressed('KeyZ')) {
+        if ((wasPressed('ArrowRight') || wasPressed('KeyD')) && equipCursor < 2) { if (allWeps.length > 0) { equipMode = 'list'; equipListCursor = 0; Audio.menu_move(); } }
+        if (wasPressed('KeyZ') && equipCursor < 2) {
           const selW = getSlotWeapon(equipCursor);
           if (selW && upgradeWeapon(selW)) {
             Audio.level_up(); showFloat('\u2B50 ' + selW.name + ' Lv.' + selW.level + ' \u306B\u5F37\u5316\uFF01', 2, MSG_COLORS.buff);

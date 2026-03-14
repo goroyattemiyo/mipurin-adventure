@@ -170,32 +170,37 @@ function drawCollectionTab() {
 
     var sprX = startX + 6, sprY = ey + 7;
     var sprW = 48, sprH = 48;
-    var shiftedColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-    var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
+    var sprId = ek.shape;
     if (known) {
       ctx.save();
-      if (typeof drawEnemyShape === 'function') {
-        drawEnemyShape(fakeE, shiftedColor);
+      if (lp > 0) ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        drawSpriteImg(sprId, sprX, sprY, sprW, sprH);
       } else {
-        ctx.fillStyle = shiftedColor; ctx.beginPath();
-        ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
+        var shiftedColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
+        var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
+        if (typeof drawEnemyShape === 'function') drawEnemyShape(fakeE, shiftedColor);
       }
+      ctx.filter = 'none';
       ctx.restore();
     } else {
-      ctx.save(); ctx.globalAlpha = 0.2;
-      if (typeof drawEnemyShape === 'function') {
-        fakeE.hitFlash = 99;
-        drawEnemyShape(fakeE, '#222');
+      ctx.save();
+      ctx.filter = 'brightness(0)';
+      ctx.globalAlpha = 0.3;
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        drawSpriteImg(sprId, sprX, sprY, sprW, sprH);
       } else {
-        ctx.fillStyle = '#333'; ctx.beginPath();
-        ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
+        var fakeE2 = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 99 };
+        if (typeof drawEnemyShape === 'function') drawEnemyShape(fakeE2, '#222');
       }
-      ctx.globalAlpha = 1; ctx.restore();
+      ctx.filter = 'none'; ctx.globalAlpha = 1;
+      ctx.restore();
     }
 
     var txX = startX + 66;
     if (known) {
-      ctx.fillStyle = shiftedColor; ctx.font = 'bold 16px ' + F;
+      var dispColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
+      ctx.fillStyle = dispColor; ctx.font = 'bold 16px ' + F;
       var displayName = ek.name + (lp > 0 ? ' [\u8272\u9055\u3044 ' + lp + ']' : '');
       ctx.fillText(displayName, txX, ey + 20);
       ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
@@ -214,6 +219,7 @@ function drawCollectionTab() {
     }
   }
 }
+
 
 
 

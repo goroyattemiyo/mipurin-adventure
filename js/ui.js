@@ -92,8 +92,7 @@ function drawInventoryItems() {
 
 function drawCollectionTab() {
   var F = "'M PLUS Rounded 1c', sans-serif";
-  // === Sub-tab header ===
-  var subTabs = ['いきもの', 'ぶき'];
+  var subTabs = ['\u3044\u304d\u3082\u306e', '\u3076\u304d'];
   for (var si = 0; si < subTabs.length; si++) {
     var stx = 200 + si * 180, sty = 120;
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
@@ -103,40 +102,108 @@ function drawCollectionTab() {
     ctx.fillText(subTabs[si], stx, sty + 6);
   }
   ctx.textAlign = 'left';
-  // === Hint ===
   ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "14px " + F; ctx.textAlign = 'center';
-  ctx.fillText('←→: サブタブ切替', 290, 155);
+  ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 290, 155);
+  ctx.textAlign = 'left';
+  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) { drawWeaponCollection(); return; }
+
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 22px " + F;
+  ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
+
+  var totalE = (typeof ENEMY_DEFS !== 'undefined') ? ENEMY_DEFS.length : 12;
+  var ownedE = 0;
+  for (var ei = 0; ei < totalE; ei++) {
+    var ekDef = ENEMY_DEFS[ei];
+    if (typeof collection !== 'undefined' && collection[ekDef.name] && collection[ekDef.name].defeated > 0) ownedE++;
+  }
+  var pctE = Math.floor(ownedE / totalE * 100);
+  ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
+  ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 200, 400 * (ownedE / totalE), 16);
+  ctx.fillStyle = '#fff'; ctx.font = "bold 12px " + F; ctx.textAlign = 'center';
+  ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
-  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) {
-    drawWeaponCollection();
-    return;
-  }
-  // === Enemy collection (sub-tab 0) ===
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px " + F;
-  ctx.fillText('🌸 花の国のいきもの図鑑', 120, 190);
-  var names = Object.keys(collection);
-  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = "20px " + F; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 240); return; }
-  var allDefs = Object.values(ENEMY_DEFS);
-  for (var i = 0; i < names.length; i++) {
-    var c = collection[names[i]];
-    var ey = 230 + i * 70;
-    if (ey > CH - 80) break;
-    var def = allDefs.find(function(d) { return d.name === names[i]; }) || {};
-    ctx.fillStyle = def.color || '#fff';
-    ctx.font = "bold 20px " + F;
-    ctx.fillText(names[i], 140, ey);
-    ctx.fillStyle = '#ccc'; ctx.font = "19px " + F;
-    ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, 340, ey);
-    if (def.lore && c.defeated > 0) {
-      ctx.fillStyle = '#999'; ctx.font = "20px " + F;
-      ctx.fillText(def.lore, 160, ey + 22);
-    } else if (c.defeated === 0) {
-      ctx.fillStyle = '#666'; ctx.font = "20px " + F;
-      ctx.fillText('??? （倒すと情報が解放されるよ）', 160, ey + 22);
+  var cardH = 68, padY = 6, startY = 228, startX = 120;
+  var maxLoop = (typeof loopCount !== 'undefined') ? loopCount : 0;
+  for (var i = 0; i < totalE; i++) {
+    var ek = ENEMY_DEFS[i];
+    var ey = startY + i * (cardH + padY);
+    if (ey + cardH > CH - 60) break;
+    var rec = (typeof collection !== 'undefined' && collection[ek.name]) ? collection[ek.name] : null;
+    var seenC = rec ? rec.seen : 0;
+    var defeatedC = rec ? rec.defeated : 0;
+    var known = defeatedC > 0;
+
+    ctx.fillStyle = known ? 'rgba(40,35,60,0.85)' : 'rgba(25,25,25,0.7)';
+    ctx.fillRect(startX, ey, CW - 240, cardH);
+    ctx.strokeStyle = known ? (ek.color || '#888') : '#333';
+    ctx.lineWidth = known ? 2 : 1;
+    ctx.strokeRect(startX, ey, CW - 240, cardH);
+
+    var sprX = startX + 8, sprY = ey + 10;
+    var sprId = 'enemy_' + ek.shape;
+    if (known) {
+      ctx.save();
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        drawSpriteImg(sprId, sprX, sprY, 48, 48);
+      } else if (typeof drawEnemyShape === 'function') {
+        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, ek.color);
+      } else {
+        ctx.fillStyle = ek.color || '#fff'; ctx.font = "32px " + F; ctx.textAlign = 'center';
+        ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
+      }
+      ctx.restore();
+      if (maxLoop > 0) {
+        for (var lp = 1; lp <= Math.min(maxLoop, 3); lp++) {
+          ctx.save();
+          ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
+          var pvX = sprX + 52 + (lp - 1) * 22, pvY = sprY + 28;
+          if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+            drawSpriteImg(sprId, pvX, pvY, 20, 20);
+          } else if (typeof drawEnemyShape === 'function') {
+            drawEnemyShape(ctx, pvX + 10, pvY + 10, ek.shape, 8, ek.color);
+          }
+          ctx.filter = 'none';
+          ctx.restore();
+        }
+      }
+    } else {
+      ctx.save();
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.4;
+        drawSpriteImg(sprId, sprX, sprY, 48, 48);
+      } else if (typeof drawEnemyShape === 'function') {
+        ctx.globalAlpha = 0.3;
+        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, '#222');
+      } else {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#222'; ctx.font = "32px " + F; ctx.textAlign = 'center';
+        ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
+      }
+      ctx.filter = 'none'; ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    var txX = startX + 120;
+    if (known) {
+      ctx.fillStyle = ek.color || '#fff'; ctx.font = "bold 17px " + F;
+      ctx.fillText(ek.name, txX, ey + 22);
+      ctx.fillStyle = '#ccc'; ctx.font = "13px " + F;
+      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 40);
+      if (ek.lore) {
+        ctx.fillStyle = '#999'; ctx.font = "12px " + F;
+        var loreShort = ek.lore.length > 40 ? ek.lore.slice(0, 40) + '..' : ek.lore;
+        ctx.fillText(loreShort, txX, ey + 56);
+      }
+    } else {
+      ctx.fillStyle = '#555'; ctx.font = "bold 17px " + F;
+      ctx.fillText('??? \u307e\u3060\u3067\u3042\u3063\u3066\u3044\u306a\u3044', txX, ey + 22);
+      ctx.fillStyle = '#444'; ctx.font = "12px " + F;
+      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 40);
     }
   }
 }
+
 
 
 function drawFloatMessages() {

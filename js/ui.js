@@ -42,7 +42,7 @@ function drawInventory() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillText('TAB: タブ切替 / もういちどTABで閉じる', CW / 2, CH - 30);
+  ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
   ctx.textAlign = 'left';
 }
 
@@ -91,27 +91,48 @@ function drawInventoryItems() {
 }
 
 function drawCollectionTab() {
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('🌸 花の国のいきもの図鑑', 120, 140);
-  const names = Object.keys(collection);
-  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 200); return; }
-  const allDefs = Object.values(ENEMY_DEFS);
-  for (let i = 0; i < names.length; i++) {
-    const c = collection[names[i]];
-    const row = i;
-    const ey = 180 + row * 70;
-    if (ey > CH - 80) break; // 画面外防止
-    const def = allDefs.find(d => d.name === names[i]) || {};
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  // === Sub-tab header ===
+  var subTabs = ['いきもの', 'ぶき'];
+  for (var si = 0; si < subTabs.length; si++) {
+    var stx = 200 + si * 180, sty = 120;
+    ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
+    ctx.fillRect(stx - 60, sty - 16, 120, 32);
+    ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#000' : '#ccc';
+    ctx.font = "bold 18px " + F; ctx.textAlign = 'center';
+    ctx.fillText(subTabs[si], stx, sty + 6);
+  }
+  ctx.textAlign = 'left';
+  // === Hint ===
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "14px " + F; ctx.textAlign = 'center';
+  ctx.fillText('←→: サブタブ切替', 290, 155);
+  ctx.textAlign = 'left';
+
+  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) {
+    drawWeaponCollection();
+    return;
+  }
+  // === Enemy collection (sub-tab 0) ===
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px " + F;
+  ctx.fillText('🌸 花の国のいきもの図鑑', 120, 190);
+  var names = Object.keys(collection);
+  if (names.length === 0) { ctx.fillStyle = '#888'; ctx.font = "20px " + F; ctx.fillText('まだ誰にも会っていないよ…冒険に出かけよう！', 140, 240); return; }
+  var allDefs = Object.values(ENEMY_DEFS);
+  for (var i = 0; i < names.length; i++) {
+    var c = collection[names[i]];
+    var ey = 230 + i * 70;
+    if (ey > CH - 80) break;
+    var def = allDefs.find(function(d) { return d.name === names[i]; }) || {};
     ctx.fillStyle = def.color || '#fff';
-    ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "bold 20px " + F;
     ctx.fillText(names[i], 140, ey);
-    ctx.fillStyle = '#ccc'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = '#ccc'; ctx.font = "19px " + F;
     ctx.fillText('遭遇: ' + c.seen + '  撃破: ' + c.defeated, 340, ey);
     if (def.lore && c.defeated > 0) {
-      ctx.fillStyle = '#999'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillStyle = '#999'; ctx.font = "20px " + F;
       ctx.fillText(def.lore, 160, ey + 22);
     } else if (c.defeated === 0) {
-      ctx.fillStyle = '#666'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillStyle = '#666'; ctx.font = "20px " + F;
       ctx.fillText('??? （倒すと情報が解放されるよ）', 160, ey + 22);
     }
   }
@@ -224,7 +245,7 @@ function drawHUD() {
     }
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    let helpText = 'WASD:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+    let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
     if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
     if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
     ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';

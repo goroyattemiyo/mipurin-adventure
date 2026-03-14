@@ -37,6 +37,8 @@ function getVariantName(shape, loop) {
 // === End Enemy Variant Names ===
 
 
+
+
 // ===== INVENTORY SCREEN =====
 let inventoryOpen = false, inventoryTab = 0;
 

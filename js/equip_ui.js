@@ -142,7 +142,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
         ctx.save();
           var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
           if (_esf !== 'none') ctx.filter = _esf;
+          ctx.save();
+          var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+          if (_esf !== 'none') ctx.filter = _esf;
           drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
+          ctx.restore();
           ctx.restore();
       } else {
         ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
@@ -247,7 +251,11 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
       ctx.save();
           var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
           if (_elf !== 'none') ctx.filter = _elf;
+          ctx.save();
+          var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+          if (_elf !== 'none') ctx.filter = _elf;
           drawSpriteImg(sprId, icoX, icoY, icoSize, icoSize);
+          ctx.restore();
           ctx.restore();
     } else {
       ctx.fillStyle = '#fff'; ctx.font = '22px ' + F; ctx.textAlign = 'center';

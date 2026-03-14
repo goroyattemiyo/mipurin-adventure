@@ -474,7 +474,11 @@ function drawWeaponCollection() {
         ctx.save();
         var _wrf = (typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity || 'normal') : 'none';
         if (_wrf !== 'none') ctx.filter = _wrf;
+        ctx.save();
+        var _wrf = (typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity || 'normal') : 'none';
+        if (_wrf !== 'none') ctx.filter = _wrf;
         drawSpriteImg(sprId, wx + 4, wy + 8, 48, 48);
+        ctx.restore();
         ctx.restore();
       } else {
         ctx.fillStyle = '#fff'; ctx.font = '28px ' + F; ctx.textAlign = 'center';

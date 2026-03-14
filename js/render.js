@@ -424,6 +424,15 @@ function drawGameState() {
       drawSpriteImg(_wpSprId, CW / 2 - 32, CH / 2 - 110, 64, 64);
       ctx.restore();
     }
+    // Weapon sprite with rarity tint
+    var _wpSprId = 'weapon_' + weaponPopup.weapon.id;
+    if (typeof hasSprite === 'function' && hasSprite(_wpSprId)) {
+      ctx.save();
+      var _wprf = (typeof getRarityFilter === 'function') ? getRarityFilter(_wpR) : 'none';
+      if (_wprf !== 'none') ctx.filter = _wprf;
+      drawSpriteImg(_wpSprId, CW / 2 - 32, CH / 2 - 110, 64, 64);
+      ctx.restore();
+    }
     ctx.fillStyle = _nameCol; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
     ctx.fillText(weaponPopup.weapon.icon + ' ' + weaponPopup.weapon.name + (weaponPopup.sparkle ? ' ✦' : ''), CW / 2, CH / 2 - 40);
       ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";

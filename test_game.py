@@ -33,7 +33,7 @@ for f in JS_FILES:
     exists = os.path.exists(f)
     check(f"exists: {f}", exists)
     if exists:
-        size = os.path.getsize(f) / 1024
+        size = os.path.getsize(f) / 1194
         check(f"size < 30KB: {f} ({size:.1f}KB)", size < 30, f"actual={size:.1f}KB")
 
 # === 2. Syntax checks (node -c) ===

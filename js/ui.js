@@ -1,5 +1,6 @@
 
 let collectionSubTab = 0; // 0=enemies, 1=weapons
+let collectionScroll = 0; // enemy collection scroll offset
 
 const UI_TEXT_STYLE = {
   heading:  { font: "bold 28px 'M PLUS Rounded 1c', sans-serif", color: '#ffd700', align: 'left' },
@@ -144,8 +145,11 @@ function drawCollectionTab() {
 
   var cardH = 62, padY = 4, startY = 228, startX = 120;
   var maxRows = Math.floor((CH - 80 - startY) / (cardH + padY));
-  for (var i = 0; i < Math.min(entries.length, maxRows); i++) {
-    var ent = entries[i];
+  // Scroll clamp
+  if (typeof collectionScroll === 'undefined') collectionScroll = 0;
+  collectionScroll = Math.max(0, Math.min(collectionScroll, Math.max(0, entries.length - maxRows)));
+  for (var i = 0; i < Math.min(entries.length - collectionScroll, maxRows); i++) {
+    var ent = entries[i + collectionScroll];
     var ek = ent.def;
     var lp = ent.loop;
     var ey = startY + i * (cardH + padY);
@@ -218,6 +222,19 @@ function drawCollectionTab() {
       ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36);
     }
   }
+
+  // --- Scroll bar & hint ---
+  if (entries.length > maxRows) {
+    var sbX = CW - 130, sbY = startY, sbH = maxRows * (cardH + padY);
+    var thumbH = Math.max(20, sbH * (maxRows / entries.length));
+    var thumbY = sbY + (sbH - thumbH) * (collectionScroll / Math.max(1, entries.length - maxRows));
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX, sbY, 8, sbH);
+    ctx.fillStyle = 'rgba(255,215,0,0.5)'; ctx.fillRect(sbX, thumbY, 8, thumbH);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
+    ctx.fillText('↑↓: スクロール (' + (collectionScroll + 1) + '-' + Math.min(collectionScroll + maxRows, entries.length) + ' / ' + entries.length + ')', CW / 2, CH - 55);
+    ctx.textAlign = 'left';
+  }
+
 }
 
 
@@ -511,6 +528,11 @@ function drawWeaponCollection() {
       // Silhouette
       ctx.fillStyle = '#444'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
       ctx.fillText('?', wx + 28, wy + 42);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#555'; ctx.font = 'bold 13px ' + F;
+      ctx.fillText('???', wx + 56, wy + 25);
+      ctx.fillStyle = '#444'; ctx.font = '11px ' + F;
+      ctx.fillText('みつけてない…', wx + 56, wy + 42);
       ctx.textAlign = 'left';
       ctx.fillStyle = '#555'; ctx.font = '13px ' + F;
       ctx.fillText('??? \u307E\u3060\u3067\u3042\u3063\u3066\u3044\u306A\u3044', wx + 56, wy + 35);

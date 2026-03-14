@@ -107,6 +107,12 @@ function update(dt) {
     if (inventoryTab === 1) {
       if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = 0; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
       if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = 1; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+    
+      // Enemy collection scroll
+      if (collectionSubTab === 0) {
+        if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof collectionScroll !== 'undefined') collectionScroll = Math.max(0, collectionScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+        if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof collectionScroll !== 'undefined') collectionScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      }
     }
     if (inventoryTab === 2) {
       const allWeps = getAllOwnedWeapons();

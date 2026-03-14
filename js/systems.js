@@ -285,10 +285,11 @@ function resetGame() {
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0.5; player.atkRangeBonus = 0;
   player.weapon = initWeapon({...WEAPON_DEFS[0]}); player.weapons = [initWeapon({...WEAPON_DEFS[0]}), null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
-  player.backpack = [null, null, null, null];
+  player.backpack = [null, null, null, null]; player.charm = null;
   player.roomHeal = 0; player.killHeal = 0; player.nectarMul = 0;
   activeBlessings = []; activeDuos = []; idleTimer = 0; eliteNext = false; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();
+  if (typeof applyCharm === 'function') applyCharm();
   startFade(1, () => startFloor());
 }
 
@@ -363,4 +364,5 @@ Object.keys(BOSS_SIL_MAP).forEach(id => {
   img.src = BOSS_SIL_MAP[id];
   img.onload = () => { bossSilhouettes[id] = img; };
 });
+
 

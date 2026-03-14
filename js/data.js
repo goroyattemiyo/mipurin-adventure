@@ -469,7 +469,7 @@ const player = { x: TILE * 10, y: TILE * 7, w: 52, h: 52, speed: 200, hp: 5, max
   atkDir: { x: 0, y: 1 }, dashing: false, dashTimer: 0, dashDuration: 0.22, dashCooldown: 0,
   dashSpeed: 700, dashDir: { x: 0, y: 0 }, invTimer: 0, invDuration: 0.6, animTimer: 0, frame: 0,
   weapon: WEAPON_DEFS[0], weapons: [WEAPON_DEFS[0], null], weaponIdx: 0, atkRangeBonus: 0, atkSpeedBonus: 0, spriteData: null, consumables: [null, null, null],
-  backpack: [null, null, null, null] };
+  backpack: [null, null, null, null], charm: null };
 
 let idleTimer = 0;
 const MONOLOGUES = [
@@ -580,3 +580,4 @@ function drawTitleParticles() {
   }
   ctx.globalAlpha = 1;
 }
+

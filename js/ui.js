@@ -110,7 +110,6 @@ function drawCollectionTab() {
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
   ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
 
-  // ENEMY_DEFS is object, convert to array
   var allEnemies = (typeof ENEMY_DEFS === "object" && !Array.isArray(ENEMY_DEFS)) ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
   var totalE = allEnemies.length || 1;
   var ownedE = 0;
@@ -143,35 +142,43 @@ function drawCollectionTab() {
     ctx.strokeRect(startX, ey, CW - 240, cardH);
 
     var sprX = startX + 8, sprY = ey + 10;
+    var sprW = 48, sprH = 48;
+    // Build fake enemy entity for drawEnemyShape(e, color)
+    var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
+
     if (known) {
       ctx.save();
       if (typeof drawEnemyShape === 'function') {
-        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, ek.color);
+        drawEnemyShape(fakeE, ek.color);
       } else {
-        ctx.fillStyle = ek.color || '#fff'; ctx.font = '32px ' + F; ctx.textAlign = 'center';
-        ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
+        ctx.fillStyle = ek.color || '#fff'; ctx.beginPath();
+        ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
+      // Color variant previews for cleared loops
       if (maxLoop > 0) {
         for (var lp = 1; lp <= Math.min(maxLoop, 3); lp++) {
           ctx.save();
           ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
           var pvX = sprX + 52 + (lp - 1) * 22, pvY = sprY + 28;
+          var fakeMini = { x: pvX, y: pvY, w: 20, h: 20, shape: ek.shape, hitFlash: 0 };
           if (typeof drawEnemyShape === 'function') {
-            drawEnemyShape(ctx, pvX + 10, pvY + 10, ek.shape, 8, ek.color);
+            drawEnemyShape(fakeMini, ek.color);
           }
           ctx.filter = 'none';
           ctx.restore();
         }
       }
     } else {
+      // Silhouette for unknown enemies
       ctx.save();
       ctx.globalAlpha = 0.25;
       if (typeof drawEnemyShape === 'function') {
-        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, '#333');
+        fakeE.hitFlash = 99; // force white fill for silhouette look
+        drawEnemyShape(fakeE, '#222');
       } else {
-        ctx.fillStyle = '#222'; ctx.font = '32px ' + F; ctx.textAlign = 'center';
-        ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
+        ctx.fillStyle = '#333'; ctx.beginPath();
+        ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -196,6 +203,7 @@ function drawCollectionTab() {
     }
   }
 }
+
 
 
 

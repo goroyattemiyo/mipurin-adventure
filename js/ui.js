@@ -1,4 +1,6 @@
 
+let collectionSubTab = 0; // 0=enemies, 1=weapons
+
 const UI_TEXT_STYLE = {
   heading:  { font: "bold 28px 'M PLUS Rounded 1c', sans-serif", color: '#ffd700', align: 'left' },
   subhead:  { font: "bold 22px 'M PLUS Rounded 1c', sans-serif", color: '#ffd700', align: 'left' },
@@ -320,3 +322,81 @@ function drawDmgNumbers() {
 }
 
 
+
+
+function drawWeaponCollection() {
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 22px " + F;
+  ctx.fillText('\u2694 \u3076\u304D\u305A\u304B\u3093', 120, 190);
+
+  // Completion bar
+  var total = typeof WEAPON_DEFS !== 'undefined' ? WEAPON_DEFS.length : 12;
+  var owned = typeof weaponCollection !== 'undefined' ? weaponCollection.size : 0;
+  var pct = Math.floor(owned / total * 100);
+  ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
+  ctx.fillStyle = '#ffd700'; ctx.fillRect(120, 200, 400 * (owned / total), 16);
+  ctx.fillStyle = '#fff'; ctx.font = "bold 12px " + F; ctx.textAlign = 'center';
+  ctx.fillText(owned + ' / ' + total + ' (' + pct + '%)', 320, 212);
+  ctx.textAlign = 'left';
+
+  // Weapon cards
+  var cardW = 200, cardH = 80, cols = 5, padX = 12, padY = 8;
+  var startX = 120, startY = 230;
+  for (var i = 0; i < WEAPON_DEFS.length; i++) {
+    var w = WEAPON_DEFS[i];
+    var col = i % cols, row = Math.floor(i / cols);
+    var wx = startX + col * (cardW + padX);
+    var wy = startY + row * (cardH + padY);
+    if (wy > CH - 100) break;
+    var has = typeof weaponCollection !== 'undefined' && weaponCollection.has(w.id);
+    var isTier2 = w.tier === 2;
+
+    // Card bg
+    ctx.fillStyle = has ? 'rgba(40,30,60,0.9)' : 'rgba(30,30,30,0.7)';
+    ctx.fillRect(wx, wy, cardW, cardH);
+    // Border (copper=tier1, gold=tier2)
+    ctx.strokeStyle = has ? (isTier2 ? '#ffd700' : '#cd7f32') : '#333';
+    ctx.lineWidth = has ? 2 : 1;
+    ctx.strokeRect(wx, wy, cardW, cardH);
+
+    if (has) {
+      // Icon
+      var sprId = 'weapon_' + w.id;
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
+        drawSpriteImg(sprId, wx + 4, wy + 8, 48, 48);
+      } else {
+        ctx.fillStyle = '#fff'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
+        var em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
+        ctx.fillText(em ? em[0] : '\u2694', wx + 28, wy + 42);
+        ctx.textAlign = 'left';
+      }
+      // Name
+      ctx.fillStyle = w.color || '#fff'; ctx.font = 'bold 13px ' + F;
+      var shortName = w.name.length > 10 ? w.name.slice(0, 10) + '..' : w.name;
+      ctx.fillText(shortName, wx + 56, wy + 25);
+      // Stats
+      ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F;
+      ctx.fillText('ATK ' + w.dmgMul.toFixed(1) + '  SPD ' + w.speed.toFixed(2), wx + 56, wy + 42);
+      // Tier badge
+      if (isTier2) {
+        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 10px ' + F;
+        ctx.fillText('T2', wx + cardW - 20, wy + 14);
+      }
+      // Desc
+      ctx.fillStyle = '#999'; ctx.font = '10px ' + F;
+      var shortDesc = w.desc.length > 18 ? w.desc.slice(0, 18) + '..' : w.desc;
+      ctx.fillText(shortDesc, wx + 56, wy + 58);
+    } else {
+      // Silhouette
+      ctx.fillStyle = '#444'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
+      ctx.fillText('?', wx + 28, wy + 42);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#555'; ctx.font = '13px ' + F;
+      ctx.fillText('??? \u307E\u3060\u3067\u3042\u3063\u3066\u3044\u306A\u3044', wx + 56, wy + 35);
+      if (isTier2) {
+        ctx.fillStyle = '#665500'; ctx.font = 'bold 10px ' + F;
+        ctx.fillText('T2', wx + cardW - 20, wy + 14);
+      }
+    }
+  }
+}

@@ -90,7 +90,11 @@ function update(dt) {
     } else {
       inventoryTab = (inventoryTab + 1) % 3;
       if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
-      if (inventoryTab === 2) { equipMode = 'slot'; equipCursor = 0; equipListCursor = 0; }
+      if (inventoryTab === 1) {
+      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = 0; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = 1; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+    }
+    if (inventoryTab === 2) { equipMode = 'slot'; equipCursor = 0; equipListCursor = 0; }
     }
   }
   if (inventoryOpen && wasPressed('Escape')) {
@@ -100,6 +104,10 @@ function update(dt) {
   if (inventoryOpen) {
    
     
+    if (inventoryTab === 1) {
+      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = 0; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = 1; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+    }
     if (inventoryTab === 2) {
       const allWeps = getAllOwnedWeapons();
       if (typeof equipMode === 'undefined') equipMode = 'slot';

@@ -163,7 +163,7 @@ function update(dt) {
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-   const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); emitParticles(CW/2, CH/2, chosenB.icon ? '#ffd700' : '#fff', 25, 120, 0.6); Audio.level_up(); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); nextFloor(); }
+   const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); emitParticles(CW/2, CH/2, chosenB.icon ? '#ffd700' : '#fff', 25, 120, 0.6); Audio.level_up(); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); if (typeof tryCharmDrop === 'function' && tryCharmDrop(floor)) { gameState = 'charmDrop'; } else { nextFloor(); } }
     return;
   }
   if (gameState === 'shop') {
@@ -227,6 +227,23 @@ function update(dt) {
    if (wasPressed('KeyC') && weaponPopup.active) { const s = player.backpack.indexOf(null); if (s !== -1) { player.backpack[s] = initWeapon({...weaponPopup.weapon}); showFloat('\uD83C\uDF92 \u30D0\u30C3\u30AF\u30D1\u30C3\u30AF\u306B\u53CE\u7D0D', 2, MSG_COLORS.info); } else { showFloat('\u30D0\u30C3\u30AF\u30D1\u30C3\u30AF\u6E80\u676F', 1.5, MSG_COLORS.warn); } weaponPopup.active = false; gameState = 'playing'; return; }
    if (wasPressed('KeyX')) { Audio.menu_move(); weaponPopup.active = false; gameState = 'playing'; }
    return;
+    }
+
+  
+    if (gameState === 'charmDrop' && charmPopup.active) {
+      if (wasPressed('KeyZ')) {
+        player.charm = {...charmPopup.charm};
+        if (typeof charmCollection !== 'undefined') { charmCollection.add(charmPopup.charm.id); saveCharmCollection(); }
+        Audio.level_up();
+        showFloat(charmPopup.charm.icon + ' ' + charmPopup.charm.name + ' そうび！', 2.5, MSG_COLORS.buff);
+        charmPopup.active = false; gameState = 'playing';
+      }
+      if (wasPressed('KeyX')) {
+        Audio.menu_move();
+        showFloat('見送った…', 1.5, MSG_COLORS.info);
+        charmPopup.active = false; gameState = 'playing';
+      }
+      return;
     }
 
   // === Combat (split to combat.js) ===

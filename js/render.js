@@ -390,6 +390,7 @@ function drawGameState() {
     ctx.textAlign = 'left';
   }
 
+  if (gameState === 'charmDrop' && typeof drawCharmDrop === 'function') drawCharmDrop();
   if (gameState === 'weaponDrop' && weaponPopup.active) {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
       ctx.fillStyle = '#ffd700'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';

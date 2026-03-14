@@ -282,3 +282,72 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
 
   ctx.restore();
 }
+
+
+// === Charm Drop Screen ===
+function drawCharmDrop() {
+  if (!charmPopup || !charmPopup.active) return;
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  var c = charmPopup.charm;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Card
+  var cx = CW/2, cy = CH/2;
+  var cw = 360, ch = 320;
+
+  // Rarity glow
+  var glowCol = c.rarity === 'legend' ? '#ffd700' : c.rarity === 'rare' ? '#3498db' : '#aaa';
+  ctx.save(); ctx.globalAlpha = 0.15;
+  ctx.fillStyle = glowCol;
+  ctx.beginPath(); ctx.arc(cx, cy - 20, 140, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Card bg (purple tint for charms)
+  ctx.fillStyle = 'rgba(60, 20, 80, 0.95)';
+  ctx.beginPath();
+  var r = 16, x0 = cx - cw/2, y0 = cy - ch/2;
+  ctx.moveTo(x0+r, y0); ctx.lineTo(x0+cw-r, y0); ctx.arcTo(x0+cw, y0, x0+cw, y0+r, r);
+  ctx.lineTo(x0+cw, y0+ch-r); ctx.arcTo(x0+cw, y0+ch, x0+cw-r, y0+ch, r);
+  ctx.lineTo(x0+r, y0+ch); ctx.arcTo(x0, y0+ch, x0, y0+ch-r, r);
+  ctx.lineTo(x0, y0+r); ctx.arcTo(x0, y0, x0+r, y0, r);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = glowCol; ctx.lineWidth = 3; ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#e056fd'; ctx.font = 'bold 22px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0\u767A\u898B\uFF01', cx, y0 + 35);
+
+  // Icon
+  ctx.font = '64px ' + F;
+  ctx.fillText(c.icon, cx, cy - 30);
+
+  // Name
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px ' + F;
+  ctx.fillText(c.name, cx, cy + 20);
+
+  // Rarity
+  ctx.fillStyle = glowCol; ctx.font = '16px ' + F;
+  ctx.fillText(c.rarity ? c.rarity.toUpperCase() : 'COMMON', cx, cy + 45);
+
+  // Description
+  ctx.fillStyle = '#ccc'; ctx.font = '16px ' + F;
+  ctx.fillText(c.desc, cx, cy + 72);
+
+  // Current charm comparison
+  if (player.charm) {
+    ctx.fillStyle = '#f8bbd0'; ctx.font = '14px ' + F;
+    ctx.fillText('\u73FE\u5728: ' + player.charm.icon + ' ' + player.charm.name, cx, cy + 100);
+    ctx.fillStyle = '#ffab91'; ctx.font = '12px ' + F;
+    ctx.fillText('\u2192 \u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059', cx, cy + 118);
+  }
+
+  // Controls
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 18px ' + F;
+  ctx.fillText('Z: \u305D\u3046\u3073\u3059\u308B', cx, y0 + ch - 45);
+  ctx.fillStyle = '#aaa'; ctx.font = '16px ' + F;
+  ctx.fillText('X: \u898B\u9001\u308B', cx, y0 + ch - 20);
+
+  ctx.textAlign = 'left';
+}

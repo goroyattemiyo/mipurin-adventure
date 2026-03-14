@@ -57,3 +57,18 @@ function rollCharmDrop(fl) {
   }
   return weighted[Math.floor(Math.random() * weighted.length)];
 }
+
+
+// === Charm Popup (drop screen) ===
+let charmPopup = { active: false, charm: null };
+
+// Trigger charm drop after floor clear (call from update.js floorClear)
+function tryCharmDrop(fl) {
+  if (fl < 3) return false;
+  var chance = fl >= 12 ? 0.12 : fl >= 9 ? 0.08 : 0.05;
+  if (Math.random() > chance) return false;
+  var charm = rollCharmDrop(fl);
+  if (!charm) return false;
+  charmPopup = { active: true, charm: charm };
+  return true;
+}

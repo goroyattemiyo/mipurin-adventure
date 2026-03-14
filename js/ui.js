@@ -98,35 +98,37 @@ function drawCollectionTab() {
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
     ctx.fillRect(stx - 60, sty - 16, 120, 32);
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#000' : '#ccc';
-    ctx.font = "bold 18px " + F; ctx.textAlign = 'center';
+    ctx.font = 'bold 18px ' + F; ctx.textAlign = 'center';
     ctx.fillText(subTabs[si], stx, sty + 6);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = "14px " + F; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 290, 155);
   ctx.textAlign = 'left';
   if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) { drawWeaponCollection(); return; }
 
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 22px " + F;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
   ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
 
-  var totalE = (typeof ENEMY_DEFS !== 'undefined') ? ENEMY_DEFS.length : 12;
+  // ENEMY_DEFS is object, convert to array
+  var allEnemies = (typeof ENEMY_DEFS === "object" && !Array.isArray(ENEMY_DEFS)) ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
+  var totalE = allEnemies.length || 1;
   var ownedE = 0;
-  for (var ei = 0; ei < totalE; ei++) {
-    var ekDef = ENEMY_DEFS[ei];
+  for (var ei = 0; ei < allEnemies.length; ei++) {
+    var ekDef = allEnemies[ei];
     if (typeof collection !== 'undefined' && collection[ekDef.name] && collection[ekDef.name].defeated > 0) ownedE++;
   }
   var pctE = Math.floor(ownedE / totalE * 100);
   ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
   ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 200, 400 * (ownedE / totalE), 16);
-  ctx.fillStyle = '#fff'; ctx.font = "bold 12px " + F; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + F; ctx.textAlign = 'center';
   ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
   var cardH = 68, padY = 6, startY = 228, startX = 120;
   var maxLoop = (typeof loopCount !== 'undefined') ? loopCount : 0;
-  for (var i = 0; i < totalE; i++) {
-    var ek = ENEMY_DEFS[i];
+  for (var i = 0; i < allEnemies.length; i++) {
+    var ek = allEnemies[i];
     var ey = startY + i * (cardH + padY);
     if (ey + cardH > CH - 60) break;
     var rec = (typeof collection !== 'undefined' && collection[ek.name]) ? collection[ek.name] : null;
@@ -141,15 +143,12 @@ function drawCollectionTab() {
     ctx.strokeRect(startX, ey, CW - 240, cardH);
 
     var sprX = startX + 8, sprY = ey + 10;
-    var sprId = 'enemy_' + ek.shape;
     if (known) {
       ctx.save();
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-        drawSpriteImg(sprId, sprX, sprY, 48, 48);
-      } else if (typeof drawEnemyShape === 'function') {
+      if (typeof drawEnemyShape === 'function') {
         drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, ek.color);
       } else {
-        ctx.fillStyle = ek.color || '#fff'; ctx.font = "32px " + F; ctx.textAlign = 'center';
+        ctx.fillStyle = ek.color || '#fff'; ctx.font = '32px ' + F; ctx.textAlign = 'center';
         ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
       }
       ctx.restore();
@@ -158,9 +157,7 @@ function drawCollectionTab() {
           ctx.save();
           ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
           var pvX = sprX + 52 + (lp - 1) * 22, pvY = sprY + 28;
-          if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-            drawSpriteImg(sprId, pvX, pvY, 20, 20);
-          } else if (typeof drawEnemyShape === 'function') {
+          if (typeof drawEnemyShape === 'function') {
             drawEnemyShape(ctx, pvX + 10, pvY + 10, ek.shape, 8, ek.color);
           }
           ctx.filter = 'none';
@@ -169,40 +166,37 @@ function drawCollectionTab() {
       }
     } else {
       ctx.save();
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-        ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.4;
-        drawSpriteImg(sprId, sprX, sprY, 48, 48);
-      } else if (typeof drawEnemyShape === 'function') {
-        ctx.globalAlpha = 0.3;
-        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, '#222');
+      ctx.globalAlpha = 0.25;
+      if (typeof drawEnemyShape === 'function') {
+        drawEnemyShape(ctx, sprX + 24, sprY + 24, ek.shape, ek.size || 18, '#333');
       } else {
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#222'; ctx.font = "32px " + F; ctx.textAlign = 'center';
+        ctx.fillStyle = '#222'; ctx.font = '32px ' + F; ctx.textAlign = 'center';
         ctx.fillText('?', sprX + 24, sprY + 32); ctx.textAlign = 'left';
       }
-      ctx.filter = 'none'; ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
 
     var txX = startX + 120;
     if (known) {
-      ctx.fillStyle = ek.color || '#fff'; ctx.font = "bold 17px " + F;
+      ctx.fillStyle = ek.color || '#fff'; ctx.font = 'bold 17px ' + F;
       ctx.fillText(ek.name, txX, ey + 22);
-      ctx.fillStyle = '#ccc'; ctx.font = "13px " + F;
+      ctx.fillStyle = '#ccc'; ctx.font = '13px ' + F;
       ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 40);
       if (ek.lore) {
-        ctx.fillStyle = '#999'; ctx.font = "12px " + F;
+        ctx.fillStyle = '#999'; ctx.font = '12px ' + F;
         var loreShort = ek.lore.length > 40 ? ek.lore.slice(0, 40) + '..' : ek.lore;
         ctx.fillText(loreShort, txX, ey + 56);
       }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = "bold 17px " + F;
+      ctx.fillStyle = '#555'; ctx.font = 'bold 17px ' + F;
       ctx.fillText('??? \u307e\u3060\u3067\u3042\u3063\u3066\u3044\u306a\u3044', txX, ey + 22);
-      ctx.fillStyle = '#444'; ctx.font = "12px " + F;
+      ctx.fillStyle = '#444'; ctx.font = '12px ' + F;
       ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 40);
     }
   }
 }
+
 
 
 

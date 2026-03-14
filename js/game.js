@@ -157,8 +157,8 @@ let cutinTimer = 0, cutinBossId = '', cutinPhase = 'none', lastBossId = '';
 
 
 // === Debug: fill all collections ===
-window.debugFillCollection = function() {
-  // Enemy collection
+window.debugFillCollection = function(maxLoop) {
+  maxLoop = maxLoop || 3;
   if (typeof ENEMY_DEFS !== 'undefined' && typeof collection !== 'undefined') {
     var keys = Object.keys(ENEMY_DEFS);
     for (var i = 0; i < keys.length; i++) {
@@ -166,21 +166,25 @@ window.debugFillCollection = function() {
       if (!collection[def.name]) collection[def.name] = { seen: 0, defeated: 0 };
       collection[def.name].seen = Math.max(collection[def.name].seen, 30);
       collection[def.name].defeated = Math.max(collection[def.name].defeated, 20);
+      for (var lp = 0; lp <= maxLoop; lp++) {
+        var lk = def.name + '_L' + lp;
+        if (!collection[lk]) collection[lk] = { seen: 0, defeated: 0, loop: lp };
+        collection[lk].seen = Math.max(collection[lk].seen, 30);
+        collection[lk].defeated = Math.max(collection[lk].defeated, 20);
+      }
     }
   }
-  // Weapon collection
   if (typeof WEAPON_DEFS !== 'undefined' && typeof weaponCollection !== 'undefined') {
     for (var j = 0; j < WEAPON_DEFS.length; j++) {
       weaponCollection.add(WEAPON_DEFS[j].id);
     }
     if (typeof saveCollection === 'function') saveCollection();
   }
-  // Charm collection
   if (typeof CHARM_DEFS !== 'undefined' && typeof charmCollection !== 'undefined') {
     for (var k = 0; k < CHARM_DEFS.length; k++) {
       charmCollection.add(CHARM_DEFS[k].id);
     }
     if (typeof saveCharmCollection === 'function') saveCharmCollection();
   }
-  console.log('[DEBUG] All collections filled! Open TAB > 図鑑 to check.');
+  console.log('[DEBUG] All collections filled (loops 0-' + maxLoop + ')! Open TAB > 図鑑 to check.');
 };

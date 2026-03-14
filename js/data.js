@@ -6,6 +6,11 @@ function recordEnemy(name, defeated) {
   if (!collection[name]) collection[name] = { seen: 0, defeated: 0 };
   collection[name].seen++;
   if (defeated) collection[name].defeated++;
+  var lc = (typeof loopCount !== 'undefined') ? loopCount : 0;
+  var lk = name + '_L' + lc;
+  if (!collection[lk]) collection[lk] = { seen: 0, defeated: 0, loop: lc };
+  collection[lk].seen++;
+  if (defeated) collection[lk].defeated++;
 }
 
 // ===== INVENTORY SCREEN =====

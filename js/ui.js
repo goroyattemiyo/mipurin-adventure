@@ -111,11 +111,29 @@ function drawCollectionTab() {
   ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
 
   var allEnemies = (typeof ENEMY_DEFS === "object" && !Array.isArray(ENEMY_DEFS)) ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
-  var totalE = allEnemies.length || 1;
-  var ownedE = 0;
+  var maxLoopFound = 0;
+  if (typeof collection !== 'undefined') {
+    var ckeys = Object.keys(collection);
+    for (var ci = 0; ci < ckeys.length; ci++) {
+      var lm = ckeys[ci].match(/_L(\d+)$/);
+      if (lm && parseInt(lm[1]) > maxLoopFound) maxLoopFound = parseInt(lm[1]);
+    }
+  }
+
+  var entries = [];
   for (var ei = 0; ei < allEnemies.length; ei++) {
-    var ekDef = allEnemies[ei];
-    if (typeof collection !== 'undefined' && collection[ekDef.name] && collection[ekDef.name].defeated > 0) ownedE++;
+    var eDef = allEnemies[ei];
+    for (var lp = 0; lp <= maxLoopFound; lp++) {
+      var lk = eDef.name + '_L' + lp;
+      var rec = (typeof collection !== 'undefined' && collection[lk]) ? collection[lk] : null;
+      entries.push({ def: eDef, loop: lp, rec: rec });
+    }
+  }
+
+  var totalE = entries.length || 1;
+  var ownedE = 0;
+  for (var oi = 0; oi < entries.length; oi++) {
+    if (entries[oi].rec && entries[oi].rec.defeated > 0) ownedE++;
   }
   var pctE = Math.floor(ownedE / totalE * 100);
   ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
@@ -124,85 +142,79 @@ function drawCollectionTab() {
   ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
-  var cardH = 68, padY = 6, startY = 228, startX = 120;
-  var maxLoop = (typeof loopCount !== 'undefined') ? loopCount : 0;
-  for (var i = 0; i < allEnemies.length; i++) {
-    var ek = allEnemies[i];
+  var cardH = 62, padY = 4, startY = 228, startX = 120;
+  var maxRows = Math.floor((CH - 80 - startY) / (cardH + padY));
+  for (var i = 0; i < Math.min(entries.length, maxRows); i++) {
+    var ent = entries[i];
+    var ek = ent.def;
+    var lp = ent.loop;
     var ey = startY + i * (cardH + padY);
-    if (ey + cardH > CH - 60) break;
-    var rec = (typeof collection !== 'undefined' && collection[ek.name]) ? collection[ek.name] : null;
+    var rec = ent.rec;
     var seenC = rec ? rec.seen : 0;
     var defeatedC = rec ? rec.defeated : 0;
     var known = defeatedC > 0;
 
     ctx.fillStyle = known ? 'rgba(40,35,60,0.85)' : 'rgba(25,25,25,0.7)';
     ctx.fillRect(startX, ey, CW - 240, cardH);
-    ctx.strokeStyle = known ? (ek.color || '#888') : '#333';
+    var borderCol = known ? (ek.color || '#888') : '#333';
+    if (known && lp > 0 && typeof loopHueShift === 'function') borderCol = loopHueShift(ek.color || '#888', lp);
+    ctx.strokeStyle = borderCol;
     ctx.lineWidth = known ? 2 : 1;
     ctx.strokeRect(startX, ey, CW - 240, cardH);
 
-    var sprX = startX + 8, sprY = ey + 10;
-    var sprW = 48, sprH = 48;
-    // Build fake enemy entity for drawEnemyShape(e, color)
-    var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
+    if (lp > 0) {
+      ctx.fillStyle = 'rgba(255,215,0,0.2)'; ctx.fillRect(startX + CW - 242 - 48, ey + 2, 46, 18);
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('Loop ' + lp, startX + CW - 242 - 44, ey + 14);
+    }
 
+    var sprX = startX + 6, sprY = ey + 7;
+    var sprW = 48, sprH = 48;
+    var shiftedColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
+    var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
     if (known) {
       ctx.save();
       if (typeof drawEnemyShape === 'function') {
-        drawEnemyShape(fakeE, ek.color);
+        drawEnemyShape(fakeE, shiftedColor);
       } else {
-        ctx.fillStyle = ek.color || '#fff'; ctx.beginPath();
+        ctx.fillStyle = shiftedColor; ctx.beginPath();
         ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
-      // Color variant previews for cleared loops
-      if (maxLoop > 0) {
-        for (var lp = 1; lp <= Math.min(maxLoop, 3); lp++) {
-          ctx.save();
-          ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
-          var pvX = sprX + 52 + (lp - 1) * 22, pvY = sprY + 28;
-          var fakeMini = { x: pvX, y: pvY, w: 20, h: 20, shape: ek.shape, hitFlash: 0 };
-          if (typeof drawEnemyShape === 'function') {
-            drawEnemyShape(fakeMini, ek.color);
-          }
-          ctx.filter = 'none';
-          ctx.restore();
-        }
-      }
     } else {
-      // Silhouette for unknown enemies
-      ctx.save();
-      ctx.globalAlpha = 0.25;
+      ctx.save(); ctx.globalAlpha = 0.2;
       if (typeof drawEnemyShape === 'function') {
-        fakeE.hitFlash = 99; // force white fill for silhouette look
+        fakeE.hitFlash = 99;
         drawEnemyShape(fakeE, '#222');
       } else {
         ctx.fillStyle = '#333'; ctx.beginPath();
         ctx.arc(sprX + sprW/2, sprY + sprH/2, sprW/3, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.globalAlpha = 1;
-      ctx.restore();
+      ctx.globalAlpha = 1; ctx.restore();
     }
 
-    var txX = startX + 120;
+    var txX = startX + 66;
     if (known) {
-      ctx.fillStyle = ek.color || '#fff'; ctx.font = 'bold 17px ' + F;
-      ctx.fillText(ek.name, txX, ey + 22);
-      ctx.fillStyle = '#ccc'; ctx.font = '13px ' + F;
-      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 40);
+      ctx.fillStyle = shiftedColor; ctx.font = 'bold 16px ' + F;
+      var displayName = ek.name + (lp > 0 ? ' [\u8272\u9055\u3044 ' + lp + ']' : '');
+      ctx.fillText(displayName, txX, ey + 20);
+      ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
+      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36);
       if (ek.lore) {
-        ctx.fillStyle = '#999'; ctx.font = '12px ' + F;
-        var loreShort = ek.lore.length > 40 ? ek.lore.slice(0, 40) + '..' : ek.lore;
-        ctx.fillText(loreShort, txX, ey + 56);
+        ctx.fillStyle = '#888'; ctx.font = '11px ' + F;
+        var ls = ek.lore.length > 45 ? ek.lore.slice(0, 45) + '..' : ek.lore;
+        ctx.fillText(ls, txX, ey + 52);
       }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = 'bold 17px ' + F;
-      ctx.fillText('??? \u307e\u3060\u3067\u3042\u3063\u3066\u3044\u306a\u3044', txX, ey + 22);
+      ctx.fillStyle = '#555'; ctx.font = 'bold 16px ' + F;
+      var unknownName = '??? ' + (lp > 0 ? '[Loop ' + lp + ']' : '');
+      ctx.fillText(unknownName, txX, ey + 20);
       ctx.fillStyle = '#444'; ctx.font = '12px ' + F;
-      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 40);
+      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36);
     }
   }
 }
+
 
 
 

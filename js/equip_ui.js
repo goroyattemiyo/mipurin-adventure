@@ -265,12 +265,21 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
 
     // Upgrade cost if selected
     if (listSel && lvl < WEAPON_UPGRADE_MAX) {
-      const cost = WEAPON_UPGRADE_COST[lvl]; const ok = pollen >= cost;
-      ctx.fillStyle = ok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('Z:\u5F37\u5316(' + cost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
+      var ucost = (typeof getUpgradeCost === 'function') ? getUpgradeCost(w) : WEAPON_UPGRADE_COST[lvl];
+      var uok = pollen >= ucost;
+      ctx.fillStyle = uok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('Z:\u5F37\u5316(' + ucost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
+    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX && typeof canEvolve === 'function' && canEvolve(w)) {
+      var ecost = getEvoCost(w);
+      ctx.fillStyle = '#e056fd'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('Z:\u2728\u3057\u3093\u304B(' + ecost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
+    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX && typeof EVOLUTION_MAP !== 'undefined' && EVOLUTION_MAP[w.id]) {
+      var ecost2 = getEvoCost(w);
+      ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 11px ' + F;
+      ctx.fillText('\u2728\u3057\u3093\u304B(' + ecost2 + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
     } else if (listSel && lvl >= WEAPON_UPGRADE_MAX) {
       ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('\u2728MAX', rightX + rightW - 10, ry + rowH - 10);
+      ctx.fillText((w.tier === 2) ? '\u2728T2 MAX' : '\u2728MAX', rightX + rightW - 10, ry + rowH - 10);
     }
     ctx.textAlign = 'left';
   }

@@ -121,7 +121,16 @@ function update(dt) {
         if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { equipMode = 'slot'; Audio.menu_move(); }
         if (wasPressed('KeyZ')) {
           const entry = allWeps[equipListCursor];
-          if (entry && upgradeWeapon(entry.w)) {
+          if (entry && entry.w && typeof canEvolve === 'function' && canEvolve(entry.w)) {
+            var evolved = evolveWeapon(entry.w);
+            if (evolved) {
+              if (entry.src === 'main') { player.weapons[0] = evolved; if (player.weaponIdx === 0) player.weapon = evolved; }
+              else if (entry.src === 'sub') { player.weapons[1] = evolved; if (player.weaponIdx === 1) player.weapon = evolved; }
+              else { player.backpack[entry.idx] = evolved; }
+              Audio.level_up(); showFloat('\u2728 ' + evolved.name + ' \u306B\u3057\u3093\u304B\uFF01', 2.5, MSG_COLORS.buff);
+              equipBounce = 1;
+            }
+          } else if (entry && upgradeWeapon(entry.w)) {
             Audio.level_up(); showFloat('\u2B50 ' + entry.w.name + ' Lv.' + entry.w.level + ' \u306B\u5F37\u5316\uFF01', 2, MSG_COLORS.buff);
             if (entry.src === 'main' && player.weaponIdx === 0) player.weapon = entry.w;
             if (entry.src === 'sub' && player.weaponIdx === 1) player.weapon = entry.w;

@@ -248,7 +248,7 @@ function initWeapon(w) {
 }
 function upgradeWeapon(w) {
   if (!w || w.level >= WEAPON_UPGRADE_MAX) return false;
-  const cost = WEAPON_UPGRADE_COST[w.level];
+  const cost = (typeof getUpgradeCost === 'function') ? getUpgradeCost(w) : WEAPON_UPGRADE_COST[w.level]; if (cost < 0) return false;
   if (pollen < cost) return false;
   pollen -= cost;
   w.level++;
@@ -258,6 +258,52 @@ function upgradeWeapon(w) {
   return true;
 }
 // === End Weapon Upgrade ===
+// === Weapon Evolution (Sprint H-2) ===
+const EVOLUTION_MAP = {
+  needle:           { to: 'golden_needle',    cost: 100 },
+  honey_cannon:     { to: 'amber_cannon',     cost: 100 },
+  pollen_shield:    { to: 'holy_shield',      cost: 120 },
+  vine_whip:        { to: 'cursed_thorn',     cost: 120 },
+  feather_shuriken: { to: 'storm_wing',       cost: 120 },
+  queen_staff:      { to: 'queen_true_staff', cost: 150 }
+};
+const WEAPON_UPGRADE_COST_T2 = [30, 60, 100];
+
+function canEvolve(w) {
+  if (!w || w.level < WEAPON_UPGRADE_MAX) return false;
+  if (w.tier === 2) return false;
+  var evo = EVOLUTION_MAP[w.id];
+  if (!evo) return false;
+  return pollen >= evo.cost;
+}
+
+function getEvoCost(w) {
+  if (!w) return -1;
+  var evo = EVOLUTION_MAP[w.id];
+  return evo ? evo.cost : -1;
+}
+
+function evolveWeapon(w) {
+  if (!canEvolve(w)) return null;
+  var evo = EVOLUTION_MAP[w.id];
+  var t2def = WEAPON_DEFS.find(function(d) { return d.id === evo.to; });
+  if (!t2def) return null;
+  pollen -= evo.cost;
+  var evolved = initWeapon({...t2def});
+  evolved.level = 0;
+  evolved._baseDmgMul = t2def.dmgMul;
+  evolved._baseSpeed = t2def.speed;
+  evolved._baseRange = t2def.range;
+  if (typeof weaponCollection !== 'undefined') { weaponCollection.add(evolved.id); saveCollection(); }
+  return evolved;
+}
+
+function getUpgradeCost(w) {
+  if (!w || w.level >= WEAPON_UPGRADE_MAX) return -1;
+  return (w.tier === 2) ? WEAPON_UPGRADE_COST_T2[w.level] : WEAPON_UPGRADE_COST[w.level];
+}
+// === End Weapon Evolution ===
+
 let weaponCollection = new Set();
 function saveCollection() { try { localStorage.setItem('mipurin_weaponcol', JSON.stringify([...weaponCollection])); } catch(e) {} }
 function loadCollection() { try { const d = localStorage.getItem('mipurin_weaponcol'); if (d) weaponCollection = new Set(JSON.parse(d)); } catch(e) {} }

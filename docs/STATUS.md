@@ -1,24 +1,30 @@
 # ミプリンの冒険 — 開発ステータス
 
-最終更新: 2026-03-09 (v6.12.6)
+最終更新: 2026-03-17 (v6.23)
 
 ---
 
 ## 1. リポジトリ構成
 
 mipurin-adventure/ (branch: v2)
-├── index.html          # エントリーポイント (1280×960 canvas, 10 JS読み込み, ?v=1200)
+├── index.html          # エントリーポイント (1280×960 canvas, 16 JS読み込み, ?v=1629)
 ├── js/
-│   ├── game.js         # ~7.7 KB — 定数, Canvas, Input, Audio SE (19種+noise), masterVol, VERSION
-│   ├── data.js         # ~20.6 KB — BGM, RNG, パーティクル, 部屋生成, テーマ, 武器, 消耗品, ドロップ, メッセージ, NPC_LINES, state変数, タイトルパーティクル
-│   ├── enemies.js      # ~13.1 KB — 敵定義12種, テーママッピング, 弾幕, スポーン, ウェーブ, ボス4種
-│   ├── blessings.js    # ~20 KB — 78祝福 (6系統×13) + 15デュオ, レアリティ加重選択
-│   ├── systems.js      # ~15.3 KB — メタ進行, ゲームフロー, スプライトエンジン, 画像アセット11枚, プロローグ(10P), 衝突判定
-│   ├── nodemap.js      # ~14.1 KB — 2段ミニツリー型ノードマップ, 8イベント, executeNode
-│   ├── ui.js           # ~21.1 KB — HUD, インベントリ, 図鑑, 祝福選択, ショップ, ダメージ数字, メッセージ, ダイアログ
-│   ├── ui_screens.js   # ~9.0 KB — タイトル, 花壇(6種+NPC Flora), エンディング(3分岐+画像), プロローグ
-│   ├── update.js       # ~20.5 KB — メインupdate(), 全state処理, 8方向攻撃, 敵AI, ボス撃破ダイアログ
-│   └── render.js       # ~26.1 KB — 描画パイプライン, 武器別VFX, ボスシルエット, エフェクト, メインループ
+│   ├── game.js         # 11.7KB — 定数, Canvas, Input, Audio SE, masterVol, VERSION, debugFillCollection
+│   ├── data.js         # 30.2KB — RNG, パーティクル, 部屋生成, テーマ, 武器, 消耗品, ドロップ, メッセージ, state変数
+│   ├── bgm.js          # 8.5KB — ハイブリッドBGM (WebAudio chiptune + MP3), TRACKS定義
+│   ├── enemies.js      # 14.3KB — 敵定義12種, テーママッピング, 弾幕, スポーン, ウェーブ, ボス4種
+│   ├── blessings.js    # 20.0KB — 78祝福 (6系統×13) + 15デュオ, レアリティ加重選択
+│   ├── systems.js      # 15.7KB — メタ進行, ゲームフロー, スプライトエンジン, SPRITE_MAP, プロローグ
+│   ├── nodemap.js      # 14.1KB — 2段ミニツリー型ノードマップ, 8イベント, executeNode
+│   ├── equip_ui.js     # 17.1KB — 装備UI (2ペイン, アップグレード, チャームスロット)
+│   ├── ui.js           # 29.8KB — HUD, インベントリ, 図鑑, 祝福選択, ショップ, 武器図鑑
+│   ├── ui_screens.js   # 12.0KB — タイトル, 花壇, エンディング(3分岐), プロローグ
+│   ├── combat.js       # 16.7KB — 戦闘処理, 武器エフェクト, 敵AI, ボスロジック
+│   ├── update.js       # 17.8KB — メインupdate(), state処理, インベントリ操作
+│   ├── render.js       # 30.1KB — 描画パイプライン, 武器別VFX, ボスシルエット, エフェクト
+│   ├── touch.js        # 12.6KB — タッチ操作, ジョイスティック, モバイルUI
+│   ├── rarity.js       # 1.5KB — 武器レアリティ定義 (5段階), rollRarity, getRarityFilter
+│   └── charms.js       # 4.1KB — チャーム定義 (9種), ドロップ, コレクション
 ├── tools/
 │   └── split_game.py
 ├── docs/
@@ -34,7 +40,7 @@ mipurin-adventure/ (branch: v2)
 │   ├── prologue/       # オープニング画像 10枚 (webp)
 │   └── sprites/        # 敵12 + ボス4 + 武器6 + 消耗品3 + ドロップ2 + 新規11枚 = 38枚 (webp)
 
-合計JS: 10ファイル稼働、各30KB以下
+合計JS: 16ファイル稼働、各35KB以下
 
 ---
 
@@ -119,7 +125,7 @@ mipurin-adventure/ (branch: v2)
 
 ---
 
-## 4. 現在のスコア推定 (v6.12.1)
+## 4. 現在のスコア推定 (v6.23)
 
 | # | 項目 | GDD開始時 | v6.6.2 | v6.11.3 | v6.12.1 | Phase2目標 |
 |---|---|---|---|---|---|---|
@@ -170,6 +176,11 @@ v6.12.1の主な変動:
 | Sprint G-A | ストーリー全面改修 | v6.12.1 | ✅ |
 
 | Sprint G-A2 | バグ修正+UI改善(カットイン,ボス位置,ダッシュ,フロア動的サイズ,テンプレート5種,フローラ改善) | v6.12.2-v6.12.6 | ✅ |
+| Sprint G-B0 | かわいさ最大化(吹き出し,煙,アイドル,死亡セリフ,独り言,ボイスSE) | v6.13.0 | ✅ |
+| Sprint H-1 | チャームシステム(9種,ドロップ,装備スロット,コレクション) | v6.16+ | ✅ |
+| Sprint H-2 | 武器進化ツリー(6 Tier1→Tier2, コスト30/60/100) | v6.18+ | ✅ |
+| Sprint H-3 | 武器図鑑(コレクションサブタブ,完了バー,Tierバッジ) | v6.19+ | ✅ |
+| Sprint H-4 | 図鑑スプライト,レアリティ,敵バリアント名,スクロール | v6.20-v6.23 | ✅ |
 
 Phase 1 目標 55/100 → 達成済み。現在 65/100。Phase 2 目標 73/100。
 
@@ -245,10 +256,10 @@ Phase 2 残り目標: 65→73 (+8ポイント)
 5. **スコープ厳守**: Phase外の機能要望は明確に先送りする
 
 ### ファイル管理ルール
-6. **ファイルサイズ上限**: 各JSファイルは30KB以下を維持する
-7. **分割トリガー**: 25KBを超えたら分割を検討、30KBを超えたら即分割
+6. **ファイルサイズ上限**: 各JSファイルは35KB以下を維持する（詳細はdocs/RULES.md参照）
+7. **分割トリガー**: 28KBを超えたら分割を検討、35KBを超えたら即分割
 8. **結合禁止**: 分割済みファイルの再結合はCOUNCIL審議を経ること
-9. **index.html読み込み順**: game.js → data.js → enemies.js → blessings.js → systems.js → nodemap.js → ui.js → ui_screens.js → update.js → render.js
+9. **index.html読み込み順**: game.js → data.js → bgm.js → enemies.js → blessings.js → systems.js → nodemap.js → equip_ui.js → ui.js → ui_screens.js → combat.js → update.js → render.js → touch.js → rarity.js → charms.js
 10. **キャッシュバスター**: JS変更時は index.html の ?v= パラメータを必ず更新する
 
 ### ワークフロールール

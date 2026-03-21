@@ -40,7 +40,7 @@ for f in JS_FILES:
 print("\n--- Syntax Checks ---")
 for f in JS_FILES:
     if not os.path.exists(f): continue
-    r = subprocess.run(["node", "-c", f], capture_output=True, text=True)
+    r = subprocess.run(["node", "-c", f], capture_output=True, text=True, encoding="utf-8")
     check(f"syntax: {f}", r.returncode == 0, r.stderr.strip() if r.returncode != 0 else "")
 
 # === 3. Global variable consistency ===

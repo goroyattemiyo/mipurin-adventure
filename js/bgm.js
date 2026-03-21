@@ -135,4 +135,3 @@ const ChipBGM = (() => {
 let currentBGM = '';
 function playBGM(name, fadeIn) { ChipBGM.play(name, fadeIn); currentBGM = name; }
 function stopBGM(fadeDur, cb) { ChipBGM.stop(fadeDur, function() { currentBGM = ''; if (cb) cb(); }); }
-function fadeOutBGM(dur, cb) { ChipBGM.fadeOut(dur, function() { currentBGM = ''; if (cb) cb(); }); }

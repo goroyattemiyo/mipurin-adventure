@@ -14,13 +14,6 @@ const UI_TEXT_STYLE = {
   cost:     { font: "bold 20px 'M PLUS Rounded 1c', sans-serif", color: '#ffd700', align: 'center' },
   warn:     { font: "bold 18px 'M PLUS Rounded 1c', sans-serif", color: '#f66', align: 'center' },
 };
-function drawText(text, x, y, layer, overrides) {
-  const s = UI_TEXT_STYLE[layer] || UI_TEXT_STYLE.body;
-  ctx.font = (overrides && overrides.font) || s.font;
-  ctx.fillStyle = (overrides && overrides.color) || s.color;
-  ctx.textAlign = (overrides && overrides.align) || s.align;
-  ctx.fillText(text, x, y);
-}
 
 function drawInventory() {
   if (!inventoryOpen) return;

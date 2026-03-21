@@ -56,37 +56,6 @@ function pickNodeType(isBossNext) {
   return {...types[0]};
 }
 
-function generateNodes() {
-  const bossNext = (floor+1) % 3 === 0;
-  treeRows = [{nodes:[]}, {nodes:[]}];
-  treeCursor = {row:0, col:0};
-  treeSelected = null;
-
-  // Row 0: 3 nodes
-  const usedR0 = new Set();
-  for (let i = 0; i < 3; i++) {
-    let node, tries = 0;
-    do { node = pickNodeType(bossNext); tries++; } while (usedR0.has(node.id) && tries < 20);
-    usedR0.add(node.id);
-    node.conn = []; // connections to row1
-    treeRows[0].nodes.push(node);
-  }
-
-  // Row 1: 3 nodes
-  const usedR1 = new Set();
-  for (let i = 0; i < 3; i++) {
-    let node, tries = 0;
-    do { node = pickNodeType(bossNext); tries++; } while (usedR1.has(node.id) && tries < 20);
-    usedR1.add(node.id);
-    treeRows[1].nodes.push(node);
-  }
-
-  // Connections: each row0 node connects to 2 row1 nodes (adjacent)
-  // [0]->[0,1], [1]->[0,1,2], [2]->[1,2]
-  treeRows[0].nodes[0].conn = [0, 1];
-  treeRows[0].nodes[1].conn = [0, 1, 2];
-  treeRows[0].nodes[2].conn = [1, 2];
-}
 
 // ===== NODE POSITIONS (for drawing) =====
 const TREE_LAYOUT = {

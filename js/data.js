@@ -130,11 +130,6 @@ function floodFill(map) {
   return count >= total;
 }
 
-function setBlock(map, c, r) {
-  for (const [bc, br] of [[c,r],[c+1,r],[c,r+1],[c+1,r+1]]) {
-    if (bc > 0 && bc < COLS-1 && br > 0 && br < ROWS-1 && !safeZone(bc,br)) map[br*COLS+bc] = 1;
-  }
-}
 
 function applyTemplate(map, name, fl) {
   const fb = getFloorBounds(fl);
@@ -625,34 +620,4 @@ let floorClearAnimTimer = 0;  // floor clear text animation
 
 // ===== TITLE PARTICLES =====
 const titleParticles = [];
-function updateTitleParticles() {
-  if (titleParticles.length < 25 && Math.random() < 0.08) {
-    titleParticles.push({
-      x: Math.random() * CW, y: -10,
-      vx: (Math.random() - 0.5) * 20,
-      vy: 15 + Math.random() * 20,
-      rot: Math.random() * Math.PI * 2,
-      rotSpd: (Math.random() - 0.5) * 2,
-      alpha: 0.2 + Math.random() * 0.3,
-      size: 14 + Math.random() * 10,
-      icon: ['🌸','🌺','🍃','✨','🌼'][Math.floor(Math.random() * 5)]
-    });
-  }
-  for (let i = titleParticles.length - 1; i >= 0; i--) {
-    const p = titleParticles[i];
-    p.x += p.vx * 0.016; p.y += p.vy * 0.016; p.rot += p.rotSpd * 0.016;
-    if (p.y > CH + 20) titleParticles.splice(i, 1);
-  }
-}
-function drawTitleParticles() {
-  for (const p of titleParticles) {
-    ctx.save(); ctx.globalAlpha = p.alpha;
-    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-    ctx.font = p.size + "px 'M PLUS Rounded 1c', sans-serif";
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(p.icon, 0, 0);
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
-}
 

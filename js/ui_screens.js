@@ -24,7 +24,7 @@ function drawPrologue() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillText('Zキーで次へ  /  Xキーでスキップ', CW / 2, CH - 20);
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップで次へ' : 'Zキーで次へ  /  Xキーでスキップ', CW / 2, CH - 20);
   ctx.textAlign = 'left';
 }
 
@@ -161,7 +161,7 @@ function drawGarden() {
     }
   }
   ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 15);
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップで選択・購入' : '↑↓で選択 / Zで購入 / Xで戻る', CW / 2, CH - 15);
   ctx.textAlign = 'left';
 }
 
@@ -192,7 +192,7 @@ function drawTitle() {
   if (Math.sin(titleBlink * 3) > -0.3) {
     ctx.fillStyle = '#ffcc00';
     ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('Zキーでスタート', CW/2, 500);
+    ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップでスタート' : 'Zキーでスタート', CW/2, 500);
   }
 
   // === Info panel (bottom) ===
@@ -214,7 +214,7 @@ function drawTitle() {
   // Controls (1 line, compact)
   ctx.fillStyle = '#e0d6c2';
   ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('移動: WASD / 矢印　　攻撃: Z　　ダッシュ: X　　アイテム: 1·2·3', CW/2, panelY + 40);
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'ジョイスティックで移動　ボタンで操作' : '移動: WASD / 矢印　　攻撃: Z　　ダッシュ: X　　アイテム: 1·2·3', CW/2, panelY + 40);
 
   // Garden + Nectar (1 line)
   ctx.fillStyle = '#ffd700';
@@ -235,7 +235,7 @@ function drawTitle() {
   } else {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, panelY + 130);
+    if (typeof touchActive === 'undefined' || !touchActive) ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, panelY + 130);
   }
 
   ctx.textAlign = 'left';

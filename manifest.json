@@ -1,0 +1,16 @@
+{
+  "name": "ミプリンの冒険",
+  "short_name": "ミプリン",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1a2e",
+  "theme_color": "#ffd700",
+  "icons": [
+    {
+      "src": "assets/mipurin.png",
+      "sizes": "500x500",
+      "type": "image/png"
+    }
+  ]
+}

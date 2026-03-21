@@ -1,0 +1,316 @@
+// === TOUCH INPUT MODULE (Sprint F + Phase 3 unified) ===
+// Mobile virtual joystick + action buttons + equipment touch
+// Unified handler: no override chains
+
+// --- Mobile detection ---
+let touchActive = false;
+
+// --- Canvas coordinate conversion ---
+function screenToCanvas(tx, ty) {
+  const rect = cvs.getBoundingClientRect();
+  return { x: (tx - rect.left) / rect.width * CW, y: (ty - rect.top) / rect.height * CH };
+}
+
+// --- Joystick ---
+const joystick = {
+  active: false, cx: 170, cy: CH - 190,
+  radius: 70, knobRadius: 42, deadzone: 0.15,
+  dx: 0, dy: 0, touchId: null
+};
+
+// --- Buttons (resized for 48dp+ compliance) ---
+const TOUCH_BUTTONS = [
+  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.790, r: 60, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyX',   label: 'X',  baseX: 0.800, baseY: 0.870, r: 50, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit1', label: '1',  baseX: 0.720, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit2', label: '2',  baseX: 0.800, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit3', label: '3',  baseX: 0.880, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyQ',   label: 'Q',  baseX: 0.700, baseY: 0.790, r: 36, color: '#e056fd', alwaysShow: false, pressed: false, touchId: null },
+  { id: 'Tab',    label: '\u2630', baseX: 0.955, baseY: 0.060, r: 32, color: '#aaa', alwaysShow: true, pressed: false, touchId: null },
+  { id: 'Escape', label: '\u2716', baseX: 0.045, baseY: 0.060, r: 32, color: '#f66', alwaysShow: true, pressed: false, touchId: null }
+];
+
+function getTouchBtnPos(btn) { return { x: btn.baseX * CW, y: btn.baseY * CH }; }
+
+function isBtnVisible(btn) {
+  if (btn.alwaysShow) return true;
+  if (btn.id === 'KeyQ') return typeof player !== 'undefined' && player.weapons && player.weapons[1] !== null;
+  return true;
+}
+
+// --- Context: which buttons to show per gameState ---
+function getVisibleButtons() {
+  const gs = typeof gameState !== 'undefined' ? gameState : 'title';
+  const inv = typeof inventoryOpen !== 'undefined' && inventoryOpen;
+  if (inv) return TOUCH_BUTTONS.filter(b => b.id === 'Tab' || b.id === 'Escape');
+  if (gs === 'playing') return TOUCH_BUTTONS.filter(b => isBtnVisible(b));
+  if (gs === 'title' || gs === 'garden' || gs === 'ending') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Tab' || b.id === 'Escape');
+  if (gs === 'shop' || gs === 'blessing') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
+  if (gs === 'dead') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'Escape');
+  return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
+}
+
+// --- Joystick keys injection ---
+const JOYSTICK_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
+let joystickKeysActive = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
+
+function updateJoystickKeys() {
+  const newState = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
+  if (joystick.active) {
+    const mag = Math.hypot(joystick.dx, joystick.dy);
+    if (mag > joystick.deadzone) {
+      if (joystick.dy < -0.3) newState.KeyW = true;
+      if (joystick.dy > 0.3)  newState.KeyS = true;
+      if (joystick.dx < -0.3) newState.KeyA = true;
+      if (joystick.dx > 0.3)  newState.KeyD = true;
+    }
+  }
+  for (const k of JOYSTICK_KEYS) {
+    if (newState[k] && !joystickKeysActive[k]) { keys[k] = true; pressed[k] = true; }
+    else if (!newState[k] && joystickKeysActive[k]) { keys[k] = false; }
+    if (newState[k]) keys[k] = true;
+    joystickKeysActive[k] = newState[k];
+  }
+}
+
+// === Equipment touch support ===
+const EQUIP_TAP_THRESHOLD = 200;
+let equipTouchStart = { x:0, y:0, time:0, slotIdx:-1 };
+
+function hitTestEquipSlot(cx, cy) {
+  if (!equipSlotRects || equipSlotRects.length === 0) return -1;
+  for (let i = 0; i < equipSlotRects.length; i++) {
+    const s = equipSlotRects[i];
+    if (cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h) return i;
+  }
+  return -1;
+}
+
+function hitTestInvTab(cx, cy) {
+  for (let i = 0; i < 3; i++) {
+    const tx = CW / 2 - 120 + i * 240 - 80;
+    if (cx >= tx && cx <= tx + 160 && cy >= 40 && cy <= 80) return i;
+  }
+  return -1;
+}
+
+function hitTestUpgradeBtn(cx, cy) {
+    if (!inventoryOpen || inventoryTab !== 2) return false;
+    // Match bottom-center detail panel from equip_ui.js
+    const panelW = 500, panelH = 440;
+    const panelX = (CW - panelW) / 2, panelY = (CH - panelH) / 2;
+    const pcx = panelX + panelW / 2;
+    const detH = 140, detY = panelY + panelH - detH - 30;
+    const btnW = 180, btnH = 30;
+    const btnX = pcx - btnW / 2, btnY = detY + detH - 38;
+    return cx >= btnX && cx <= btnX + btnW && cy >= btnY && cy <= btnY + btnH;
+  }
+
+// === Unified touch handlers ===
+function onTouchStart(e) {
+  e.preventDefault();
+  if (!touchActive) {
+    touchActive = true;
+    try {
+      const el = document.documentElement;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (rfs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        rfs.call(el).then(function() {
+          try { screen.orientation.lock('landscape').catch(function(){}); } catch(e2){}
+        }).catch(function(){});
+      }
+    } catch(e2){}
+    try {
+      if (typeof ChipBGM !== 'undefined') ChipBGM.resume();
+      var _actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_actx.state === 'suspended') _actx.resume();
+      _actx.close();
+    } catch(ex) {}
+  }
+
+  for (var ti = 0; ti < e.changedTouches.length; ti++) {
+    var t = e.changedTouches[ti];
+    var pos = screenToCanvas(t.clientX, t.clientY);
+
+    // --- Inventory mode ---
+    if (typeof inventoryOpen !== 'undefined' && inventoryOpen) {
+      var tabHit = hitTestInvTab(pos.x, pos.y);
+      if (tabHit >= 0) {
+        inventoryTab = tabHit;
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        return;
+      }
+      if (pos.x < 80 && pos.y < 80) { inventoryOpen = false; return; }
+      if (inventoryTab === 2) {
+        if (hitTestUpgradeBtn(pos.x, pos.y)) {
+          var selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
+          if (selW && typeof upgradeWeapon === 'function') {
+            if (upgradeWeapon(selW)) {
+              if (typeof Audio !== 'undefined' && Audio.level_up) Audio.level_up();
+              if (typeof equipBounce !== 'undefined') equipBounce = 1;
+              if (typeof showFloat === 'function') showFloat('\u26A1 \u5F37\u5316\u6210\u529F\uFF01', 1.5, '#2ecc71');
+            }
+          }
+          return;
+        }
+        var slotHit = hitTestEquipSlot(pos.x, pos.y);
+        if (slotHit >= 0) {
+          
+          equipCursor = slotHit; if (typeof equipMode !== 'undefined') equipMode = 'slot';
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          return;
+        }
+        // List item tap (right pane)
+        if (typeof getAllOwnedWeapons === 'function' && typeof equipMode !== 'undefined') {
+          var allW = getAllOwnedWeapons();
+          if (allW.length > 0) {
+            var pW2 = CW - 160, pX2 = 80, pY2 = 110;
+            var lW2 = Math.floor(pW2 * 0.45);
+            var rX2 = pX2 + lW2 + 20, rY2 = pY2 + 95;
+            var rW2 = pW2 - lW2 - 35, rH2 = 52;
+            for (var li = 0; li < allW.length; li++) {
+              var ry2 = rY2 + li * rH2;
+              if (pos.x >= rX2 && pos.x <= rX2 + rW2 && pos.y >= ry2 && pos.y <= ry2 + rH2) {
+                equipMode = 'list'; equipListCursor = li;
+                if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+                return;
+              }
+            }
+          }
+        }
+      }
+      // In inventory, also check Tab/Esc buttons
+      for (var bi = 0; bi < TOUCH_BUTTONS.length; bi++) {
+        var btn = TOUCH_BUTTONS[bi];
+        if (btn.id !== 'Tab' && btn.id !== 'Escape') continue;
+        var bp = getTouchBtnPos(btn);
+        if (Math.hypot(pos.x - bp.x, pos.y - bp.y) < btn.r + 18) {
+          btn.pressed = true; btn.touchId = t.identifier;
+          keys[btn.id] = true; pressed[btn.id] = true;
+          return;
+        }
+      }
+      return;
+    }
+
+    // --- Normal mode: check context-visible buttons ---
+    var visible = getVisibleButtons();
+    var hitBtn = false;
+    for (var bi = 0; bi < visible.length; bi++) {
+      var btn = visible[bi];
+      var bp = getTouchBtnPos(btn);
+      if (Math.hypot(pos.x - bp.x, pos.y - bp.y) < btn.r + 18) {
+        btn.pressed = true; btn.touchId = t.identifier;
+        keys[btn.id] = true; pressed[btn.id] = true;
+        hitBtn = true; break;
+      }
+    }
+    if (!hitBtn && pos.x < CW * 0.45 && joystick.touchId === null) {
+      joystick.active = true; joystick.touchId = t.identifier;
+      var dx = pos.x - joystick.cx, dy = pos.y - joystick.cy;
+      var dist = Math.hypot(dx, dy);
+      var clampDist = Math.min(dist, joystick.radius);
+      if (dist > 0) { joystick.dx = (dx / dist) * (clampDist / joystick.radius); joystick.dy = (dy / dist) * (clampDist / joystick.radius); }
+    }
+  }
+}
+
+function onTouchMove(e) {
+  e.preventDefault();
+  for (var ti = 0; ti < e.changedTouches.length; ti++) {
+    var t = e.changedTouches[ti];
+    var pos = screenToCanvas(t.clientX, t.clientY);
+
+    // Equipment touch (no D&D)
+
+    // Joystick move
+    if (t.identifier === joystick.touchId) {
+      var dx = pos.x - joystick.cx, dy = pos.y - joystick.cy;
+      var dist = Math.hypot(dx, dy);
+      var clampDist = Math.min(dist, joystick.radius);
+      if (dist > 0) { joystick.dx = (dx / dist) * (clampDist / joystick.radius); joystick.dy = (dy / dist) * (clampDist / joystick.radius); }
+      else { joystick.dx = 0; joystick.dy = 0; }
+    }
+  }
+}
+
+function onTouchEnd(e) {
+  e.preventDefault();
+  for (var ti = 0; ti < e.changedTouches.length; ti++) {
+    var t = e.changedTouches[ti];
+    var pos = screenToCanvas(t.clientX, t.clientY);
+
+    // Equipment touch end (no D&D)
+
+    // Joystick release
+    if (t.identifier === joystick.touchId) {
+      joystick.active = false; joystick.touchId = null;
+      joystick.dx = 0; joystick.dy = 0;
+      for (var ki = 0; ki < JOYSTICK_KEYS.length; ki++) { keys[JOYSTICK_KEYS[ki]] = false; joystickKeysActive[JOYSTICK_KEYS[ki]] = false; }
+    }
+
+    // Button release
+    for (var bi = 0; bi < TOUCH_BUTTONS.length; bi++) {
+      if (TOUCH_BUTTONS[bi].touchId === t.identifier) {
+        TOUCH_BUTTONS[bi].pressed = false; TOUCH_BUTTONS[bi].touchId = null;
+        keys[TOUCH_BUTTONS[bi].id] = false;
+      }
+    }
+  }
+}
+
+// --- Register events ---
+cvs.addEventListener('touchstart', onTouchStart, { passive: false });
+cvs.addEventListener('touchmove', onTouchMove, { passive: false });
+cvs.addEventListener('touchend', onTouchEnd, { passive: false });
+cvs.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
+// --- Drawing ---
+function drawTouchUI() {
+  if (!touchActive) return;
+  ctx.save();
+
+  // Joystick
+  ctx.globalAlpha = 0.25; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(joystick.cx, joystick.cy, joystick.radius, 0, Math.PI * 2); ctx.stroke();
+  ctx.globalAlpha = 0.1; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(joystick.cx, joystick.cy - joystick.radius + 10);
+  ctx.lineTo(joystick.cx, joystick.cy + joystick.radius - 10);
+  ctx.moveTo(joystick.cx - joystick.radius + 10, joystick.cy);
+  ctx.lineTo(joystick.cx + joystick.radius - 10, joystick.cy);
+  ctx.stroke();
+  var knobX = joystick.cx + joystick.dx * joystick.radius * 0.7;
+  var knobY = joystick.cy + joystick.dy * joystick.radius * 0.7;
+  ctx.globalAlpha = joystick.active ? 0.5 : 0.2;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(knobX, knobY, joystick.knobRadius, 0, Math.PI * 2); ctx.fill();
+
+  // Context-aware buttons
+  var visible = getVisibleButtons();
+  for (var i = 0; i < visible.length; i++) {
+    var btn = visible[i];
+    var bp = getTouchBtnPos(btn);
+    ctx.globalAlpha = btn.pressed ? 0.55 : 0.28;
+    ctx.fillStyle = btn.color;
+    ctx.beginPath(); ctx.arc(bp.x, bp.y, btn.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.globalAlpha = btn.pressed ? 0.9 : 0.6;
+    ctx.fillStyle = '#fff';
+    ctx.font = "bold " + Math.floor(btn.r * 0.75) + "px 'M PLUS Rounded 1c', sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(btn.label, bp.x, bp.y + 1);
+  }
+
+  ctx.restore();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+// --- Per-frame update ---
+function updateTouch() {
+  if (!touchActive) return;
+  updateJoystickKeys();
+}
+
+
+

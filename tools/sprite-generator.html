@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprite Generator v4</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --panel: #202043;
+      --panel-2: #262654;
+      --text: #f4f4ff;
+      --muted: #b8b8d9;
+      --accent: #e94560;
+      --accent-2: #28c7fa;
+      --border: #2d2d5a;
+      --shadow: rgba(0,0,0,0.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: "Noto Sans JP", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+    header {
+      padding: 24px 20px 12px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    main { padding: 0 16px 40px; max-width: 1200px; margin: 0 auto; }
+    details {
+      margin: 12px 0;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 24px var(--shadow);
+      overflow: hidden;
+    }
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 18px;
+      font-weight: 700;
+      font-size: 15px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+    }
+    summary::-webkit-details-marker { display: none; }
+    .panel { padding: 14px 18px 20px; }
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    label { font-size: 13px; color: var(--muted); }
+    input[type="text"], input[type="password"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      background: #17172a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--sans);
+    }
+    textarea { min-height: 72px; }
+    button {
+      background: var(--accent);
+      color: #1a0f13;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.05s ease, filter 0.2s ease;
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #2d2d5a; color: var(--text); }
+    button.danger { background: #ff6b6b; color: #2b0b0b; }
+    .disabled { opacity: 0.45; pointer-events: none; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .status { font-size: 13px; color: var(--muted); }
+    .badge { padding: 3px 8px; border-radius: 999px; background: #2d2d5a; font-size: 11px; }
+    .preview {
+      background: #17172a;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      place-items: center;
+      min-height: 160px;
+    }
+    .checker {
+      background-color: #151528;
+      background-image:
+        linear-gradient(45deg, #1f1f3a 25%, transparent 25%),
+        linear-gradient(-45deg, #1f1f3a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1f1f3a 75%),
+        linear-gradient(-45deg, transparent 75%, #1f1f3a 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    canvas, img { image-rendering: pixelated; max-width: 100%; }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+    }
+    .preview-grid .slot { text-align: center; font-size: 12px; color: var(--muted); }
+    .preview-grid .slot canvas { width: 100%; height: auto; }
+    .sheet-preview canvas { width: 100%; height: auto; }
+    .progress-row { display: flex; gap: 10px; align-items: center; }
+    progress { width: 100%; height: 12px; }
+    .code {
+      background: #121221;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      color: #dcdcff;
+    }
+    .chip { background: #25254a; padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+    .error { color: #ffb3b3; font-size: 13px; }
+    @media (max-width: 900px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .preview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@imgly/background-removal": "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/+esm"
+    }
+  }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body>
+  <header>Sprite Generator v4</header>
+  <main>
+    <div class="status" id="globalStatus">待機中...</div>
+    <div class="error" id="errorBox"></div>
+
+    <div class="row" style="margin: 8px 0 16px;">
+      <label class="chip">アップロードから開始<input id="fileUploadTop" type="file" accept="image/png,image/jpeg,image/webp" style="display:none" /></label>
+      <span class="hint">PNG/JPG/WebP を選択すると即プレビュー表示します。</span>
+    </div>
+
+    <details open>
+      <summary>① API 設定（オプション）</summary>
+      <div class="panel grid grid-2">
+        <div>
+          <label>Gemini API キー</label>
+          <input id="apiKey" type="password" placeholder="AIza..." />
+          <div class="row" style="margin-top:10px;">
+            <button id="saveKey">保存</button>
+            <button id="clearKey" class="secondary">クリア</button>
+            <span class="badge" id="apiStatus">未設定</span>
+          </div>
+          <div class="hint">API キーは localStorage に保存されます。</div>
+          <div class="hint">API キーがなくても画像アップロードから全機能が使えます。</div>
+        </div>
+        <div>
+          <label>ステータス</label>
+          <div class="status" id="quotaStatus">待機中</div>
+          <div class="status">残りリクエスト推定: <span id="rateRemaining">-</span></div>
+          <div class="status">次回リトライ: <span id="rateRetry">-</span></div>
+        </div>
+      </div>
+    </details>
+
+    <details id="aiSection">
+      <summary>② AI キャラクター生成（オプション）</summary>
+      <div class="panel grid grid-2">
+        <div class="grid">
+          <label>キャラ名</label>
+          <input id="charName" type="text" value="poison_mushroom" />
+          <div class="grid grid-3">
+            <div>
+              <label>スタイル</label>
+              <select id="style">
+                <option value="chibi">chibi</option>
+                <option value="sd">SD</option>
+                <option value="real">realistic</option>
+              </select>
+            </div>
+            <div>
+              <label>サイズ</label>
+              <select id="size">
+                <option value="32">32×32</option>
+                <option value="48">48×48</option>
+                <option value="64" selected>64×64</option>
+              </select>
+            </div>
+            <div>
+              <label>自動背景除去</label>
+              <select id="autoBg">
+                <option value="on">ON</option>
+                <option value="off">OFF</option>
+              </select>
+            </div>
+          </div>
+          <label>追加プロンプト</label>
+          <textarea id="extraPrompt" placeholder="例: warm lighting, simple silhouette"></textarea>
+          <div class="row">
+            <button id="btnGenerate">AI 生成</button>
+            <button id="btnLocalMode" class="secondary">ローカルモード</button>
+            <span class="hint">APIキー未設定時は無効</span>
+          </div>
+        </div>
+        <div>
+          <label>プレビュー</label>
+          <div class="preview checker" id="aiPreviewBox"><span class="muted">未生成</span></div>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>③ 背景除去</summary>
+      <div class="panel grid grid-2">
+        <div>
+          <label>Before</label>
+          <div class="preview checker" id="bgBefore"></div>
+        </div>
+        <div>
+          <label>After</label>
+          <div class="preview checker" id="bgAfter"></div>
+        </div>
+        <div class="row">
+          <button id="btnRemoveBg">背景除去</button>
+          <div class="progress-row" style="flex:1;">
+            <progress id="bgProgress" value="0" max="100"></progress>
+            <span class="small" id="bgProgressText">0%</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>④ ピクセルアート変換</summary>
+      <div class="panel grid grid-2">
+        <div class="grid">
+          <label>パレット色数</label>
+          <input id="palette" type="range" min="4" max="32" value="16" />
+          <label>出力サイズ</label>
+          <select id="pixelSize">
+            <option value="32">32</option>
+            <option value="48">48</option>
+            <option value="64" selected>64</option>
+          </select>
+          <div class="row">
+            <label><input id="outline" type="checkbox" checked /> 輪郭線</label>
+            <label><input id="dither" type="checkbox" /> ディザリング</label>
+          </div>
+          <button id="btnPixelize" class="secondary">ピクセル化更新</button>
+        </div>
+        <div>
+          <label>プレビュー</label>
+          <div class="preview checker" id="pixelPreview"></div>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>⑤ 4方向スプライト生成</summary>
+      <div class="panel grid">
+        <div class="row">
+          <label>モード</label>
+          <select id="dirMode">
+            <option value="program" selected>プログラマティック</option>
+            <option value="ai">AI</option>
+          </select>
+          <button id="btnGenDir">4方向生成</button>
+          <span class="hint">AI は正面画像から左/右/後ろを生成します。</span>
+        </div>
+        <div class="preview-grid" id="dirGrid"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>⑥ アニメーションフレーム</summary>
+      <div class="panel grid">
+        <div class="row">
+          <button id="btnGenFrames" class="secondary">フレーム生成</button>
+          <button id="btnPreviewAnim">ループ再生</button>
+        </div>
+        <div class="preview checker" id="animPreview"></div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>⑦ スプライトシート出力</summary>
+      <div class="panel grid grid-2">
+        <div class="sheet-preview">
+          <label>最終シート</label>
+          <div class="preview checker" id="sheetPreview"></div>
+        </div>
+        <div class="grid">
+          <div class="row">
+            <button id="btnDownloadPng">PNG ダウンロード</button>
+            <button id="btnDownloadJson" class="secondary">JSON DL</button>
+          </div>
+          <label>ゲームにインポート</label>
+          <div class="code" id="importCode">// まだ生成されていません</div>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>⑧ バッチモード</summary>
+      <div class="panel grid">
+        <div class="row">
+          <button id="btnBatch">一括生成</button>
+          <button id="btnBatchZip" class="secondary">ZIP ダウンロード</button>
+          <label class="chip">フォルダアップロード<input id="folderUpload" type="file" webkitdirectory multiple style="display:none" /></label>
+          <span class="hint">チェックしたプリセットのみ生成します。</span>
+        </div>
+        <div class="hint" id="batchLimit">無料枠目安: 1日5体まで推奨</div>
+        <div class="status" id="batchLimitWarn"></div>
+        <div class="status" id="batchStatus">未実行</div>
+        <div class="grid grid-3" id="presetList"></div>
+      </div>
+    </details>
+  </main>
+
+  <script type="module">
+    import { removeBackground } from '@imgly/background-removal';
+
+    class GeminiAPI {
+      constructor(apiKey) { this.apiKey = apiKey; }
+
+      buildCharacterPrompt(name, style, size, extras) {
+        const styleMap = {
+          chibi: 'cute chibi',
+          sd: 'super-deformed',
+          real: 'detailed'
+        };
+        const s = styleMap[style] || 'cute chibi';
+        return `A single ${s} game character sprite of a ${name}, facing forward, pixel art style, transparent background, centered, full body, no shadow, clean edges. size ${size}px. ${extras || ''}`.trim();
+      }
+
+      buildDirectionPrompt(direction) {
+        return `Redraw this exact character sprite facing ${direction}. Keep the same art style, colors, proportions, and transparent background. Only change the facing direction.`;
+      }
+
+      async generateImage(prompt) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
+        const parts = [{ text: prompt }];
+        const res = await throttledFetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+        if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+        const data = await res.json();
+        const b64 = findInlineBase64(data);
+        if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
+        return base64ToBlob(b64, 'image/png');
+      }
+
+      async editImage(prompt, imageBase64) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${this.apiKey}`;
+        const parts = [
+          { text: prompt },
+          { inline_data: { mime_type: 'image/png', data: imageBase64 } }
+        ];
+        const res = await throttledFetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+        if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+        const data = await res.json();
+        const b64 = findInlineBase64(data);
+        if (!b64) throw new Error('No image data in response');
+        rateState.requestsMade += 1;
+        updateRateUI();
+        return base64ToBlob(b64, 'image/png');
+      }
+    }
+
+    class BgRemover {
+      async remove(imageBlob, onProgress) {
+        const config = {
+          model: 'isnet_fp16',
+          output: { format: 'image/png', type: 'foreground' },
+          progress: (key, current, total) => onProgress?.(key, current, total)
+        };
+        return await removeBackground(imageBlob, config);
+      }
+    }
+
+    class PixelConverter {
+      convert(sourceCanvas, options = {}) {
+        const { targetSize = 64, paletteSize = 16, outline = true, dither = false } = options;
+        const small = document.createElement('canvas');
+        small.width = small.height = targetSize;
+        const sctx = small.getContext('2d');
+        sctx.imageSmoothingEnabled = false;
+        sctx.clearRect(0,0,targetSize,targetSize);
+        sctx.drawImage(sourceCanvas, 0, 0, targetSize, targetSize);
+
+        const imgData = sctx.getImageData(0, 0, targetSize, targetSize);
+        const palette = medianCut(imgData, paletteSize);
+        applyPalette(imgData, palette, dither);
+        if (outline) addOutline(imgData);
+        sctx.putImageData(imgData, 0, 0);
+        return small;
+      }
+    }
+
+    class DirectionGenerator {
+      async generateWithAI(geminiApi, frontCanvas) {
+        const frontBase64 = frontCanvas.toDataURL('image/png').split(',')[1];
+        const directions = { front: frontCanvas };
+        for (const dir of ['left', 'right', 'back']) {
+          const prompt = geminiApi.buildDirectionPrompt(dir);
+          const blob = await geminiApi.editImage(prompt, frontBase64);
+          directions[dir] = await blobToCanvas(blob);
+        }
+        return directions;
+      }
+
+      generateProgrammatic(frontCanvas) {
+        return {
+          front: frontCanvas,
+          right: this._flipH(frontCanvas),
+          left: frontCanvas,
+          back: this._darken(frontCanvas, 0.7)
+        };
+      }
+
+      _flipH(canvas) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.translate(c.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(canvas, 0, 0);
+        return c;
+      }
+
+      _darken(canvas, factor) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        const img = ctx.getImageData(0, 0, c.width, c.height);
+        for (let i = 0; i < img.data.length; i += 4) {
+          img.data[i] *= factor;
+          img.data[i+1] *= factor;
+          img.data[i+2] *= factor;
+        }
+        ctx.putImageData(img, 0, 0);
+        return c;
+      }
+    }
+
+    class FrameGenerator {
+      generate(directionCanvas) {
+        return {
+          idle: directionCanvas,
+          walk1: this._shiftY(directionCanvas, -1),
+          walk2: this._shiftY(directionCanvas, 1)
+        };
+      }
+
+      _shiftY(canvas, dy) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width; c.height = canvas.height;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.drawImage(canvas, 0, dy);
+        return c;
+      }
+    }
+
+    class SheetAssembler {
+      assemble(allFrames, frameSize) {
+        const cols = 3, rows = 4;
+        const sheet = document.createElement('canvas');
+        sheet.width = frameSize * cols;
+        sheet.height = frameSize * rows;
+        const ctx = sheet.getContext('2d');
+        const order = ['front', 'left', 'right', 'back'];
+        const frames = ['idle', 'walk1', 'walk2'];
+        order.forEach((dir, row) => {
+          frames.forEach((frame, col) => {
+            ctx.drawImage(allFrames[dir][frame], col * frameSize, row * frameSize, frameSize, frameSize);
+          });
+        });
+        return sheet;
+      }
+
+      generateMeta(name, size) {
+        return {
+          name,
+          frameWidth: size,
+          frameHeight: size,
+          columns: 3,
+          rows: 4,
+          directions: ['front', 'left', 'right', 'back'],
+          framesPerDirection: 3,
+          frameNames: ['idle', 'walk1', 'walk2'],
+          animationSpeed: 150
+        };
+      }
+
+      generateImportCode(name, size) {
+        return `SpriteManager.register('${name}', {\n  src: 'assets/sprites/${name}-sheet.png',\n  frameWidth: ${size},\n  frameHeight: ${size},\n  directions: ['front','left','right','back'],\n  framesPerDirection: 3,\n  animSpeed: 150\n});\n\n// balance.js の ENEMIES に追加する例\n{ id: '${name}', ..., spriteId: '${name}' }`;
+      }
+    }
+
+    class BatchProcessor {
+      constructor(api, remover, converter, dirGen, frameGen, assembler) {
+        this.api = api;
+        this.remover = remover;
+        this.converter = converter;
+        this.dirGen = dirGen;
+        this.frameGen = frameGen;
+        this.assembler = assembler;
+      }
+
+      async run(presets, options) {
+        const zip = new JSZip();
+        for (let i = 0; i < presets.length; i++) {
+          const preset = presets[i];
+          options.onProgress?.(`生成中: ${preset.name} (${i+1}/${presets.length})`);
+          await sleep(8000);
+          const blob = await this.api.generateImage(preset.prompt);
+          const fg = await this.remover.remove(blob);
+          const fgCanvas = await blobToCanvas(fg);
+          const px = this.converter.convert(fgCanvas, {
+            targetSize: options.size,
+            paletteSize: 16,
+            outline: true,
+            dither: false
+          });
+          const dirs = options.useAI
+            ? await this.dirGen.generateWithAI(this.api, px)
+            : this.dirGen.generateProgrammatic(px);
+          const frames = {};
+          Object.keys(dirs).forEach((dir) => { frames[dir] = this.frameGen.generate(dirs[dir]); });
+          const sheet = this.assembler.assemble(frames, options.size);
+          const json = this.assembler.generateMeta(preset.id, options.size);
+          const sheetBlob = await canvasToBlob(sheet);
+          zip.file(`${preset.id}-sheet.png`, sheetBlob);
+          zip.file(`${preset.id}.json`, JSON.stringify(json, null, 2));
+        }
+        return zip;
+      }
+    }
+
+    class Pipeline {
+      constructor() {
+        this.state = {
+          rawBlob: null,
+          rawCanvas: null,
+          bgBlob: null,
+          bgCanvas: null,
+          pixelCanvas: null,
+          directions: null,
+          frames: null,
+          sheet: null
+        };
+      }
+    }
+
+    const ENEMY_PRESETS = [
+      { id: 'slime',     name: '緑スライム',   prompt: 'a cute green slime monster' },
+      { id: 'mushroom',  name: '毒キノコ',     prompt: 'a purple poison mushroom creature' },
+      { id: 'spider',    name: '洞窟グモ',     prompt: 'a dark brown cave spider' },
+      { id: 'bat',       name: 'コウモリ',     prompt: 'a small grey bat with wings spread' },
+      { id: 'worm',      name: 'ミミズ',       prompt: 'a segmented earth worm monster' },
+      { id: 'flower',    name: '食虫花',       prompt: 'a carnivorous flower with teeth' },
+      { id: 'bee',       name: '女王蜂',       prompt: 'a large queen bee with a crown' },
+      { id: 'golem',     name: 'ゴーレム',     prompt: 'a stone golem with glowing eyes' },
+      { id: 'ghost',     name: 'ゴースト',     prompt: 'a translucent floating ghost' }
+    ];
+
+    const state = new Pipeline().state;
+
+    const apiKeyInput = document.getElementById('apiKey');
+    const apiStatus = document.getElementById('apiStatus');
+    const quotaStatus = document.getElementById('quotaStatus');
+    const globalStatus = document.getElementById('globalStatus');
+    const errorBox = document.getElementById('errorBox');
+    const rateRemaining = document.getElementById('rateRemaining');
+    const rateRetry = document.getElementById('rateRetry');
+    const aiSection = document.getElementById('aiSection');
+    const charName = document.getElementById('charName');
+    const style = document.getElementById('style');
+    const size = document.getElementById('size');
+    const extraPrompt = document.getElementById('extraPrompt');
+    const autoBg = document.getElementById('autoBg');
+    const aiPreviewBox = document.getElementById('aiPreviewBox');
+    const bgBefore = document.getElementById('bgBefore');
+    const bgAfter = document.getElementById('bgAfter');
+    const bgProgress = document.getElementById('bgProgress');
+    const bgProgressText = document.getElementById('bgProgressText');
+    const pixelPreview = document.getElementById('pixelPreview');
+    const dirGrid = document.getElementById('dirGrid');
+    const dirMode = document.getElementById('dirMode');
+    const btnGenDir = document.getElementById('btnGenDir');
+    const animPreview = document.getElementById('animPreview');
+    const sheetPreview = document.getElementById('sheetPreview');
+    const importCode = document.getElementById('importCode');
+    const presetList = document.getElementById('presetList');
+    const batchStatus = document.getElementById('batchStatus');
+    const batchLimitWarn = document.getElementById('batchLimitWarn');
+    const pixelSize = document.getElementById('pixelSize');
+    const btnLocalMode = document.getElementById('btnLocalMode');
+    const fileUploadTop = document.getElementById('fileUploadTop');
+    const folderUpload = document.getElementById('folderUpload');
+
+    const rateState = {
+      lastFetchAt: 0,
+      retryUntil: 0,
+      requestsMade: 0
+    };
+    const RATE_LIMIT_ESTIMATE = 500;
+    const MIN_FETCH_INTERVAL = 6000;
+    const RETRY_BACKOFFS = [10000, 20000, 40000];
+    const BATCH_SOFT_LIMIT = 5;
+
+    function setError(msg) {
+      errorBox.textContent = msg || '';
+    }
+
+    function setStatus(msg) {
+      globalStatus.textContent = msg || '';
+    }
+
+    function updateApiAvailability() {
+      const hasKey = !!apiKeyInput.value.trim();
+      if (aiSection) aiSection.classList.toggle('disabled', !hasKey);
+      document.getElementById('btnGenerate').disabled = !hasKey;
+      if (dirMode) {
+        const aiOption = dirMode.querySelector('option[value=\"ai\"]');
+        if (aiOption) aiOption.disabled = !hasKey;
+        if (!hasKey && dirMode.value === 'ai') dirMode.value = 'program';
+      }
+    }
+
+    function updateRateUI() {
+      const remaining = Math.max(0, RATE_LIMIT_ESTIMATE - rateState.requestsMade);
+      rateRemaining.textContent = `${remaining}`;
+      const now = Date.now();
+      if (rateState.retryUntil > now) {
+        const sec = Math.ceil((rateState.retryUntil - now) / 1000);
+        rateRetry.textContent = `${sec}s`;
+      } else {
+        rateRetry.textContent = '-';
+      }
+    }
+
+    async function throttledFetch(url, options, attempt = 0) {
+      const now = Date.now();
+      const waitForInterval = Math.max(0, MIN_FETCH_INTERVAL - (now - rateState.lastFetchAt));
+      if (waitForInterval > 0) {
+        await sleep(waitForInterval);
+      }
+      const res = await fetch(url, options);
+      rateState.lastFetchAt = Date.now();
+      if (res.status === 429 && attempt < RETRY_BACKOFFS.length) {
+        const backoff = RETRY_BACKOFFS[attempt];
+        rateState.retryUntil = Date.now() + backoff;
+        updateRateUI();
+        await sleep(backoff);
+        return throttledFetch(url, options, attempt + 1);
+      }
+      return res;
+    }
+
+    function findInlineBase64(data) {
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      for (const p of parts) {
+        if (p.inlineData?.data) return p.inlineData.data;
+        if (p.inline_data?.data) return p.inline_data.data;
+      }
+      return null;
+    }
+
+    function base64ToBlob(base64, mime) {
+      const bin = atob(base64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    }
+
+    function blobToImg(blob) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.src = url;
+      });
+    }
+
+    async function blobToCanvas(blob) {
+      const img = await blobToImg(blob);
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return c;
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    }
+
+    function setPreview(el, canvas) {
+      el.innerHTML = '';
+      if (!canvas) {
+        el.innerHTML = '<span class="muted">未生成</span>';
+        return;
+      }
+      el.appendChild(canvas);
+    }
+
+    function getFrameSize() {
+      return parseInt(pixelSize.value, 10);
+    }
+
+    function refreshImportCode() {
+      const name = charName.value.trim() || 'sprite';
+      const sz = getFrameSize();
+      const assembler = new SheetAssembler();
+      importCode.textContent = assembler.generateImportCode(name, sz);
+    }
+
+    function medianCut(imgData, paletteSize) {
+      const pixels = [];
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const a = imgData.data[i+3];
+        if (a === 0) continue;
+        pixels.push([imgData.data[i], imgData.data[i+1], imgData.data[i+2]]);
+      }
+      if (pixels.length === 0) return [[0,0,0]];
+      let boxes = [pixels];
+      while (boxes.length < paletteSize) {
+        boxes.sort((a,b) => colorRange(b) - colorRange(a));
+        const box = boxes.shift();
+        if (!box || box.length <= 1) break;
+        const [rRange, gRange, bRange] = channelRange(box);
+        const channel = rRange >= gRange && rRange >= bRange ? 0 : gRange >= bRange ? 1 : 2;
+        box.sort((p1,p2) => p1[channel] - p2[channel]);
+        const mid = Math.floor(box.length / 2);
+        boxes.push(box.slice(0, mid));
+        boxes.push(box.slice(mid));
+      }
+      return boxes.map(avgColor);
+    }
+
+    function channelRange(box) {
+      let rMin=255, rMax=0, gMin=255, gMax=0, bMin=255, bMax=0;
+      for (const [r,g,b] of box) {
+        if (r < rMin) rMin = r; if (r > rMax) rMax = r;
+        if (g < gMin) gMin = g; if (g > gMax) gMax = g;
+        if (b < bMin) bMin = b; if (b > bMax) bMax = b;
+      }
+      return [rMax-rMin, gMax-gMin, bMax-bMin];
+    }
+
+    function colorRange(box) {
+      const [r,g,b] = channelRange(box);
+      return Math.max(r,g,b);
+    }
+
+    function avgColor(box) {
+      let r=0,g=0,b=0;
+      for (const p of box) { r+=p[0]; g+=p[1]; b+=p[2]; }
+      const n = Math.max(1, box.length);
+      return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+    }
+
+    function nearestColor([r,g,b], palette) {
+      let best = palette[0];
+      let bestD = Infinity;
+      for (const c of palette) {
+        const dr = r - c[0];
+        const dg = g - c[1];
+        const db = b - c[2];
+        const d = dr*dr + dg*dg + db*db;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      return best;
+    }
+
+    function applyPalette(imgData, palette, dither) {
+      const w = imgData.width;
+      const h = imgData.height;
+      const data = imgData.data;
+      const err = new Float32Array(data.length);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (data[i+3] === 0) continue;
+          let r = data[i] + err[i];
+          let g = data[i+1] + err[i+1];
+          let b = data[i+2] + err[i+2];
+          const nc = nearestColor([r,g,b], palette);
+          const er = r - nc[0];
+          const eg = g - nc[1];
+          const eb = b - nc[2];
+          data[i] = nc[0]; data[i+1] = nc[1]; data[i+2] = nc[2];
+          if (dither) diffuse(err, i, w, er, eg, eb);
+        }
+      }
+    }
+
+    function diffuse(err, idx, w, er, eg, eb) {
+      const weights = [
+        { off: 4, w: 7/16 },
+        { off: (w-1) * 4, w: 3/16 },
+        { off: w * 4, w: 5/16 },
+        { off: (w+1) * 4, w: 1/16 }
+      ];
+      for (const t of weights) {
+        const j = idx + t.off;
+        if (j < 0 || j >= err.length) continue;
+        err[j] += er * t.w;
+        err[j+1] += eg * t.w;
+        err[j+2] += eb * t.w;
+      }
+    }
+
+    function addOutline(imgData) {
+      const w = imgData.width;
+      const h = imgData.height;
+      const data = imgData.data;
+      const copy = new Uint8ClampedArray(data);
+      for (let y = 1; y < h-1; y++) {
+        for (let x = 1; x < w-1; x++) {
+          const i = (y * w + x) * 4;
+          if (copy[i+3] !== 0) continue;
+          let hasNeighbor = false;
+          for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const j = ((y+dy) * w + (x+dx)) * 4;
+            if (copy[j+3] !== 0) { hasNeighbor = true; break; }
+          }
+          if (hasNeighbor) {
+            data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 255;
+          }
+        }
+      }
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function setRawImage(blob) {
+      state.rawBlob = blob;
+      state.rawCanvas = await blobToCanvas(blob);
+      setPreview(aiPreviewBox, state.rawCanvas);
+      setPreview(bgBefore, state.rawCanvas);
+      if (autoBg.value === 'on') {
+        await removeBg();
+      }
+    }
+
+    async function removeBg() {
+      if (!state.rawBlob) return showError('先に画像を生成/アップロードしてください');
+      const remover = new BgRemover();
+      bgProgress.value = 0;
+      bgProgressText.textContent = '0%';
+      const result = await remover.remove(state.rawBlob, (key, current, total) => {
+        const pct = total ? Math.floor((current / total) * 100) : 0;
+        bgProgress.value = pct;
+        bgProgressText.textContent = `${pct}% (${key})`;
+      });
+      state.bgBlob = result;
+      state.bgCanvas = await blobToCanvas(result);
+      setPreview(bgAfter, state.bgCanvas);
+    }
+
+    function pixelize() {
+      const source = state.bgCanvas || state.rawCanvas;
+      if (!source) return showError('画像がありません');
+      const converter = new PixelConverter();
+      const pxSize = getFrameSize();
+      const paletteSize = parseInt(document.getElementById('palette').value, 10);
+      state.pixelCanvas = converter.convert(source, {
+        targetSize: pxSize,
+        paletteSize,
+        outline: document.getElementById('outline').checked,
+        dither: document.getElementById('dither').checked
+      });
+      setPreview(pixelPreview, state.pixelCanvas);
+    }
+
+    function renderDirections(directions) {
+      dirGrid.innerHTML = '';
+      ['front','left','right','back'].forEach((dir) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        const label = document.createElement('div');
+        label.textContent = dir;
+        const canvas = directions?.[dir];
+        const box = document.createElement('div');
+        box.className = 'preview checker';
+        if (canvas) box.appendChild(canvas);
+        const retry = document.createElement('button');
+        retry.textContent = `${dir} リトライ`;
+        retry.className = 'secondary small';
+        retry.addEventListener('click', async () => {
+          if (!state.pixelCanvas) return showError('先にピクセル化してください');
+          await regenerateDirection(dir);
+        });
+        slot.appendChild(label);
+        slot.appendChild(box);
+        slot.appendChild(retry);
+        dirGrid.appendChild(slot);
+      });
+    }
+
+    async function regenerateDirection(dir) {
+      const key = apiKeyInput.value.trim();
+      if (!key) return showError('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const frontBase64 = state.pixelCanvas.toDataURL('image/png').split(',')[1];
+      const blob = await api.editImage(api.buildDirectionPrompt(dir), frontBase64);
+      const c = await blobToCanvas(blob);
+      state.directions[dir] = c;
+      renderDirections(state.directions);
+    }
+
+    function generateFrames() {
+      if (!state.directions) return showError('方向画像がありません');
+      const gen = new FrameGenerator();
+      state.frames = {};
+      Object.keys(state.directions).forEach((dir) => {
+        state.frames[dir] = gen.generate(state.directions[dir]);
+      });
+    }
+
+    function assembleSheet() {
+      if (!state.frames) return showError('フレームがありません');
+      const assembler = new SheetAssembler();
+      const frameSize = getFrameSize();
+      state.sheet = assembler.assemble(state.frames, frameSize);
+      setPreview(sheetPreview, state.sheet);
+      refreshImportCode();
+    }
+
+    let animTimer = null;
+    function previewAnimation() {
+      if (!state.frames) return showError('フレームがありません');
+      animPreview.innerHTML = '';
+      const c = document.createElement('canvas');
+      c.width = getFrameSize();
+      c.height = getFrameSize();
+      c.style.width = '200px';
+      c.style.height = '200px';
+      const ctx = c.getContext('2d');
+      animPreview.appendChild(c);
+      const frames = ['idle','walk1','walk2'];
+      let idx = 0;
+      if (animTimer) clearInterval(animTimer);
+      animTimer = setInterval(() => {
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.drawImage(state.frames.front[frames[idx]], 0, 0);
+        idx = (idx + 1) % frames.length;
+      }, 200);
+    }
+
+    function showError(msg) {
+      setError(msg);
+      if (msg) setStatus('エラー');
+    }
+
+    async function runLocalMode() {
+      if (!state.rawBlob) return showError('ローカルモード: 先に画像をアップロードしてください');
+      setStatus('ローカルモード実行中...');
+      try {
+        await removeBackground();
+        pixelize();
+        const dirGen = new DirectionGenerator();
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
+        renderDirections(state.directions);
+        generateFrames();
+        assembleSheet();
+        setStatus('ローカルモード完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function updateBatchLimitWarn() {
+      const selected = Array.from(document.querySelectorAll('.preset-check')).filter(i => i.checked).length;
+      if (selected > BATCH_SOFT_LIMIT) {
+        batchLimitWarn.textContent = `警告: 無料枠ユーザーは1日${BATCH_SOFT_LIMIT}体まで推奨（現在 ${selected} 体）`;
+      } else {
+        batchLimitWarn.textContent = '';
+      }
+    }
+
+    // UI Bindings
+    document.getElementById('saveKey').addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      localStorage.setItem('gemini_api_key', key);
+      apiStatus.textContent = key ? '保存済み' : '未設定';
+    });
+    document.getElementById('clearKey').addEventListener('click', () => {
+      localStorage.removeItem('gemini_api_key');
+      apiKeyInput.value = '';
+      apiStatus.textContent = '未設定';
+    });
+
+    document.getElementById('btnGenerate').addEventListener('click', async () => {
+      setError('');
+      const key = apiKeyInput.value.trim();
+      if (!key) return showError('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const prompt = api.buildCharacterPrompt(charName.value, style.value, size.value, extraPrompt.value);
+      quotaStatus.textContent = '生成中...';
+      setStatus('AI 生成中...');
+      try {
+        const blob = await api.generateImage(prompt);
+        await setRawImage(blob);
+        quotaStatus.textContent = '生成完了';
+        setStatus('生成完了');
+      } catch (e) {
+        quotaStatus.textContent = '生成失敗';
+        showError(e.message);
+      }
+    });
+    btnLocalMode.addEventListener('click', async () => {
+      setError('');
+      await runLocalMode();
+    });
+
+    fileUploadTop.addEventListener('change', async (e) => {
+      setError('');
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        await setRawImage(file);
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    document.getElementById('btnRemoveBg').addEventListener('click', async () => {
+      setError('');
+      setStatus('背景除去中...');
+      try {
+        await removeBg();
+        setStatus('背景除去完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    document.getElementById('btnPixelize').addEventListener('click', () => {
+      setError('');
+      pixelize();
+    });
+    document.getElementById('palette').addEventListener('input', pixelize);
+    document.getElementById('outline').addEventListener('change', pixelize);
+    document.getElementById('dither').addEventListener('change', pixelize);
+    pixelSize.addEventListener('change', () => {
+      size.value = pixelSize.value;
+      pixelize();
+      refreshImportCode();
+    });
+    size.addEventListener('change', () => {
+      pixelSize.value = size.value;
+      refreshImportCode();
+    });
+
+    btnGenDir.addEventListener('click', async () => {
+      setError('');
+      if (!state.pixelCanvas) return showError('先にピクセル化してください');
+      const dirGen = new DirectionGenerator();
+      if (dirMode.value === 'ai') {
+        const key = apiKeyInput.value.trim();
+        if (!key) return showError('API キーが必要です');
+        const api = new GeminiAPI(key);
+        setStatus('4方向生成中...');
+        try {
+          state.directions = await dirGen.generateWithAI(api, state.pixelCanvas);
+          renderDirections(state.directions);
+          setStatus('完了');
+        } catch (e) {
+          showError(e.message);
+        }
+      } else {
+        state.directions = dirGen.generateProgrammatic(state.pixelCanvas);
+        renderDirections(state.directions);
+      }
+    });
+
+    document.getElementById('btnGenFrames').addEventListener('click', () => {
+      setError('');
+      generateFrames();
+      assembleSheet();
+    });
+
+    document.getElementById('btnPreviewAnim').addEventListener('click', () => {
+      setError('');
+      generateFrames();
+      previewAnimation();
+    });
+
+    document.getElementById('btnDownloadPng').addEventListener('click', async () => {
+      setError('');
+      if (!state.sheet) return showError('シートがありません');
+      const blob = await canvasToBlob(state.sheet);
+      saveAs(blob, `${charName.value}-sheet.png`);
+    });
+
+    document.getElementById('btnDownloadJson').addEventListener('click', async () => {
+      setError('');
+      const assembler = new SheetAssembler();
+      const json = assembler.generateMeta(charName.value, getFrameSize());
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      saveAs(blob, `${charName.value}.json`);
+    });
+
+    document.getElementById('btnBatch').addEventListener('click', async () => {
+      setError('');
+      const key = apiKeyInput.value.trim();
+      if (!key) return showError('API キーが必要です');
+      const api = new GeminiAPI(key);
+      const remover = new BgRemover();
+      const converter = new PixelConverter();
+      const dirGen = new DirectionGenerator();
+      const frameGen = new FrameGenerator();
+      const assembler = new SheetAssembler();
+      const batch = new BatchProcessor(api, remover, converter, dirGen, frameGen, assembler);
+
+      const selected = Array.from(document.querySelectorAll('.preset-check')).filter(i => i.checked).map(i => i.value);
+      const presets = ENEMY_PRESETS.filter(p => selected.includes(p.id));
+      if (presets.length === 0) return showError('プリセットを選択してください');
+
+      setStatus('バッチ実行中...');
+      try {
+        const zip = await batch.run(presets, {
+          size: getFrameSize(),
+          useAI: true,
+          onProgress: (msg) => { batchStatus.textContent = msg; }
+        });
+        window.__batchZip = zip;
+        batchStatus.textContent = 'バッチ完了。ZIP ダウンロード可能。';
+        setStatus('バッチ完了');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    document.getElementById('btnBatchZip').addEventListener('click', async () => {
+      setError('');
+      if (!window.__batchZip) return showError('先に一括生成してください');
+      const blob = await window.__batchZip.generateAsync({ type: 'blob' });
+      saveAs(blob, 'sprites-batch.zip');
+    });
+
+    function init() {
+      const savedKey = localStorage.getItem('gemini_api_key') || '';
+      apiKeyInput.value = savedKey;
+      apiStatus.textContent = savedKey ? '保存済み' : '未設定';
+      pixelSize.value = size.value;
+      refreshImportCode();
+      renderDirections({});
+      ENEMY_PRESETS.forEach((p) => {
+        const card = document.createElement('label');
+        card.className = 'chip';
+        card.innerHTML = `<input class="preset-check" type="checkbox" value="${p.id}" checked /> ${p.name} (${p.id})`;
+        presetList.appendChild(card);
+      });
+      document.querySelectorAll('.preset-check').forEach((el) => {
+        el.addEventListener('change', updateBatchLimitWarn);
+      });
+      updateBatchLimitWarn();
+      updateRateUI();
+      setInterval(updateRateUI, 1000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+
+

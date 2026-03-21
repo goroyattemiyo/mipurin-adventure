@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ミプリンの冒険</title>
+  <meta name="description" content="ミツバチのミプリンが黄金蜂蜜のかけらを集める2DアクションRPG">
+
+  <!-- OGP -->
+  <meta property="og:title" content="ミプリンの冒険">
+  <meta property="og:description" content="ミツバチのミプリンが黄金蜂蜜のかけらを集める冒険に出る2DアクションRPG。3つのエンディング、無限巣窟モード搭載。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://goroyattemiyo.github.io/mipurin-adventure/">
+  <meta property="og:image" content="https://goroyattemiyo.github.io/mipurin-adventure/assets/ogp.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%F0%9F%90%9D%3C/text%3E%3C/svg%3E">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ローディング画面 -->
+  <div id="loading">
+    <div id="loading-title">ミプリンの冒険</div>
+    <div id="loading-text">よみこみちゅう...</div>
+    <div id="loading-bar"><div id="loading-bar-inner"></div></div>
+  </div>
+
+  <!-- ゲームキャンバス -->
+  <div id="game-wrapper">
+    <canvas id="game-canvas" width="1920" height="1440"></canvas>
+  </div>
+
+  <!-- モバイル仮想コントローラ -->
+  <div id="mobile-controls">
+    <div id="dpad-area">
+      <div id="dpad-visual"><div id="dpad-stick"></div></div>
+    </div>
+    <div id="btn-a" class="btn-action">Z</div>
+    <div id="btn-b" class="btn-action">X</div>
+    <div id="btn-c" class="btn-action">C</div>
+  </div>
+  <div id="btn-menu">≡</div>
+
+  <!-- JS (依存順) -->
+  <script src="js/config.js"></script>
+  <script src="js/scaling.js"></script>
+  <script src="js/lang.js"></script>
+  <script src="js/balance.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/equipment.js"></script>
+  <script src="js/equipmentUI.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skillUI.js"></script>
+  <script src="js/itemGen.js"></script>
+  <script src="js/loot.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/npc.js"></script>
+  <script src="js/collection.js"></script>
+  <script src="js/dungeon.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/tileEngine.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/gameFeel.js"></script>
+  <script src="js/damageNumber.js"></script>
+  <script src="js/spriteVariant.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/boss.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/blessings.js"></script>
+  <script src="js/blessingUI.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
+

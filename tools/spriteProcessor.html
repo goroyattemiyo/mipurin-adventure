@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Processor - ミプリンの冒険</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root { --pri:#F5A623; --bg:#1a1a2a; --bg2:#252540; --txt:#eee; --dim:#888; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:monospace;font-size:14px;overflow-x:hidden;}
+h1{text-align:center;color:var(--pri);padding:16px 0 8px;font-size:20px;}
+.tabs{display:flex;justify-content:center;gap:4px;margin-bottom:12px;}
+.tab{padding:8px 20px;background:var(--bg2);color:var(--dim);cursor:pointer;border:1px solid #444;border-radius:6px 6px 0 0;}
+.tab.active{background:var(--pri);color:#000;font-weight:bold;}
+.panel{display:none;padding:16px;max-width:1100px;margin:0 auto;}
+.panel.active{display:block;}
+#drop-zone{border:3px dashed #555;border-radius:12px;padding:60px;text-align:center;color:var(--dim);cursor:pointer;transition:border-color .2s;}
+#drop-zone.hover{border-color:var(--pri);color:var(--pri);}
+#drop-zone input{display:none;}
+.canvas-wrap{position:relative;overflow:auto;max-height:500px;background:#111;border:1px solid #333;margin:12px 0;}
+canvas{display:block;image-rendering:pixelated;}
+.ctrl-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0;}
+.ctrl-row label{color:var(--dim);min-width:100px;}
+.ctrl-row input[type=number],.ctrl-row select,.ctrl-row input[type=text]{background:var(--bg2);color:var(--txt);border:1px solid #555;padding:4px 8px;border-radius:4px;width:80px;}
+.ctrl-row select{width:120px;}
+button{background:var(--pri);color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;}
+button:hover{opacity:.85;}
+button.secondary{background:#555;color:var(--txt);}
+.frames-row{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:#111;border-radius:6px;min-height:48px;margin:8px 0;}
+.frame-thumb{border:2px solid #444;cursor:pointer;image-rendering:pixelated;}
+.frame-thumb.selected{border-color:var(--pri);}
+#anim-canvas{border:2px solid var(--pri);background:#111;margin:8px 0;}
+.slider-row{display:flex;align-items:center;gap:8px;margin:6px 0;}
+.slider-row label{min-width:60px;color:var(--dim);text-align:right;}
+.slider-row input[type=range]{flex:1;max-width:300px;}
+.slider-row .val{width:50px;color:var(--pri);text-align:center;}
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+.preset-btn{padding:4px 10px;font-size:12px;border-radius:4px;}
+#variant-preview{border:1px solid #555;background:#111;image-rendering:pixelated;margin:8px 0;}
+.info{color:var(--dim);font-size:12px;margin:4px 0;}
+.anim-section{margin-top:12px;padding:12px;background:var(--bg2);border-radius:6px;}
+.anim-section h3{color:var(--pri);font-size:14px;margin-bottom:8px;}
+.anim-entry{display:flex;gap:8px;align-items:center;margin:4px 0;flex-wrap:wrap;}
+.anim-entry input[type=text]{background:var(--bg);color:var(--txt);border:1px solid #555;padding:3px 6px;border-radius:3px;width:140px;}
+.anim-entry input[type=number]{background:var(--bg);color:var(--txt);border:1px solid #555;padding:3px 6px;border-radius:3px;width:50px;}
+.anim-entry .remove-anim{background:#a33;padding:4px 8px;font-size:11px;}
+/* BG remove */
+.bg-remove-section{margin:12px 0;padding:12px;background:var(--bg2);border-radius:6px;}
+.bg-remove-section h3{color:var(--pri);font-size:14px;margin-bottom:8px;}
+.color-pick-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0;}
+.color-pick-row .swatch{width:32px;height:32px;border:2px solid #888;border-radius:4px;cursor:pointer;}
+.color-pick-row .swatch.active{border-color:var(--pri);box-shadow:0 0 6px var(--pri);}
+.color-pick-row input[type=color]{width:40px;height:32px;border:none;padding:0;cursor:pointer;background:transparent;}
+.color-pick-row input[type=range]{width:100px;}
+.checker-bg{background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px;}
+/* Anim definition improvements */
+.anim-preset-row{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+.anim-preset-row button{padding:4px 8px;font-size:11px;border-radius:4px;}
+.anim-entry{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;padding:6px 8px;background:var(--bg);border-radius:4px;border:1px solid #333;}
+.anim-entry .frame-mini-row{display:flex;gap:2px;align-items:center;margin-left:4px;}
+.anim-entry .frame-mini{width:24px;height:24px;border:1px solid #555;image-rendering:pixelated;border-radius:2px;}
+.anim-entry .play-anim{background:#4a9;padding:3px 8px;font-size:11px;min-width:auto;}
+.frame-thumb-numbered{position:relative;display:inline-block;}
+.frame-thumb-numbered .fnum{position:absolute;top:0;left:0;background:rgba(0,0,0,0.7);color:var(--pri);font-size:10px;font-weight:bold;padding:1px 4px;border-radius:0 0 4px 0;}
+.frame-select-hint{background:var(--pri);color:#000;padding:6px 12px;border-radius:4px;font-size:12px;display:none;margin:6px 0;}
+</style>
+</head>
+<body>
+
+<h1>Sprite Processor</h1>
+
+<div class="tabs">
+  <div class="tab active" data-tab="import">1. 読込</div>
+  <div class="tab" data-tab="detect">2. 検出</div>
+  <div class="tab" data-tab="output">3. 出力</div>
+  <div class="tab" data-tab="preview">4. プレビュー</div>
+  <div class="tab" data-tab="variant">5. バリアント</div>
+</div>
+
+<!-- TAB 1: Import -->
+<div id="tab-import" class="panel active">
+  <div id="drop-zone">
+    PNGをドラッグ＆ドロップ（透過・非透過どちらもOK）<br>またはクリックしてファイル選択
+    <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp">
+  </div>
+  <div class="canvas-wrap checker-bg"><canvas id="src-canvas"></canvas></div>
+  <p class="info" id="src-info"></p>
+
+  <!-- Background removal section -->
+  <div class="bg-remove-section" id="bg-remove-section" style="display:none;">
+    <h3>背景色を透過にする</h3>
+    <p class="info">画像をクリックして背景色をスポイト取得、または手動で色を指定してください。</p>
+    <div class="color-pick-row">
+      <button id="btn-eyedropper" class="secondary">スポイトモード</button>
+      <label style="color:var(--dim);">背景色:</label>
+      <div class="swatch" id="bg-swatch" style="background:#808080;"></div>
+      <input type="color" id="bg-color-input" value="#808080">
+      <label style="color:var(--dim);">許容値:</label>
+      <input type="range" id="bg-tolerance" min="0" max="100" value="30">
+      <span class="val" id="bg-tolerance-val">30</span>
+    </div>
+    <div class="ctrl-row">
+      <button id="btn-remove-bg">背景を透過にする</button>
+      <button id="btn-undo-bg" class="secondary">元に戻す</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: Detect -->
+<div id="tab-detect" class="panel">
+  <div class="ctrl-row">
+    <label>最小フレームサイズ</label><input type="number" id="min-frame" value="16" min="4" max="256">
+    <label>最小ギャップ</label><input type="number" id="min-gap" value="1" min="0" max="32">
+    <button id="btn-detect">自動検出</button>
+    <button class="secondary" id="btn-add-frame">＋手動追加</button>
+    <button class="secondary" id="btn-clear-frames">全削除</button>
+  </div>
+  <p class="info">ドラッグ: フレーム右下をドラッグでリサイズ ／ クリック: 選択 → Delete: 削除</p>
+  <div class="canvas-wrap"><canvas id="detect-canvas"></canvas></div>
+  <p class="info">フレーム: <span id="frame-count">0</span>個</p>
+</div>
+
+<!-- TAB 3: Output settings -->
+<div id="tab-output" class="panel">
+  <div class="ctrl-row">
+    <label>出力サイズ</label>
+    <select id="out-size">
+      <option value="16">16×16</option>
+      <option value="32" selected>32×32</option>
+      <option value="64">64×64</option>
+      <option value="custom">カスタム</option>
+    </select>
+    <input type="number" id="out-custom" value="32" min="8" max="512" style="display:none;">
+  </div>
+  <div class="ctrl-row">
+    <label>プレフィックス</label><input type="text" id="out-prefix" value="sprite" style="width:160px;">
+  </div>
+  <div class="ctrl-row">
+    <label>JSON名</label><input type="text" id="json-name" value="player" style="width:200px;">
+  </div>
+  <button id="btn-process">フレーム生成</button>
+  <div class="frames-row" id="frames-row"></div>
+  <p class="info" id="out-info"></p>
+
+    <div class="anim-section" id="anim-section" style="display:none;">
+    <h3>アニメーション定義</h3>
+    <p class="info">エンジン用JSONに含めるアニメーションを定義します。プリセットから選ぶか、手動で追加してください。</p>
+
+    <p class="info" style="margin-top:4px;">プリセット（クリックで追加）:</p>
+    <div class="anim-preset-row" id="anim-preset-row">
+      <button data-name="idle_down" data-frames="0" data-fps="4">idle_down</button>
+      <button data-name="idle_up" data-frames="1" data-fps="4">idle_up</button>
+      <button data-name="idle_right" data-frames="2" data-fps="4">idle_right</button>
+      <button data-name="idle_left" data-frames="3" data-fps="4">idle_left</button>
+      <button data-name="walk_down" data-frames="0,4,5,6" data-fps="8">walk_down</button>
+      <button data-name="walk_up" data-frames="1,7,8,9" data-fps="8">walk_up</button>
+      <button data-name="walk_right" data-frames="2,10,11,12" data-fps="8">walk_right</button>
+      <button data-name="walk_left" data-frames="3,13,14,15" data-fps="8">walk_left</button>
+      <button data-name="attack_down" data-frames="16,17" data-fps="6">attack</button>
+      <button data-name="needle" data-frames="18,19" data-fps="6">needle</button>
+      <button data-name="hurt" data-frames="20" data-fps="4">hurt</button>
+      <button data-name="dead" data-frames="21" data-fps="4">dead</button>
+    </div>
+
+    <div class="frame-select-hint" id="frame-select-hint">フレームサムネイルをクリックして番号を追加中… (Escで終了)</div>
+
+    <div id="anim-list"></div>
+    <div class="ctrl-row" style="margin-top:8px;">
+      <button class="secondary" id="btn-add-anim">＋手動追加</button>
+      <button class="secondary" id="btn-clear-anims">全定義クリア</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- TAB 4: Preview & Export -->
+<div id="tab-preview" class="panel">
+  <div class="ctrl-row">
+    <label>FPS</label><input type="number" id="anim-fps" value="8" min="1" max="60">
+    <button id="btn-play">▶ 再生</button>
+    <button id="btn-stop">■ 停止</button>
+  </div>
+  <canvas id="anim-canvas" width="128" height="128"></canvas>
+  <div class="ctrl-row" style="margin-top:12px;">
+    <button id="btn-export-zip">個別PNG (ZIP)</button>
+    <button id="btn-export-sheet">スプライトシート</button>
+    <button id="btn-export-engine">エンジン用データ</button>
+  </div>
+</div>
+
+<!-- TAB 5: HSL Variant -->
+<div id="tab-variant" class="panel">
+  <div class="slider-row"><label>Hue</label><input type="range" id="hsl-h" min="-180" max="180" value="0"><span class="val" id="hsl-h-val">0</span></div>
+  <div class="slider-row"><label>Sat</label><input type="range" id="hsl-s" min="-100" max="100" value="0"><span class="val" id="hsl-s-val">0</span></div>
+  <div class="slider-row"><label>Lit</label><input type="range" id="hsl-l" min="-100" max="100" value="0"><span class="val" id="hsl-l-val">0</span></div>
+  <div class="preset-row">
+    <button class="preset-btn" data-h="330" data-s="-10" data-l="5">桜</button>
+    <button class="preset-btn" data-h="180" data-s="10" data-l="10">氷</button>
+    <button class="preset-btn" data-h="0" data-s="30" data-l="15">黄金</button>
+    <button class="preset-btn" data-h="0" data-s="-15" data-l="-20">暗化1</button>
+    <button class="preset-btn" data-h="0" data-s="-30" data-l="-40">暗化2</button>
+    <button class="preset-btn" data-h="0" data-s="-50" data-l="-60">暗化3</button>
+    <button class="preset-btn" data-mode="tint" data-color="#DC3D3D" data-amt="0.7">赤化</button>
+    <button class="preset-btn" data-mode="silhouette" data-color="#FFFFFF">白化</button>
+    <button class="preset-btn" data-h="0" data-s="0" data-l="0">リセット</button>
+  </div>
+  <canvas id="variant-preview" width="256" height="64"></canvas>
+  <div class="ctrl-row">
+    <button id="btn-variant-export">バリアントPNG書出し</button>
+    <button id="btn-variant-export-engine">バリアントPNG+JSON書出し</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Sprite Processor - ミプリンの冒険 ツール v2.1
+   v2.1: 背景色透過化（スポイト＋許容値）機能追加
+   v2.0: ZIP書出し, エンジンJSON animations, フレームリサイズ,
+         バリアントJSON同梱, マージロジック改善
+   ============================================================ */
+(() => {
+ 
+  /* --- state --- */
+  let srcImg = null;
+  let srcData = null;
+  let origImgBackup = null;   // for undo bg removal
+  let frames = [];
+  let outFrames = [];
+  let selectedFrame = -1;
+  let animInterval = null;
+  let addingManual = false;
+  let manualStart = null;
+  let resizing = false;
+  let resizeIdx = -1;
+  let animDefs = [];
+  let eyedropperMode = false;
+
+  /* --- DOM --- */
+  const $ = s => document.querySelector(s);
+  const srcCanvas = $('#src-canvas'), srcCtx = srcCanvas.getContext('2d');
+  const detCanvas = $('#detect-canvas'), detCtx = detCanvas.getContext('2d');
+  const animCanvas = $('#anim-canvas'), animCtx = animCanvas.getContext('2d');
+  const varCanvas = $('#variant-preview'), varCtx = varCanvas.getContext('2d');
+
+  /* --- tabs --- */
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      $(`#tab-${t.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  /* --- file input --- */
+  const dropZone = $('#drop-zone');
+  const fileInput = $('#file-input');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('hover'); loadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  function loadFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        srcImg = img;
+        srcCanvas.width = img.width; srcCanvas.height = img.height;
+        srcCtx.clearRect(0, 0, img.width, img.height);
+        srcCtx.drawImage(img, 0, 0);
+        srcData = srcCtx.getImageData(0, 0, img.width, img.height);
+        // backup for undo
+        origImgBackup = srcCtx.getImageData(0, 0, img.width, img.height);
+        detCanvas.width = img.width; detCanvas.height = img.height;
+        $('#src-info').textContent = `${img.width}×${img.height} px`;
+        frames = []; outFrames = [];
+        // show bg remove section
+        $('#bg-remove-section').style.display = 'block';
+        // auto-detect bg color from top-left corner
+        const tlR = srcData.data[0], tlG = srcData.data[1], tlB = srcData.data[2];
+        const hex = '#' + [tlR, tlG, tlB].map(v => v.toString(16).padStart(2, '0')).join('');
+        $('#bg-color-input').value = hex;
+        $('#bg-swatch').style.background = hex;
+        _redrawDetect();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ========== BACKGROUND REMOVAL ========== */
+
+  // eyedropper on src canvas
+  $('#btn-eyedropper').addEventListener('click', () => {
+    eyedropperMode = !eyedropperMode;
+    srcCanvas.style.cursor = eyedropperMode ? 'crosshair' : 'default';
+    $('#btn-eyedropper').textContent = eyedropperMode ? 'スポイト ON（画像をクリック）' : 'スポイトモード';
+    if (eyedropperMode) $('#btn-eyedropper').style.background = '#F5A623';
+    else $('#btn-eyedropper').style.background = '#555';
+  });
+
+  srcCanvas.addEventListener('click', e => {
+    if (!eyedropperMode || !srcData) return;
+    const r = srcCanvas.getBoundingClientRect();
+    const sx = srcCanvas.width / r.width, sy = srcCanvas.height / r.height;
+    const px = Math.floor((e.clientX - r.left) * sx);
+    const py = Math.floor((e.clientY - r.top) * sy);
+    const i = (py * srcCanvas.width + px) * 4;
+    const cr = srcData.data[i], cg = srcData.data[i + 1], cb = srcData.data[i + 2];
+    const hex = '#' + [cr, cg, cb].map(v => v.toString(16).padStart(2, '0')).join('');
+    $('#bg-color-input').value = hex;
+    $('#bg-swatch').style.background = hex;
+    // auto-exit eyedropper
+    eyedropperMode = false;
+    srcCanvas.style.cursor = 'default';
+    $('#btn-eyedropper').textContent = 'スポイトモード';
+    $('#btn-eyedropper').style.background = '#555';
+  });
+
+  $('#bg-color-input').addEventListener('input', e => {
+    $('#bg-swatch').style.background = e.target.value;
+  });
+
+  $('#bg-tolerance').addEventListener('input', () => {
+    $('#bg-tolerance-val').textContent = $('#bg-tolerance').value;
+  });
+
+  // remove background
+  $('#btn-remove-bg').addEventListener('click', () => {
+    if (!srcData) return;
+    const hex = $('#bg-color-input').value;
+    const tR = parseInt(hex.slice(1, 3), 16);
+    const tG = parseInt(hex.slice(3, 5), 16);
+    const tB = parseInt(hex.slice(5, 7), 16);
+    const tolerance = +$('#bg-tolerance').value;
+
+    const id = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+    const d = id.data;
+    let removed = 0;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const dr = d[i] - tR, dg = d[i + 1] - tG, db = d[i + 2] - tB;
+      const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (dist <= tolerance) {
+        d[i + 3] = 0; // set alpha to 0
+        removed++;
+      }
+    }
+
+    srcCtx.putImageData(id, 0, 0);
+    srcData = id;
+    // rebuild srcImg from canvas
+    const newImg = new Image();
+    newImg.onload = () => {
+      srcImg = newImg;
+      detCanvas.width = newImg.width; detCanvas.height = newImg.height;
+      _redrawDetect();
+    };
+    newImg.src = srcCanvas.toDataURL('image/png');
+
+    $('#src-info').textContent = `${srcCanvas.width}×${srcCanvas.height} px — ${removed}px 透過化済み`;
+  });
+
+  // undo
+  $('#btn-undo-bg').addEventListener('click', () => {
+    if (!origImgBackup) return;
+    srcCtx.putImageData(origImgBackup, 0, 0);
+    srcData = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+    const newImg = new Image();
+    newImg.onload = () => {
+      srcImg = newImg;
+      _redrawDetect();
+    };
+    newImg.src = srcCanvas.toDataURL('image/png');
+    $('#src-info').textContent = `${srcCanvas.width}×${srcCanvas.height} px — 元画像に復元`;
+  });
+
+  /* ========== AUTO DETECT ========== */
+  $('#btn-detect').addEventListener('click', () => {
+    if (!srcData) return;
+    const minSize = +$('#min-frame').value || 16;
+    const minGap = +$('#min-gap').value || 1;
+    frames = detectFrames(srcData, minSize, minGap);
+    selectedFrame = -1;
+    _redrawDetect();
+  });
+
+  function detectFrames(imgData, minSize, minGap) {
+    const { width: W, height: H, data: D } = imgData;
+    const visited = new Uint8Array(W * H);
+    const boxes = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (D[i + 3] > 10 && !visited[y * W + x]) {
+        let x0 = x, y0 = y, x1 = x, y1 = y;
+        const stack = [[x, y]];
+        visited[y * W + x] = 1;
+        while (stack.length) {
+          const [cx, cy] = stack.pop();
+          if (cx < x0) x0 = cx; if (cx > x1) x1 = cx;
+          if (cy < y0) y0 = cy; if (cy > y1) y1 = cy;
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            const nx = cx + dx, ny = cy + dy;
+            if (nx >= 0 && nx < W && ny >= 0 && ny < H && !visited[ny * W + nx]) {
+              const ni = (ny * W + nx) * 4;
+              if (D[ni + 3] > 10) { visited[ny * W + nx] = 1; stack.push([nx, ny]); }
+            }
+          }
+        }
+        const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+        if (bw >= minSize && bh >= minSize) boxes.push({ x: x0, y: y0, w: bw, h: bh });
+      }
+    }
+    // improved merge
+    const merged = [];
+    const used = new Uint8Array(boxes.length);
+    for (let i = 0; i < boxes.length; i++) {
+      if (used[i]) continue;
+      let b = { ...boxes[i] };
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (let j = 0; j < boxes.length; j++) {
+          if (i === j || used[j]) continue;
+          const o = boxes[j];
+          const gapX = Math.max(0, Math.max(b.x, o.x) - Math.min(b.x + b.w, o.x + o.w));
+          const gapY = Math.max(0, Math.max(b.y, o.y) - Math.min(b.y + b.h, o.y + o.h));
+          if (gapX <= minGap && gapY <= minGap) {
+            const nx = Math.min(b.x, o.x), ny = Math.min(b.y, o.y);
+            b = { x: nx, y: ny, w: Math.max(b.x + b.w, o.x + o.w) - nx, h: Math.max(b.y + b.h, o.y + o.h) - ny };
+            used[j] = 1; changed = true;
+          }
+        }
+      }
+      merged.push(b);
+    }
+    merged.sort((a, b) => {
+      const rowA = Math.floor(a.y / 32), rowB = Math.floor(b.y / 32);
+      return rowA !== rowB ? rowA - rowB : a.x - b.x;
+    });
+    return merged;
+  }
+
+  /* --- detect canvas drawing --- */
+  const HANDLE_SIZE = 8;
+  function _getHandleRect(f) {
+    return { x: f.x + f.w - HANDLE_SIZE, y: f.y + f.h - HANDLE_SIZE, w: HANDLE_SIZE, h: HANDLE_SIZE };
+  }
+
+  function _redrawDetect() {
+    if (!srcImg) return;
+    detCtx.clearRect(0, 0, detCanvas.width, detCanvas.height);
+    detCtx.drawImage(srcImg, 0, 0);
+    for (let i = 0; i < frames.length; i++) {
+      const f = frames[i];
+      const sel = i === selectedFrame;
+      detCtx.strokeStyle = sel ? '#0f0' : '#f00';
+      detCtx.lineWidth = sel ? 3 : 1;
+      detCtx.strokeRect(f.x, f.y, f.w, f.h);
+      detCtx.fillStyle = sel ? 'rgba(0,255,0,0.08)' : 'rgba(255,0,0,0.08)';
+      detCtx.fillRect(f.x, f.y, f.w, f.h);
+      detCtx.fillStyle = '#fff'; detCtx.font = '10px monospace';
+      detCtx.fillText(i, f.x + 2, f.y + 10);
+      if (sel) {
+        const h = _getHandleRect(f);
+        detCtx.fillStyle = '#F5A623';
+        detCtx.fillRect(h.x, h.y, h.w, h.h);
+      }
+    }
+    $('#frame-count').textContent = frames.length;
+  }
+
+  /* --- detect canvas interaction --- */
+  function _canvasCoords(e) {
+    const r = detCanvas.getBoundingClientRect();
+    const sx = detCanvas.width / r.width, sy = detCanvas.height / r.height;
+    return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+  }
+
+  detCanvas.addEventListener('mousedown', e => {
+    const m = _canvasCoords(e);
+    if (selectedFrame >= 0) {
+      const h = _getHandleRect(frames[selectedFrame]);
+      if (m.x >= h.x && m.x <= h.x + h.w && m.y >= h.y && m.y <= h.y + h.h) {
+        resizing = true; resizeIdx = selectedFrame; return;
+      }
+    }
+    if (addingManual) { manualStart = { x: m.x, y: m.y }; return; }
+    selectedFrame = -1;
+    for (let i = frames.length - 1; i >= 0; i--) {
+      const f = frames[i];
+      if (m.x >= f.x && m.x <= f.x + f.w && m.y >= f.y && m.y <= f.y + f.h) { selectedFrame = i; break; }
+    }
+    _redrawDetect();
+  });
+
+  detCanvas.addEventListener('mousemove', e => {
+    if (!resizing || resizeIdx < 0) return;
+    const m = _canvasCoords(e);
+    const f = frames[resizeIdx];
+    f.w = Math.max(8, Math.round(m.x - f.x));
+    f.h = Math.max(8, Math.round(m.y - f.y));
+    _redrawDetect();
+  });
+
+  detCanvas.addEventListener('mouseup', e => {
+    if (resizing) { resizing = false; resizeIdx = -1; return; }
+    if (!addingManual || !manualStart) return;
+    const m = _canvasCoords(e);
+    const x = Math.min(manualStart.x, m.x), y = Math.min(manualStart.y, m.y);
+    const w = Math.abs(m.x - manualStart.x), h = Math.abs(m.y - manualStart.y);
+    if (w > 4 && h > 4) frames.push({ x: Math.floor(x), y: Math.floor(y), w: Math.floor(w), h: Math.floor(h) });
+    manualStart = null; addingManual = false; detCanvas.style.cursor = 'default';
+    _redrawDetect();
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Delete' && selectedFrame >= 0) { frames.splice(selectedFrame, 1); selectedFrame = -1; _redrawDetect(); }
+  });
+  $('#btn-add-frame').addEventListener('click', () => { addingManual = true; detCanvas.style.cursor = 'crosshair'; });
+  $('#btn-clear-frames').addEventListener('click', () => { frames = []; selectedFrame = -1; _redrawDetect(); });
+
+  /* ========== OUTPUT ========== */
+  $('#out-size').addEventListener('change', e => {
+    $('#out-custom').style.display = e.target.value === 'custom' ? 'inline' : 'none';
+  });
+
+  $('#btn-process').addEventListener('click', () => {
+    if (!srcImg || frames.length === 0) return;
+    const sizeVal = $('#out-size').value;
+    const size = sizeVal === 'custom' ? (+$('#out-custom').value || 32) : +sizeVal;
+    outFrames = [];
+    const row = $('#frames-row'); row.innerHTML = '';
+    for (let i = 0; i < frames.length; i++) {
+      const f = frames[i];
+      const c = document.createElement('canvas'); c.width = size; c.height = size;
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
+      const scale = Math.min(size / f.w, size / f.h);
+      const dw = f.w * scale, dh = f.h * scale;
+      cx.drawImage(srcImg, f.x, f.y, f.w, f.h, (size - dw) / 2, (size - dh) / 2, dw, dh);
+      outFrames.push(c);
+      const thumb = document.createElement('canvas');
+      thumb.width = 48; thumb.height = 48; thumb.className = 'frame-thumb';
+      const tx = thumb.getContext('2d'); tx.imageSmoothingEnabled = false;
+      tx.drawImage(c, 0, 0, 48, 48);
+      thumb.addEventListener('click', () => {
+        document.querySelectorAll('.frame-thumb').forEach(x => x.classList.remove('selected'));
+        thumb.classList.add('selected');
+      });
+      row.appendChild(thumb);
+    }
+    $('#out-info').textContent = `${outFrames.length}フレーム (${size}×${size}) 生成完了`;
+    animCanvas.width = size * 2; animCanvas.height = size * 2;
+    $('#anim-section').style.display = 'block';
+    if (animDefs.length === 0) {      
+    }
+    _updateVariantPreview();
+  });
+
+    /* --- animation definitions UI (v2) --- */
+  let selectingForIdx = -1; // which anim entry is receiving frame clicks
+
+  function _addAnimDef(name, frameStr, fps, loop) {
+    animDefs.push({ name: name || '', frames: frameStr || '0', fps: fps || 8, loop: loop !== false });
+    _renderAnimDefs();
+  }
+
+  function _renderAnimDefs() {
+    const list = $('#anim-list'); list.innerHTML = '';
+    animDefs.forEach((def, i) => {
+      const row = document.createElement('div'); row.className = 'anim-entry';
+
+      // parse frame indices for mini preview
+      const idxArr = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n));
+      let miniHtml = '<span class="frame-mini-row">';
+      idxArr.forEach(fi => {
+        if (outFrames[fi]) {
+          miniHtml += `<canvas class="frame-mini" data-fi="${fi}" width="24" height="24"></canvas>`;
+        } else {
+          miniHtml += `<span class="frame-mini" style="background:#333;display:inline-block;text-align:center;line-height:24px;font-size:9px;color:#888;">${fi}</span>`;
+        }
+      });
+      miniHtml += '</span>';
+
+      row.innerHTML = `
+        <input type="text" placeholder="名前" value="${def.name}" data-i="${i}" data-f="name" style="width:110px;">
+        <input type="text" placeholder="0,1,2,3" value="${def.frames}" data-i="${i}" data-f="frames" style="width:100px;" title="フレーム番号（カンマ区切り）">
+        ${miniHtml}
+        <button class="secondary pick-frames" data-i="${i}" title="サムネクリックで追加" style="padding:3px 8px;font-size:11px;">🎯</button>
+        <label style="color:var(--dim);min-width:auto;font-size:12px;">FPS:</label>
+        <input type="number" value="${def.fps}" min="1" max="60" data-i="${i}" data-f="fps" style="width:44px;">
+        <label style="color:var(--dim);min-width:auto;font-size:12px;"><input type="checkbox" ${def.loop ? 'checked' : ''} data-i="${i}" data-f="loop"> Loop</label>
+        <button class="play-anim" data-i="${i}" title="この定義だけ再生">▶</button>
+        <button class="remove-anim secondary" data-i="${i}" style="background:#a33;padding:3px 8px;font-size:11px;">✕</button>`;
+      list.appendChild(row);
+
+      // draw mini canvases
+      row.querySelectorAll('canvas.frame-mini').forEach(mc => {
+        const fi = +mc.dataset.fi;
+        if (outFrames[fi]) {
+          const mx = mc.getContext('2d'); mx.imageSmoothingEnabled = false;
+          mx.drawImage(outFrames[fi], 0, 0, 24, 24);
+        }
+      });
+    });
+
+    // bind events
+    list.querySelectorAll('input[data-f="name"]').forEach(inp => {
+      inp.addEventListener('change', e => { animDefs[+e.target.dataset.i].name = e.target.value; });
+    });
+    list.querySelectorAll('input[data-f="frames"]').forEach(inp => {
+      inp.addEventListener('change', e => {
+        animDefs[+e.target.dataset.i].frames = e.target.value;
+        _renderAnimDefs(); // re-render to update mini previews
+      });
+    });
+    list.querySelectorAll('input[data-f="fps"]').forEach(inp => {
+      inp.addEventListener('change', e => { animDefs[+e.target.dataset.i].fps = +e.target.value || 8; });
+    });
+    list.querySelectorAll('input[data-f="loop"]').forEach(inp => {
+      inp.addEventListener('change', e => { animDefs[+e.target.dataset.i].loop = e.target.checked; });
+    });
+    list.querySelectorAll('.remove-anim').forEach(btn => {
+      btn.addEventListener('click', e => { animDefs.splice(+e.target.dataset.i, 1); _renderAnimDefs(); });
+    });
+
+    // pick-frames button: enter frame-selection mode
+    list.querySelectorAll('.pick-frames').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.target.dataset.i;
+        if (selectingForIdx === idx) {
+          _exitFrameSelect();
+        } else {
+          selectingForIdx = idx;
+          $('#frame-select-hint').style.display = 'block';
+          $('#frame-select-hint').textContent = `「${animDefs[idx].name || '(名前未設定)'}」にフレーム追加中… サムネイルをクリック (Escで終了)`;
+        }
+      });
+    });
+
+    // play single anim definition
+    list.querySelectorAll('.play-anim').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.target.dataset.i;
+        const def = animDefs[idx];
+        if (!def) return;
+        const idxArr2 = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n) && outFrames[n]);
+        if (idxArr2.length === 0) return;
+        if (animInterval) clearInterval(animInterval);
+        let ai = 0;
+        const fps = def.fps || 8;
+        // switch to preview tab
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+        document.querySelector('.tab[data-tab="preview"]').classList.add('active');
+        $('#tab-preview').classList.add('active');
+        animInterval = setInterval(() => {
+          animCtx.imageSmoothingEnabled = false;
+          animCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
+          animCtx.drawImage(outFrames[idxArr2[ai]], 0, 0, animCanvas.width, animCanvas.height);
+          ai = (ai + 1) % idxArr2.length;
+        }, 1000 / fps);
+      });
+    });
+  }
+
+  function _exitFrameSelect() {
+    selectingForIdx = -1;
+    $('#frame-select-hint').style.display = 'none';
+  }
+
+  // Escape key exits frame-select mode
+  window.addEventListener('keydown', origKeydown => {
+    if (origKeydown.key === 'Escape' && selectingForIdx >= 0) {
+      _exitFrameSelect();
+    }
+  });
+
+  // override btn-process to add numbered thumbs + click-to-select
+  const origProcessHandler = $('#btn-process').onclick;
+  const _origBtnProcess = () => {
+    // after outFrames generated, add numbered thumbnails
+    const row = $('#frames-row');
+    row.innerHTML = '';
+    for (let i = 0; i < outFrames.length; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'frame-thumb-numbered';
+      const thumb = document.createElement('canvas');
+      thumb.width = 48; thumb.height = 48; thumb.className = 'frame-thumb';
+      thumb.style.display = 'block';
+      const tx = thumb.getContext('2d'); tx.imageSmoothingEnabled = false;
+      tx.drawImage(outFrames[i], 0, 0, 48, 48);
+      const numLabel = document.createElement('span');
+      numLabel.className = 'fnum';
+      numLabel.textContent = i;
+      wrap.appendChild(thumb);
+      wrap.appendChild(numLabel);
+
+      // click: if in select mode, append to anim def
+      wrap.addEventListener('click', () => {
+        if (selectingForIdx >= 0 && animDefs[selectingForIdx]) {
+          const def = animDefs[selectingForIdx];
+          const cur = def.frames.trim();
+          def.frames = cur ? cur + ',' + i : '' + i;
+          _renderAnimDefs();
+        } else {
+          // normal select behavior
+          document.querySelectorAll('.frame-thumb').forEach(x => x.classList.remove('selected'));
+          thumb.classList.add('selected');
+        }
+      });
+      row.appendChild(wrap);
+    }
+  };
+
+  // patch btn-process click to also call our numbered-thumb builder
+  const _realProcessBtn = $('#btn-process');
+  const _existingListeners = _realProcessBtn.cloneNode(true);
+  // We need to hook after process. Wrap original:
+  _realProcessBtn.addEventListener('click', () => {
+    // slight delay to let original handler finish
+    setTimeout(_origBtnProcess, 50);
+  });
+
+  // preset buttons
+  document.querySelectorAll('#anim-preset-row button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.name;
+      // don't add duplicates
+      if (animDefs.some(d => d.name === name)) return;
+      _addAnimDef(name, btn.dataset.frames, +btn.dataset.fps || 8, true);
+    });
+  });
+
+  $('#btn-add-anim').addEventListener('click', () => _addAnimDef('', '0', 8, true));
+
+  // clear all
+  $('#btn-clear-anims').addEventListener('click', () => {
+    animDefs = [];
+    _renderAnimDefs();
+  });
+
+
+  function _buildEngineJson() {
+    const size = outFrames.length > 0 ? outFrames[0].width : 32;
+    const prefix = $('#out-prefix').value || 'sprite';
+    const jsonName = $('#json-name').value || 'sprite';
+    const animations = {};
+    for (const def of animDefs) {
+      if (!def.name) continue;
+      const idxArr = def.frames.split(',').map(s => +s.trim()).filter(n => !isNaN(n));
+      animations[def.name] = { frames: idxArr, fps: def.fps, loop: def.loop };
+    }
+    return {
+      name: jsonName, image: prefix + '_sheet.png',
+      frameSize: [size, size], frameCount: outFrames.length,
+      frames: outFrames.map((f, i) => ({ index: i, sx: i * size, sy: 0, sw: size, sh: size })),
+      animations
+    };
+  }
+
+  /* ========== ANIMATION PREVIEW ========== */
+  let animIdx = 0;
+  $('#btn-play').addEventListener('click', () => {
+    if (outFrames.length === 0) return;
+    if (animInterval) clearInterval(animInterval);
+    animIdx = 0;
+    const fps = +$('#anim-fps').value || 8;
+    animInterval = setInterval(() => {
+      animCtx.imageSmoothingEnabled = false;
+      animCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
+      animCtx.drawImage(outFrames[animIdx], 0, 0, animCanvas.width, animCanvas.height);
+      animIdx = (animIdx + 1) % outFrames.length;
+    }, 1000 / fps);
+  });
+  $('#btn-stop').addEventListener('click', () => { if (animInterval) { clearInterval(animInterval); animInterval = null; } });
+
+  /* ========== EXPORT ========== */
+  $('#btn-export-zip').addEventListener('click', async () => {
+    if (outFrames.length === 0) return;
+    const prefix = $('#out-prefix').value || 'sprite';
+    const zip = new JSZip();
+    for (let i = 0; i < outFrames.length; i++) {
+      const blob = await new Promise(r => outFrames[i].toBlob(r, 'image/png'));
+      zip.file(`${prefix}_${String(i).padStart(2, '0')}.png`, blob);
+    }
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.download = prefix + '_frames.zip'; link.href = URL.createObjectURL(content); link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  $('#btn-export-sheet').addEventListener('click', () => {
+    if (outFrames.length === 0) return;
+    const size = outFrames[0].width;
+    const sheetC = document.createElement('canvas');
+    sheetC.width = size * outFrames.length; sheetC.height = size;
+    const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
+    for (let i = 0; i < outFrames.length; i++) sx.drawImage(outFrames[i], i * size, 0);
+    const link = document.createElement('a');
+    link.download = ($('#out-prefix').value || 'sprite') + '_sheet.png';
+    link.href = sheetC.toDataURL('image/png'); link.click();
+  });
+
+  $('#btn-export-engine').addEventListener('click', async () => {
+    if (outFrames.length === 0) return;
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
+    const sheetC = document.createElement('canvas');
+    sheetC.width = size * outFrames.length; sheetC.height = size;
+    const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
+    for (let i = 0; i < outFrames.length; i++) sx.drawImage(outFrames[i], i * size, 0);
+    const json = _buildEngineJson();
+    const sheetBlob = await new Promise(r => sheetC.toBlob(r, 'image/png'));
+    const zip = new JSZip();
+    zip.file(prefix + '_sheet.png', sheetBlob);
+    zip.file(prefix + '.json', JSON.stringify(json, null, 2));
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.download = prefix + '_engine.zip'; link.href = URL.createObjectURL(content); link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  /* ========== HSL VARIANT ========== */
+  function _rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0; if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6; else if (mx === g) h = ((b - r) / d + 2) / 6; else h = ((r - g) / d + 4) / 6; } return [h * 360, s * 100, l * 100]; }
+  function _hsl2rgb(h, s, l) { h /= 360; s /= 100; l /= 100; let r, g, b; if (s === 0) { r = g = b = l; } else { const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; }; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3); } return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]; }
+
+  function applyVariant(srcCanvas, hShift, sShift, lShift, mode, color, amount) {
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const cx = c.getContext('2d'); cx.drawImage(srcCanvas, 0, 0);
+    const id = cx.getImageData(0, 0, w, h), d = id.data;
+    if (mode === 'silhouette' && color) {
+      const cr = parseInt(color.slice(1, 3), 16), cg = parseInt(color.slice(3, 5), 16), cb = parseInt(color.slice(5, 7), 16);
+      for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 0) { d[i] = cr; d[i + 1] = cg; d[i + 2] = cb; } }
+    } else if (mode === 'tint' && color) {
+      const cr = parseInt(color.slice(1, 3), 16), cg = parseInt(color.slice(3, 5), 16), cb = parseInt(color.slice(5, 7), 16);
+      const a = amount || 0.7;
+      for (let i = 0; i < d.length; i += 4) { if (d[i + 3] > 0) { d[i] = Math.round(d[i] * (1 - a) + cr * a); d[i + 1] = Math.round(d[i + 1] * (1 - a) + cg * a); d[i + 2] = Math.round(d[i + 2] * (1 - a) + cb * a); } }
+    } else {
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 0) continue;
+        let [hh, ss, ll] = _rgb2hsl(d[i], d[i + 1], d[i + 2]);
+        hh = (hh + hShift + 360) % 360;
+        ss = Math.max(0, Math.min(100, ss + sShift));
+        ll = Math.max(0, Math.min(100, ll + lShift));
+        const [rr, gg, bb] = _hsl2rgb(hh, ss, ll);
+        d[i] = rr; d[i + 1] = gg; d[i + 2] = bb;
+      }
+    }
+    cx.putImageData(id, 0, 0);
+    return c;
+  }
+
+  const hSlider = $('#hsl-h'), sSlider = $('#hsl-s'), lSlider = $('#hsl-l');
+  let varMode = null, varColor = null, varAmt = 0;
+
+  function _updateVariantPreview() {
+    if (outFrames.length === 0) return;
+    const size = outFrames[0].width, count = Math.min(outFrames.length, 8);
+    varCanvas.width = size * count; varCanvas.height = size;
+    varCtx.imageSmoothingEnabled = false;
+    for (let i = 0; i < count; i++) {
+      const vc = applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt);
+      varCtx.drawImage(vc, i * size, 0);
+    }
+  }
+
+  [hSlider, sSlider, lSlider].forEach(sl => {
+    sl.addEventListener('input', () => {
+      $('#hsl-h-val').textContent = hSlider.value;
+      $('#hsl-s-val').textContent = sSlider.value;
+      $('#hsl-l-val').textContent = lSlider.value;
+      varMode = null;
+      _updateVariantPreview();
+    });
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.mode) {
+        varMode = btn.dataset.mode; varColor = btn.dataset.color || null;
+        varAmt = parseFloat(btn.dataset.amt) || 0;
+        hSlider.value = 0; sSlider.value = 0; lSlider.value = 0;
+      } else {
+        varMode = null; varColor = null; varAmt = 0;
+        hSlider.value = btn.dataset.h || 0; sSlider.value = btn.dataset.s || 0; lSlider.value = btn.dataset.l || 0;
+      }
+      $('#hsl-h-val').textContent = hSlider.value;
+      $('#hsl-s-val').textContent = sSlider.value;
+      $('#hsl-l-val').textContent = lSlider.value;
+      _updateVariantPreview();
+    });
+  });
+
+  $('#btn-variant-export').addEventListener('click', () => {
+    if (outFrames.length === 0) return;
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
+    const sheetC = document.createElement('canvas');
+    sheetC.width = size * outFrames.length; sheetC.height = size;
+    const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
+    for (let i = 0; i < outFrames.length; i++) {
+      sx.drawImage(applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt), i * size, 0);
+    }
+    const link = document.createElement('a');
+    link.download = prefix + '_variant_sheet.png';
+    link.href = sheetC.toDataURL('image/png'); link.click();
+  });
+
+  $('#btn-variant-export-engine').addEventListener('click', async () => {
+    if (outFrames.length === 0) return;
+    const size = outFrames[0].width, prefix = $('#out-prefix').value || 'sprite';
+    const sheetC = document.createElement('canvas');
+    sheetC.width = size * outFrames.length; sheetC.height = size;
+    const sx = sheetC.getContext('2d'); sx.imageSmoothingEnabled = false;
+    for (let i = 0; i < outFrames.length; i++) {
+      sx.drawImage(applyVariant(outFrames[i], +hSlider.value, +sSlider.value, +lSlider.value, varMode, varColor, varAmt), i * size, 0);
+    }
+    const json = _buildEngineJson();
+    json.image = prefix + '_variant_sheet.png';
+    json.variant = { mode: varMode || 'hsl', hue: +hSlider.value, saturation: +sSlider.value, lightness: +lSlider.value, tintColor: varColor || null, tintAmount: varAmt || 0 };
+    const sheetBlob = await new Promise(r => sheetC.toBlob(r, 'image/png'));
+    const zip = new JSZip();
+    zip.file(prefix + '_variant_sheet.png', sheetBlob);
+    zip.file(prefix + '_variant.json', JSON.stringify(json, null, 2));
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.download = prefix + '_variant.zip'; link.href = URL.createObjectURL(content); link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+})();
+</script>
+</body>
+</html>

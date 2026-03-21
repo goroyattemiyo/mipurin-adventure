@@ -1,0 +1,297 @@
+{
+  "name": "player",
+  "image": "sprite_sheet.png",
+  "frameSize": [
+    32,
+    32
+  ],
+  "frameCount": 26,
+  "frames": [
+    {
+      "index": 0,
+      "sx": 0,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 1,
+      "sx": 32,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 2,
+      "sx": 64,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 3,
+      "sx": 96,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 4,
+      "sx": 128,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 5,
+      "sx": 160,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 6,
+      "sx": 192,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 7,
+      "sx": 224,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 8,
+      "sx": 256,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 9,
+      "sx": 288,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 10,
+      "sx": 320,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 11,
+      "sx": 352,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 12,
+      "sx": 384,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 13,
+      "sx": 416,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 14,
+      "sx": 448,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 15,
+      "sx": 480,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 16,
+      "sx": 512,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 17,
+      "sx": 544,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 18,
+      "sx": 576,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 19,
+      "sx": 608,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 20,
+      "sx": 640,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 21,
+      "sx": 672,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 22,
+      "sx": 704,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 23,
+      "sx": 736,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 24,
+      "sx": 768,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    },
+    {
+      "index": 25,
+      "sx": 800,
+      "sy": 0,
+      "sw": 32,
+      "sh": 32
+    }
+  ],
+  "animations": {
+    "idle_down": {
+      "frames": [
+        0
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "idle_up": {
+      "frames": [
+        1
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "idle_right": {
+      "frames": [
+        14
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "idle_left": {
+      "frames": [
+        2
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "walk_down": {
+      "frames": [
+        0,
+        4,
+        3,
+        4
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "walk_right": {
+      "frames": [
+        14,
+        13,
+        15,
+        13
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "walk_left": {
+      "frames": [
+        17,
+        16,
+        17,
+        16
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "attack_down": {
+      "frames": [
+        22,
+        20,
+        18,
+        20
+      ],
+      "fps": 6,
+      "loop": true
+    },
+    "needle": {
+      "frames": [
+        21,
+        20,
+        19
+      ],
+      "fps": 6,
+      "loop": true
+    },
+    "dead": {
+      "frames": [
+        23,
+        25
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "hurt": {
+      "frames": [
+        19
+      ],
+      "fps": 4,
+      "loop": true
+    },
+    "walk_up": {
+      "frames": [
+        1,
+        7,
+        6,
+        7
+      ],
+      "fps": 8,
+      "loop": true
+    }
+  }
+}

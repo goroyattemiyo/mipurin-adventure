@@ -3,11 +3,11 @@
 // Public domain: Satie(1888), Vivaldi(1725), Beethoven(1808)
 "use strict";
 const ChipBGM = (() => {
-  let actx = null, masterGain = null, melGain = null, bassGain = null;
+  let actx = null, masterGain = null, melGain = null, bassGain = null, lpFilter = null;
   let currentName = '', playing = false, useChip = false;
   let melIdx = 0, bassIdx = 0, melTime = 0, bassTime = 0, schedId = null;
   const AHEAD = 2.0;
-  let mp3Audio = null, mp3Fading = null;
+  let mp3Audio = null, mp3Fading = null, mp3Source = null;
   let _vol = 0.7;
   try { const v = localStorage.getItem('mipurin_bgmvol'); if (v !== null) _vol = parseFloat(v); } catch(e) {}
   const NF = {
@@ -30,12 +30,17 @@ const ChipBGM = (() => {
     flower_field:{mel:F_MEL,bas:F_BAS,bpm:150,mT:'sine',bT:'triangle',mV:.09,bV:.06},
     forest_north:{mel:F_MEL,bas:F_BAS,bpm:130,mT:'square',bT:'triangle',mV:.07,bV:.05},
     nest:{mel:F_MEL,bas:F_BAS,bpm:135,mT:'triangle',bT:'sine',mV:.08,bV:.06},
-    boss:{mel:B_MEL,bas:B_BAS,bpm:108,mT:'sawtooth',bT:'square',mV:.10,bV:.08}
+    boss:{mel:B_MEL,bas:B_BAS,bpm:108,mT:'sawtooth',bT:'square',mV:.10,bV:.08},
+    shop:{mel:T_MEL,bas:T_BAS,bpm:76,mT:'sine',bT:'triangle',mV:.10,bV:.07},
+    ending:{mel:T_MEL,bas:T_BAS,bpm:56,mT:'sine',bT:'triangle',mV:.12,bV:.08},
+    nest_boss:{mel:B_MEL,bas:B_BAS,bpm:120,mT:'sawtooth',bT:'square',mV:.11,bV:.09}
   };
   function initCtx() {
     if (actx) return true;
     try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return false; }
-    masterGain = actx.createGain(); masterGain.gain.value = _vol * 0.3; masterGain.connect(actx.destination);
+    masterGain = actx.createGain(); masterGain.gain.value = _vol * 0.3;
+    lpFilter = actx.createBiquadFilter(); lpFilter.type = 'lowpass'; lpFilter.frequency.value = 20000;
+    masterGain.connect(lpFilter); lpFilter.connect(actx.destination);
     melGain = actx.createGain(); melGain.connect(masterGain);
     bassGain = actx.createGain(); bassGain.connect(masterGain);
     return true;
@@ -75,6 +80,7 @@ const ChipBGM = (() => {
   }
   function stopChip() { playing = false; if (schedId) { clearInterval(schedId); schedId = null; } }
   function startMp3(name, fadeIn) {
+    if (mp3Source) { try { mp3Source.disconnect(); } catch(e) {} mp3Source = null; }
     mp3Audio = new window.Audio('assets/music/' + name + '.mp3');
     mp3Audio.loop = true;
     var target = _vol * 0.3;
@@ -87,6 +93,15 @@ const ChipBGM = (() => {
         if (mp3Audio.volume >= target - 0.001) { mp3Audio.volume = target; clearInterval(iv); }
       }, step * 1000);
     } else { mp3Audio.volume = target; mp3Audio.play().catch(function(){}); }
+    // Route through AudioContext for low-pass filter
+    if (initCtx() && lpFilter) {
+      try {
+        mp3Source = actx.createMediaElementSource(mp3Audio);
+        mp3Source.connect(lpFilter);
+        mp3Audio.volume = 1.0; // Volume controlled by masterGain
+        if (masterGain) masterGain.gain.value = _vol * 0.3;
+      } catch(e) { /* fallback: direct playback without filter */ }
+    }
   }
   function stopMp3(fadeDur, cb) {
     if (!mp3Audio) { if (cb) cb(); return; }
@@ -130,8 +145,15 @@ const ChipBGM = (() => {
     if (document.hidden) { if (playing) { clearInterval(schedId); schedId = null; } }
     else { if (playing && !schedId) { schedId = setInterval(scheduler, 200); scheduler(); } }
   });
-  return { play:play, stop:stop, fadeOut:fadeOut, setVolume:setVolume, getVolume:getVolume, setChipMode:setChipMode, isChipMode:isChipMode, resume:resume };
+  function setLowPass(on) {
+    if (!lpFilter) return;
+    lpFilter.frequency.setTargetAtTime(on ? 400 : 20000, actx.currentTime, 0.3);
+  }
+  function isLowPass() { return lpFilter && lpFilter.frequency.value < 1000; }
+  return { play:play, stop:stop, fadeOut:fadeOut, setVolume:setVolume, getVolume:getVolume, setChipMode:setChipMode, isChipMode:isChipMode, resume:resume, setLowPass:setLowPass, isLowPass:isLowPass };
 })();
 let currentBGM = '';
 function playBGM(name, fadeIn) { ChipBGM.play(name, fadeIn); currentBGM = name; }
 function stopBGM(fadeDur, cb) { ChipBGM.stop(fadeDur, function() { currentBGM = ''; if (cb) cb(); }); }
+
+function setLowPass(on) { ChipBGM.setLowPass(on); }

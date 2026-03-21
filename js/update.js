@@ -272,7 +272,7 @@ function update(dt) {
     }
 
   // === Combat (split to combat.js) ===
-  if (gameState === "playing") updateCombat(dt);
+  if (gameState === "playing") updateCombat(dt); if (typeof checkHpLowPass === "function") checkHpLowPass();
 
 }
 

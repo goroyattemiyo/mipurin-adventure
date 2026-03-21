@@ -239,3 +239,11 @@ function updateCombat(dt) {
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
 }
+
+// === HP Low-Pass Filter (Sprint G-B) ===
+function checkHpLowPass() {
+  if (typeof setLowPass !== 'function') return;
+  var ratio = player.hp / player.maxHp;
+  if (ratio <= 0.3 && gameState === 'playing') { setLowPass(true); }
+  else { setLowPass(false); }
+}

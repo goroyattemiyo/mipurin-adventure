@@ -27,14 +27,15 @@ JS_FILES = [
     "js/game.js", "js/data.js", "js/bgm.js", "js/enemies.js",
     "js/blessings.js", "js/systems.js", "js/nodemap.js",
     "js/equip_ui.js", "js/ui.js", "js/ui_screens.js",
-    "js/combat.js", "js/update.js", "js/render.js", "js/touch.js"
+    "js/combat.js", "js/update.js", "js/render.js", "js/touch.js",
+    "js/rarity.js", "js/charms.js"
 ]
 for f in JS_FILES:
     exists = os.path.exists(f)
     check(f"exists: {f}", exists)
     if exists:
-        size = os.path.getsize(f) / 1194
-        check(f"size < 30KB: {f} ({size:.1f}KB)", size < 30, f"actual={size:.1f}KB")
+        size = os.path.getsize(f) / 1024
+        check(f"size < 35KB: {f} ({size:.1f}KB)", size < 35, f"actual={size:.1f}KB")
 
 # === 2. Syntax checks (node -c) ===
 print("\n--- Syntax Checks ---")
@@ -204,6 +205,71 @@ for caller_file, func_name, definer_file in cross_refs:
     check(f"xref: {caller_file} calls {func_name} (def in {definer_file})",
         not called or defined,
         f"called={called} defined={defined}")
+
+# === 13. Cross-data integrity ===
+print("\n--- Cross-data Integrity ---")
+
+# WEAPON_DEFS ids must be unique
+wep_ids = re.findall(r"id:\s*'([^']+)'", read("js/data.js"))
+check("WEAPON_DEFS ids unique", len(wep_ids) == len(set(wep_ids)),
+    f"duplicates: {[x for x in wep_ids if wep_ids.count(x) > 1]}")
+
+# EVOLUTION_MAP keys must exist in WEAPON_DEFS
+evo_keys = re.findall(r"^\s+(\w+):\s+\{\s*to:", read("js/data.js"), re.MULTILINE)
+for ek in evo_keys:
+    check(f"evo source '{ek}' in WEAPON_DEFS", ek in wep_ids)
+
+evo_targets = re.findall(r"to:\s*'([^']+)'", read("js/data.js"))
+for et in evo_targets:
+    check(f"evo target '{et}' in WEAPON_DEFS", et in wep_ids)
+
+# ENEMY_DEFS ids must match ENEMY_VARIANT_NAMES keys
+enemies_js = read("js/enemies.js")
+enemy_ids = re.findall(r"id:\s*'([^']+)'", enemies_js)
+variant_keys = re.findall(r"^\s+(\w+):\s*\[", enemies_js, re.MULTILINE)
+if variant_keys:
+    for eid in enemy_ids:
+        if eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth']:
+            continue  # bosses may not have variants
+        check(f"enemy '{eid}' has variant names", eid in variant_keys,
+            f"missing from ENEMY_VARIANT_NAMES")
+
+# SPRITE_MAP should cover all enemies
+systems_js = read("js/systems.js")
+sprite_keys = re.findall(r"'([^']+)'\s*:", systems_js[systems_js.find("SPRITE_MAP"):systems_js.find("SPRITE_MAP")+3000])
+for eid in enemy_ids:
+    check(f"sprite exists for '{eid}'", eid in sprite_keys or eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth'],
+        "missing from SPRITE_MAP")
+
+# CHARM_DEFS ids must be unique
+charms_js = read("js/charms.js")
+charm_ids = re.findall(r"id:\s*'([^']+)'", charms_js)
+check("CHARM_DEFS ids unique", len(charm_ids) == len(set(charm_ids)),
+    f"duplicates: {[x for x in charm_ids if charm_ids.count(x) > 1]}")
+
+# RARITY_DEFS must have 5 tiers
+rarity_js = read("js/rarity.js")
+rarity_keys = re.findall(r"^\s+(\w+):\s*\{\s*name:", rarity_js, re.MULTILINE)
+check("RARITY_DEFS has 5 tiers", len(rarity_keys) == 5,
+    f"found {len(rarity_keys)}: {rarity_keys}")
+
+# index.html loads all 16 JS files
+html = read("index.html")
+for f in ["rarity.js", "charms.js", "bgm.js", "combat.js", "touch.js"]:
+    check(f"index.html loads {f}", f in html)
+
+# === 14. File size monitoring (RULES.md compliance) ===
+print("\n--- File Size Monitoring ---")
+attention_files = []
+for f in JS_FILES:
+    if not os.path.exists(f): continue
+    size_kb = os.path.getsize(f) / 1024
+    if size_kb > 28:
+        attention_files.append((f, size_kb))
+        check(f"size warning: {f} ({size_kb:.1f}KB > 28KB)", size_kb < 35,
+            f"SPLIT REQUIRED: {size_kb:.1f}KB >= 35KB")
+    else:
+        check(f"size ok: {f} ({size_kb:.1f}KB)", True)
 
 # === Summary ===
 print("\n" + "=" * 50)

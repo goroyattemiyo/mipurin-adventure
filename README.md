@@ -1,25 +1,22 @@
-# ミプリンの冒険 v6.16.1
+# ミプリンの冒険 🌸
 
-花の国を救うアクションローグライク。ミツバチのミプリンがクリスタルのかけらを集める冒険。
+ローグライトRPG — 小さなミツバチの大冒険
 
-## 遊び方
-- 移動: WASD / 矢印キー
-- 攻撃: Z  ダッシュ: X  アイテム: 1-3  武器切替: Q
-- インベントリ: Tab (←→でタブ切替: 持ち物/図鑑/装備)
-- 装備タブ: ↑↓選択, Z強化, X装備⇔バックパック入替
-- 装備タブ(マウス): 武器をドラッグ&ドロップでスロット間移動
-- 武器ドロップ: Z装備 / Q入替 / C→バックパック / X捨てる
-- スマホ: 仮想ジョイスティック + ボタン
+## Play
+https://goroyattemiyo.github.io/mipurin-adventure
 
-## 特徴
-- 15フロア + ボス4種 + 周回システム(敵強化+色変化)
-- 祝福78種(6系統) + 共鳴15種のビルド構築
-- ノードマップ(戦闘/エリート/ショップ/休憩/イベント)
-- 花壇メタ進行(ネクター→永続強化)
-- 武器12種 + 強化Lv0-3 + バックパック4枠 + マウスD&D
-- 祝福リロール(X+花粉15)
+## Version
+v6.27 | Score: 66.3/100
 
-## 開発
-- Synapse方式 (Orchestrator/Coder/Reviewer + 事前バグ予測)
-- 品質ツール: check_globals.js, check_concat.js, patch_workflow v3
-- リポ: https://github.com/goroyattemiyo/mipurin-adventure (branch: v2)
+## Docs
+- [STATUS](docs/STATUS.md) — 現在のスナップショット
+- [ROADMAP](docs/ROADMAP.md) — 開発計画
+- [RULES](docs/RULES.md) — 開発ルール
+- [MODULE_INDEX](docs/MODULE_INDEX.md) — 関数・定義の所在
+- [HISTORY](docs/HISTORY.md) — Sprint履歴
+- [DECISIONS](docs/DECISIONS.md) — 設計判断
+- [CHANGELOG](docs/CHANGELOG.md) — 変更履歴
+- [GDD](docs/GDD.md) — ゲームデザイン設計書 (凍結)
+
+## License
+MIT

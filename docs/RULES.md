@@ -5,10 +5,15 @@
 ### 3.1 新規会話の開始時
 
 毎回の会話開始時に、以下をリポジトリから raw.githubusercontent.com 経由で読み込む:
-1. docs/RULES.md - 開発ルール（本ドキュメント）
-2. docs/STATUS.md - 現在の開発状況
-3. docs/ROADMAP.md - 開発計画（存在する場合）
-4. docs/DECISIONS.md - 過去の設計判断（存在する場合）
+必須（毎回読み込む）:
+1. docs/RULES.md - 開発ルール
+2. docs/STATUS.md - 現在のスナップショット
+
+任意に応じて（任意時のみ）:
+3. docs/ROADMAP.md - 開発計画（計画確認時）
+4. docs/DECISIONS.md - 設計判断（設計参照時）
+5. docs/MODULE_INDEX.md - 関数・定義の所在（コード探索時）
+6. docs/HISTORY.md - Sprint履歴（過去の履歴確認時）
 
 ### 3.2 会話圧縮が発生した場合
 

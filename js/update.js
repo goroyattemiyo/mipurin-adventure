@@ -190,7 +190,7 @@ function update(dt) {
     return;
   }
   if (gameState === 'shop') {
-    if (currentBGM !== 'shop') playBGM('shop', 0.8);
+    if (currentBGM !== 'shop') { playBGM('shop', 0.8); if (typeof pickShopLine === 'function') pickShopLine('enter'); }
     if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + (shopItems.length + 1)) % (shopItems.length + 1); Audio.menu_move(); }
     if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % (shopItems.length + 1); Audio.menu_move(); }
     if (wasPressed('ArrowUp') || wasPressed('KeyW')) { selectCursor = Math.max(0, selectCursor - 3); Audio.menu_move(); }
@@ -199,9 +199,9 @@ function update(dt) {
    if (wasPressed('Digit' + (i + 1))) { selectCursor = i; }
     }
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && selectCursor < shopItems.length && pollen >= shopItems[selectCursor].cost) {
-   pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); Audio.menu_select(); shopItems.splice(selectCursor, 1);
+   pollen -= shopItems[selectCursor].cost; shopItems[selectCursor].action(); Audio.menu_select(); if (typeof pickShopLine === 'function') pickShopLine('buy'); shopItems.splice(selectCursor, 1);
    selectCursor = Math.min(selectCursor, shopItems.length); }
-    if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) { finishTree(); }
+    if (wasPressed('Escape') || wasPressed('KeyX') || (selectCursor >= shopItems.length && (wasPressed('KeyZ') || wasPressed('Enter')))) { if (typeof pickShopLine === 'function') pickShopLine('exit'); finishTree(); }
     return;
   }
   if (gameState === 'waveWait') { clearTimer += dt; if (clearTimer > 1.0) { spawnWave(); gameState = 'playing'; } return; }

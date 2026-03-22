@@ -115,15 +115,15 @@ function drawGarden() {
   if (typeof floraReady !== 'undefined' && floraReady) { ctx.save(); ctx.globalAlpha=0.95; ctx.drawImage(floraImg, floraX, floraY+floraFloat, floraW, floraH); ctx.restore(); }
   ctx.fillStyle = '#90ee90'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
   ctx.fillText('🌸 フローラ', floraX+floraW/2, floraY+floraH+25);
-  const bx=floraX+floraW+20, by=floraY+10, bw=320, bh=100;
+  const bx=floraX+floraW+20, by=floraY, bw=320, bh=90;
   ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 12); ctx.fill();
   ctx.fillStyle = '#333'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  const ftext = typeof getFloraLine === 'function' ? getFloraLine() : 'お花を育てて、冒険を有利にしよう！';
+  const ftext = (function(){var g=['お花を育てて、冒険を有利にしよう！','ネクターで花壇を強化できるわよ！','新しい花が咲いたら教えてね！','ミプリン、がんばってね～！'];return g[Math.floor(Date.now()/10000)%g.length]})();
   const chars = ftext.split(''); let fline = '', fly = by+25;
   for (const ch of chars) { fline += ch; if (ctx.measureText(fline).width > bw-30) { ctx.fillText(fline, bx+15, fly); fly += 22; fline = ''; } }
   if (fline) ctx.fillText(fline, bx+15, fly);
-  const cardX=380, cardW=860, cardH=72, startY=130;
-  const gap = Math.min(80, (CH-startY-60)/Math.max(visibleDefs.length, 1));
+  const cardX=380, cardW=860, cardH=68, startY=110;
+  const gap = Math.min(75, (CH-startY-50)/Math.max(visibleDefs.length, 1));
   for (let i = 0; i < visibleDefs.length; i++) {
     const def = visibleDefs[i]; const lv = gardenUpgrades[def.id]||0; const cost = getGardenCost(def.id); const y = startY + i*gap; const selected = i === gardenCursor;
     ctx.fillStyle = selected ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(cardX, y, cardW, cardH, 10); ctx.fill();

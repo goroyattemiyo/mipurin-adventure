@@ -12,7 +12,9 @@ const GARDEN_DEFS = [
   { id: 'speed', name: '🌻 疾風の花壇', desc: '初期速度 +8%', cost: [20, 45, 90], max: 3, icon: '💨', unlock: 'speed' },
   { id: 'dash', name: '⚡ 閃光の花壇', desc: 'ダッシュCD -15%', cost: [25, 60, 120], max: 3, icon: '⚡', unlock: 'dash' },
   { id: 'magnet', name: '✨ 収穫の花壇', desc: '磁力 +40', cost: [15, 30, 60], max: 3, icon: '🧲', unlock: 'magnet' },
-  { id: 'nectar', name: '🍯 蜜の花壇', desc: 'ネクター +10%', cost: [30, 80, 180], max: 3, icon: '🍯', unlock: 'nectar' }
+  { id: 'nectar', name: '🍯 蜜の花壇', desc: 'ネクター +10%', cost: [30, 80, 180], max: 3, icon: '🍯', unlock: 'nectar' },
+  { id: 'luck', name: '🍀 幸運の花壇', desc: 'ドロップ率 +5%', cost: [20, 50, 100], max: 3, icon: '🍀', unlock: 'luck' },
+  { id: 'explore', name: '🔎 探索の花壇', desc: 'ショップ商品 +1', cost: [30, 70, 140], max: 3, icon: '🔎', unlock: 'explore' }
 ];
 let gardenCursor = 0;
 let runNectar = 0, loopCount = 0; // nectar earned this run

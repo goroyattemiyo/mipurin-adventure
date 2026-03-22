@@ -213,28 +213,29 @@ UI・描画変更後は以下を実施:
 
 ## 13. ファイルサイズ監視
 
-    js/game.js        11.6KB  OK
-    js/data.js        30.2KB  要注意
-    js/bgm.js          8.6KB  OK
+    js/game.js        11.4KB  OK
+    js/data.js        29.0KB  要注意
+    js/bgm.js          9.5KB  OK
     js/enemies.js     14.5KB  OK
-    js/blessings.js   20.0KB  OK
+    js/blessings.js   20.1KB  OK
     js/systems.js     16.1KB  OK
-    js/nodemap.js     14.1KB  OK
+    js/nodemap.js     13.1KB  OK
     js/equip_ui.js    17.5KB  OK
-    js/ui.js          29.8KB  要注意
-    js/ui_screens.js  12.2KB  OK
+    js/ui.js          29.5KB  要注意
+    js/ui_screens.js  12.6KB  OK
     js/combat.js      16.9KB  OK
-    js/update.js      17.8KB  OK
+    js/update.js      17.9KB  OK
     js/render.js      30.7KB  要注意
     js/touch.js       12.9KB  OK
     js/rarity.js       1.5KB  OK
     js/charms.js       4.2KB  OK
 
-テスト状況: 100件合格, 0件失敗
+テスト状況: 146件合格, 0件失敗
 
 ---
 
 ## 14. ルール変更履歴
 
+- 2026-03-22: ファイルサイズ監視テーブル更新(v6.25対応), テスト146件反映
 - 2026-03-21: v2 → main 統合、ブランチ名更新
 - 2026-03-17: 初版作成（RULES_TEMPLATE.md ベースにミプリン用カスタマイズ。STATUS.md セクション7のルールを統合）

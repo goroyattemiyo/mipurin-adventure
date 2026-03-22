@@ -48,6 +48,8 @@ function checkGardenUnlocks() {
   if (totalClears >= 2) gardenUnlocks.dash = true;
   if (totalClears >= 3) gardenUnlocks.magnet = true;
   if (totalClears >= 5) gardenUnlocks.nectar = true;
+  if (totalClears >= 3) gardenUnlocks.luck = true;
+  if (totalClears >= 5) gardenUnlocks.explore = true;
 }
 
 function applyGardenBonuses() {
@@ -60,6 +62,8 @@ function applyGardenBonuses() {
   if (dashLv > 0) player.dashCooldown = player.dashCooldown * (1 - dashLv * 0.15);
   player.magnetRange = (player.magnetRange || 0) + (gardenUpgrades.magnet || 0) * 40;
   player.nectarMul = (player.nectarMul || 0) + (gardenUpgrades.nectar || 0) * 0.10;
+  player.luckBonus = (gardenUpgrades.luck || 0) * 0.05;
+  player.exploreBonus = (gardenUpgrades.explore || 0);
 }
 
 
@@ -90,6 +94,16 @@ function buildShop() {
     } });
   // Max HP
   shopItems.push({ name: '最大HP +1', cost: 8 + floor * 2, icon: '\u2B06', action: () => { player.maxHp += 1; player.hp += 1; } });
+  // Explore bonus: extra random item
+  if (player.exploreBonus && player.exploreBonus > 0) {
+    for (var _ei = 0; _ei < player.exploreBonus; _ei++) {
+      var _extraPool = [
+        { name: '回復 +3', cost: 5 + floor, icon: '\u2665', desc: 'HPを3回復', action: function() { player.hp = Math.min(player.hp + 3, player.maxHp); } },
+        { name: '花粉×2', cost: 3 + floor, icon: '\uD83C\uDF3C', desc: '花粈10獲得', action: function() { pollen += 10; showFloat('\uD83C\uDF3C +10', 1.5, MSG_COLORS.info); } }
+      ];
+      shopItems.push(_extraPool[Math.floor(rng() * _extraPool.length)]);
+    }
+  }
 }
 
 // ===== FADE =====
@@ -296,6 +310,7 @@ function resetGame() {
   player.weapon = initWeapon({...WEAPON_DEFS[0]}); player.weapons = [initWeapon({...WEAPON_DEFS[0]}), null]; player.weaponIdx = 0; player.atkSpeedBonus = 0; player.vampiric = false; player.thorns = 0; player.magnetRange = 0; player.consumables = [null, null, null];
   player.backpack = [null, null, null, null]; player.charm = null;
   player.roomHeal = 0; player.killHeal = 0; player.nectarMul = 0;
+  player.luckBonus = 0; player.exploreBonus = 0;
   activeBlessings = []; activeDuos = []; idleTimer = 0; eliteNext = false; drops.length = 0; projectiles.length = 0; particles.length = 0;
   applyGardenBonuses();
   if (typeof applyCharm === 'function') applyCharm();

@@ -204,7 +204,7 @@ function updateCombat(dt) {
    if (player.vampiric) player.hp = Math.min(player.hp + 1, player.maxHp);
    if (player.killHeal) player.hp = Math.min(player.hp + player.killHeal, player.maxHp);
    if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
-   if (Math.random() < 0.20) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+   if (Math.random() < 0.20 + (player.luckBonus || 0)) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
    recordEnemy(enemies[i].name || enemies[i].type, true);
    enemies.splice(i, 1);
     }

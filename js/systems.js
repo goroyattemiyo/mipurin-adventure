@@ -122,7 +122,7 @@ function startFloor() {
   else { const tn = getTheme(floor).name || ''; showFloat('🌿 フロア ' + floor + (tn ? ' — ' + tn : ''), 2.5, MSG_COLORS.info); }
   const floorTheme = getTheme(floor);
   if (!isBossFloor() && floorTheme.bgm) playBGM(floorTheme.bgm, 0.8);
-  if (isBossFloor()) { stopBGM(1.2); setTimeout(() => playBGM('boss', 0.5), 2000); }
+  if (isBossFloor()) { stopBGM(1.2); setTimeout(() => { Audio.boss_appear(); playBGM('boss', 0.5); }, 2000); }
   startFade(-1, null);
 }
 

@@ -385,55 +385,7 @@ function drawBlessing() {
   ctx.textAlign = 'left';
 }
 
-function drawShop() {
-  if (gameState !== 'shop') return;
-  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 30px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-  ctx.fillText('🌸 はなの市場 🌸', CW / 2, 55);
-  ctx.fillStyle = '#ddd'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('いらっしゃい！ なにがほしいの？', CW / 2, 82);
-  if (shopkeeperReady) { ctx.drawImage(shopkeeperImg, 40, 30, 70, 110); }
-  ctx.fillStyle = COL.pollen; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('💛 花粉: ' + pollen, CW / 2, 108);
-  const cols = 3;
-  const cardW = 240, cardH = 200, padX = 24, padY = 20;
-  const totalW = cols * cardW + (cols - 1) * padX;
-  const startX = CW / 2 - totalW / 2;
-  const startY = 130;
-  for (let i = 0; i < shopItems.length; i++) {
-    const s = shopItems[i];
-    const sel = selectCursor === i;
-    const row = Math.floor(i / cols), col = i % cols;
-    const sx = startX + col * (cardW + padX);
-    const sy = startY + row * (cardH + padY);
-    const canBuy = pollen >= s.cost;
-    ctx.fillStyle = canBuy ? (sel ? 'rgba(60,50,90,0.95)' : 'rgba(30,30,50,0.85)') : 'rgba(60,30,30,0.8)';
-    ctx.fillRect(sx, sy, cardW, cardH);
-    ctx.strokeStyle = sel ? '#ffd700' : (canBuy ? 'rgba(255,215,0,0.4)' : '#555');
-    ctx.lineWidth = sel ? 3 : 1; ctx.strokeRect(sx, sy, cardW, cardH);
-    ctx.fillStyle = '#fff'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.icon, sx + cardW / 2, sy + 50);
-    ctx.fillStyle = canBuy ? '#fff' : '#888'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif";
-    const nm = s.name.length > 8 ? s.name.slice(0,8) + '..' : s.name;
-    ctx.fillText(nm, sx + cardW / 2, sy + 85);
-    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(s.desc, sx + cardW / 2, sy + 140); }
-    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(s.cost + ' 花粉', sx + cardW / 2, sy + 115);
-    if (sel) {
-      ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText(canBuy ? '▶ Zで買う ◀' : '✖ 花粉不足', sx + cardW / 2, sy + 178);
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText('◀▶で選ぶ', sx + cardW / 2, sy + 185);
-    }
-  }
-  const skipRow = Math.floor(shopItems.length / cols) + 1;
-  const skipY = startY + skipRow * (cardH + padY) + 10;
-  const skipSel = selectCursor >= shopItems.length;
-  ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.4)';
-  ctx.font = (skipSel ? 'bold 20px' : '20px') + ' M PLUS Rounded 1c, sans-serif';
-  ctx.fillText(skipSel ? '▶ つぎへすすむ (Z) ◀' : 'Xキー / Escでつぎへ', CW / 2, skipY);
-  ctx.textAlign = 'left';
-}
+// drawShop moved to shop_ui.js
 
 function drawDmgNumbers() {
   for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }

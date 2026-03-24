@@ -101,8 +101,12 @@
 
 | Sprint G-B | BGM演出強化(ショップBGM/ボス前無音/ローパス) | v6.25 | ✅ |
 | Sprint G-C | 花壇拡張(幸運/探索) + ショップUI刷新 | v6.26-v6.27 | ✅ |
+| Sprint H-A-1 | 宝箱ノード追加(NODE_TYPES chest, openChestNode) | v6.28 | ✅ |
+| Sprint H-A-2 | 鍵アイテム(🗝️)＆宝箱ロック連携(罠/ボーナス/ショップ販売) | v6.28 | ✅ |
+| perf | スマホ描画最適化3件(DPR上限/rectキャッシュ/OffscreenCanvas) | v6.28 | ✅ |
+| Sprint H-A-3 | 巨大化はちみつ(🐻 ATK+3・巨大描画×1.6・オーラ・ドロップ/ショップ販売) | v6.29 | ✅ |
 
-Phase 1 目標 55/100 → 達成済み。現在 66.3/100。Phase 2 目標 73/100。
+Phase 1 目標 55/100 → 達成済み。現在 68.8/100（v6.29）。Phase 2 目標 73/100。
 
 ### COUNCIL議論の結論（Synapse Council）
 

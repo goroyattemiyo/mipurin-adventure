@@ -1,3 +1,34 @@
+## v6.29 (2026-03-24) Sprint H-A-3 + 技術負債解消
+
+### Features
+- **H-A-3: 巨大化はちみつ** (data.js / combat.js / render.js / systems.js / update.js)
+  - `🐻 巨大化はちみつ`（CONSUMABLE_DEFS に追加）: 使用すると10秒間ATK+3
+  - 巨大化中はプレイヤースプライト×1.6拡大＋オレンジオーラ（sin波動）表示
+  - 効果終了時に自動でATK復元＋「巨大化おわり」フロート表示
+  - 入手方法: 敵撃破で3%ドロップ / ショップで花粉18から購入
+  - ドロップ描画: 橙色の大きな円＋光沢＋輝き記号（✦）
+
+### Bug Fixes / Debt
+- **武器進化DPSダウングレード修正** (data.js): T2武器speed/dmgMul再調整で全5武器が進化後+13〜+54%アップ確認
+- **fix_*.pyをscripts/へ整理**: ルートディレクトリのスクリプト群を scripts/ に移動済み
+
+## v6.28 (2026-03-24) Sprint H-A-1〜H-A-2 + パフォーマンス最適化
+
+### Features
+- **H-A-1: 宝箱ノード追加** (nodemap.js)
+  - NODE_TYPES に `chest` 追加（💎 weight=8）
+  - 中身: 祝福40% / 花粉35% / 消耗品25%（消耗品スロット満杯時は花粉+8）
+- **H-A-2: 鍵アイテム & 宝箱ロック連携** (data.js / nodemap.js / systems.js / combat.js)
+  - `🗝️ 古い鍵`（CHEST_KEY_DEF）を消耗品スロットに実装（noUse:true で手動使用不可）
+  - 敵撃破で5%確率ドロップ（luck祝福で最大8%）、ショップで花粉15で購入可
+  - 鍵なし宝箱: 40%でブービートラップ（HP-2）、60%通常開封
+  - 鍵あり宝箱: 鍵を自動消費、祝福確率60%・レジェンド優先、花粉+15〜25
+
+### Performance
+- **DPR上限制限** (game.js): `Math.min(devicePixelRatio, 2)` でRetina DPR=3端末の描画コスト最大44%削減
+- **getBoundingClientRectキャッシュ** (touch.js): タッチイベント毎のDOMレイアウト再計算を排除、resize/orientationchangeで再取得
+- **ルームOffscreenCanvasキャッシュ** (render.js / systems.js): 毎フレーム300タイル×fillRect → drawImage 1回に削減、startFloor()でキャッシュクリア
+
 ## v6.13.0 (2026-03-09) Sprint G-B0: かわいさ最大化
 - 吹き出しシステム追加（攻撃30%/被ダメ40%/撃破25%/ボス撃破100%でセリフ表示）
 - 敵消滅「ぽふっ」煙エフェクト（ピンク〜白8方向パーティクル）

@@ -249,12 +249,13 @@ const WEAPON_DEFS = [
   { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 84, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
   { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
   { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' },
-  { id: 'golden_needle', name: '🐝 蜂の金針', dmgMul: 1.3, range: 68, speed: 0.16, dur: 0.15, desc: '3撃目に衝撃波！金色の連撃', color: '#ffaa00', fx: 'double', tier: 2, minFloor: 6, comboFx: 'shockwave' },
-  { id: 'amber_cannon', name: '🍯 蜜の大砲', dmgMul: 1.8, range: 120, speed: 0.45, dur: 0.2, desc: '着弾に蜜だまり。敵が減速する', color: '#cc7700', fx: 'none', tier: 2, minFloor: 6, comboFx: 'honeypool' },
-  { id: 'holy_shield', name: '✨ 聖花の盾', dmgMul: 1.0, range: 60, speed: 0.3, dur: 0.18, desc: 'パリィ成功でATK×4＋HP回復！', color: '#fff0d0', fx: 'none', tier: 2, minFloor: 9, comboFx: 'parry' },
-  { id: 'cursed_thorn', name: '💜 呪いの荊', dmgMul: 0.9, range: 96, speed: 0.38, dur: 0.2, desc: '攻撃に毒付与。毒撃破で毒霧拡散', color: '#8e44ad', fx: '360', tier: 2, minFloor: 9, comboFx: 'poison' },
-  { id: 'storm_wing', name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 84, speed: 0.1, dur: 0.08, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
-  { id: 'queen_true_staff', name: '💎 女王の真杖', dmgMul: 2.5, range: 76, speed: 0.5, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe', tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
+  // T2 speed を T1 Lv3 比 +15% EffDPS になるよう調整（BACKLOG: 武器進化DPSダウングレード修正）
+  { id: 'golden_needle',   name: '🐝 蜂の金針', dmgMul: 1.3, range: 68, speed: 0.064, dur: 0.13, desc: '3撃目に衝撃波！金色の連撃', color: '#ffaa00', fx: 'double', tier: 2, minFloor: 6, comboFx: 'shockwave' },
+  { id: 'amber_cannon',    name: '🍯 蜜の大砲', dmgMul: 1.8, range: 120, speed: 0.30, dur: 0.2,  desc: '着弾に蜜だまり。敵が減速する', color: '#cc7700', fx: 'none',   tier: 2, minFloor: 6, comboFx: 'honeypool' },
+  { id: 'holy_shield',     name: '✨ 聖花の盾', dmgMul: 1.0, range: 60,  speed: 0.16, dur: 0.18, desc: 'パリィ成功でATK×4＋HP回復！', color: '#fff0d0', fx: 'none',   tier: 2, minFloor: 9, comboFx: 'parry' },
+  { id: 'cursed_thorn',    name: '💜 呪いの荊', dmgMul: 0.9, range: 96,  speed: 0.19, dur: 0.2,  desc: '攻撃に毒付与。毒撃破で毒霧拡散', color: '#8e44ad', fx: '360',  tier: 2, minFloor: 9, comboFx: 'poison' },
+  { id: 'storm_wing',      name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 84,  speed: 0.033, dur: 0.07, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
+  { id: 'queen_true_staff',name: '💎 女王の真杖', dmgMul: 2.5, range: 76, speed: 0.47, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe',   tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
 
 // ===== WEAPON COLLECTION =====
 
@@ -341,7 +342,12 @@ weaponCollection.add(WEAPON_DEFS[0].id); saveCollection();
 const CONSUMABLE_DEFS = [
   { id: 'honey_drop', name: '🍯 はちみつドロップ', desc: 'HP+3', icon: '🍯', msg: 'あまくておいしい！', apply: () => { player.hp = Math.min(player.hp + 3, player.maxHp); } },
   { id: 'spicy_pollen', name: '🌶️ ピリカラ花粉', desc: '8秒ATK+2', icon: '🌶️', msg: 'からい！でもちからがわく！', apply: () => { player.atk += 2; setTimeout(() => { player.atk = Math.max(1, player.atk - 2); }, 8000); } },
-  { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } }
+  { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } },
+  { id: 'giant_honey', name: '🍯 巨大化はちみつ', desc: '10秒ATK+3・巨大化', icon: '🐻', msg: 'おおきくなったよ！！', apply: () => {
+    player._giantTimer = 10.0;
+    player.atk += 3;
+    player._giantAtkBoost = 3;
+  }}
 ];
 // 鍵は消耗品スロットに入るが「使う」ではなく宝箱ノードで自動消費される特殊アイテム
 const CHEST_KEY_DEF = { id: 'chest_key', name: '🗝️ 古い鍵', desc: '宝箱で自動使用', icon: '🗝️', noUse: true };
@@ -378,6 +384,20 @@ function updateDrops(dt) {
           showFloat('🗝️ 鍵を拾えなかった…（かばんがいっぱい）', 2.0, '#aaa');
         }
       }
+      if (d.type === 'giant_honey') {
+        const ghDef = CONSUMABLE_DEFS.find(c => c.id === 'giant_honey');
+        if (ghDef) {
+          const slot = player.consumables.indexOf(null);
+          if (slot !== -1) {
+            player.consumables[slot] = {...ghDef};
+            emitParticles(d.x, d.y, '#f0a030', 10, 80, 0.5);
+            Audio.item_get();
+            showFloat('🐻 巨大化はちみつ ゲット！', 2.0, '#f0a030');
+          } else {
+            showFloat('🐻 アイテム枠いっぱい…', 1.5, '#aaa');
+          }
+        }
+      }
       drops.splice(i, 1);
     }
   }
@@ -408,6 +428,18 @@ function drawDrops() {
       ctx.fillStyle = '#ffd700';
       ctx.fillRect(d.x - 1, d.y + bob + 2, 2, 6);
       ctx.fillRect(d.x + 1, d.y + bob + 5, 3, 2);
+    }
+    if (d.type === 'giant_honey') {
+      // 🐻 クマ型の大きなはちみつ瓶（橙色の円+ハイライト）
+      ctx.fillStyle = '#f0a030';
+      ctx.beginPath(); ctx.arc(d.x, d.y + bob, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b07820'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(d.x, d.y + bob, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath(); ctx.arc(d.x - 3, d.y + bob - 3, 3, 0, Math.PI * 2); ctx.fill();
+      // 輝きパーティクル（小）
+      ctx.fillStyle = '#ffd700'; ctx.font = '11px serif';
+      ctx.fillText('✦', d.x + 6, d.y + bob - 8);
     }
     ctx.globalAlpha = 1;
   }

@@ -124,17 +124,29 @@ function drawEntity(e, color, isP) {
   if (!isP && e.hitFlash > 0) ctx.globalAlpha = 0.6;
 
   if (isP) {
+    // 巨大化はちみつ中: 描画スケール×1.6 + オレンジオーラ
+    const isGiant = player._giantTimer > 0;
+    const giantScale = isGiant ? 1.6 : 1.0;
+    if (isGiant) {
+      const aura = Math.sin(Date.now() / 150) * 0.15 + 0.55;
+      ctx.save();
+      ctx.globalAlpha = aura;
+      ctx.fillStyle = '#f0a030';
+      ctx.beginPath(); ctx.arc(cx, cy, (e.w / 2 + 18) * giantScale, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0 ? 0.4 : 1;
+    }
     if (mipurinReady) {
       const dir = getPlayerDir();
       const mf = MIPURIN_FRAMES[dir];
-      const drawSz = e.w + 24;
+      const drawSz = (e.w + 24) * giantScale;
       const isMoving = keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD'] ||
                        keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
       const bob = isMoving ? Math.sin(Date.now() / 100) * 2 : 0;
       const squash = isMoving ? 1 + Math.sin(Date.now() / 120) * 0.10 : 1;
       ctx.save();
       ctx.translate(cx, e.y + e.h / 2 + bob);
-      ctx.scale(squash, 2 - squash);
+      ctx.scale(squash * giantScale, (2 - squash) * giantScale);
       ctx.translate(-cx, -(e.y + e.h / 2));
       ctx.drawImage(mipurinImg, mf.sx, mf.sy, mf.sw, mf.sh, e.x - 12, e.y - 12, drawSz, drawSz);
       ctx.restore();

@@ -77,7 +77,7 @@ function buildShop() {
   shopItems.push({ name: '回復 +2', cost: 3 + floor, icon: '\u2665', action: () => { player.hp = Math.min(player.hp + 2, player.maxHp); } });
   // Consumable shop items
   for (const cdef of CONSUMABLE_DEFS) {
-    const baseCost = cdef.id === 'honey_drop' ? 5 : cdef.id === 'spicy_pollen' ? 8 : 12;
+    const baseCost = cdef.id === 'honey_drop' ? 5 : cdef.id === 'spicy_pollen' ? 8 : cdef.id === 'giant_honey' ? 18 : 12;
     shopItems.push({ name: cdef.name, cost: baseCost + floor, icon: cdef.icon, action: () => {
       // Find empty consumable slot
       const slot = player.consumables.indexOf(null);

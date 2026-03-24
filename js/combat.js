@@ -4,6 +4,7 @@ function updateCombat(dt) {
   for (let ci = 0; ci < 3; ci++) {
     if (wasPressed('Digit' + (ci + 1)) && player.consumables[ci]) {
    const item = player.consumables[ci];
+   if (item.noUse) { showFloat(item.icon + ' は宝箱で自動使用されるよ！', 1.8, '#ffd700'); continue; }
    item.apply();
    showFloat(item.msg, 2.5, MSG_COLORS.info);
    emitParticles(player.x + player.w/2, player.y + player.h/2, '#fff', 6, 60, 0.3);
@@ -205,6 +206,8 @@ function updateCombat(dt) {
    if (player.killHeal) player.hp = Math.min(player.hp + player.killHeal, player.maxHp);
    if (Math.random() < 0.4) spawnDrop(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, 'pollen');
    if (Math.random() < 0.20 + (player.luckBonus || 0)) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
+   // 5% で鍵をドロップ（luck祝福で最大8%）
+   if (Math.random() < 0.05 + (player.luckBonus || 0) * 0.5) spawnDrop(enemies[i].x + enemies[i].w / 2 - 10, enemies[i].y + enemies[i].h / 2, 'chest_key');
    recordEnemy(enemies[i].name || enemies[i].type, true);
    enemies.splice(i, 1);
     }

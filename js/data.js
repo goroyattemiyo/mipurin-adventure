@@ -343,6 +343,8 @@ const CONSUMABLE_DEFS = [
   { id: 'spicy_pollen', name: '🌶️ ピリカラ花粉', desc: '8秒ATK+2', icon: '🌶️', msg: 'からい！でもちからがわく！', apply: () => { player.atk += 2; setTimeout(() => { player.atk = Math.max(1, player.atk - 2); }, 8000); } },
   { id: 'royal_jelly', name: '✨ ロイヤルゼリー', desc: '3秒無敵', icon: '✨', msg: '女王さまのちから…！', apply: () => { player.invTimer = 3.0; } }
 ];
+// 鍵は消耗品スロットに入るが「使う」ではなく宝箱ノードで自動消費される特殊アイテム
+const CHEST_KEY_DEF = { id: 'chest_key', name: '🗝️ 古い鍵', desc: '宝箱で自動使用', icon: '🗝️', noUse: true };
 // [REMOVED] old consumableMsg - replaced by msgQueue
 // ===== DROPS =====
 const drops = [];
@@ -365,6 +367,17 @@ function updateDrops(dt) {
     if (rectOverlap(pb, db)) {
       if (d.type === 'pollen') { emitParticles(d.x, d.y, '#f1c40f', 4, 50, 0.3); const amt = 1 + Math.floor(floor / 3); pollen += amt; runNectar += amt; Audio.item_get(); showFloat('\uD83C\uDF3C \u82B1\u7C89 +' + amt, 1.2, '#f1c40f'); }
       if (d.type === 'heal') { player.hp = Math.min(player.hp + 1, player.maxHp); if(Math.random()<0.4) showBubble("わぁい♪",0.8); emitParticles(d.x, d.y, '#2ecc71', 6, 60, 0.3); showFloat('\uD83C\uDF6F HP+1', 1.2, '#2ecc71'); }
+      if (d.type === 'chest_key') {
+        const slot = player.consumables.indexOf(null);
+        if (slot !== -1) {
+          player.consumables[slot] = {...CHEST_KEY_DEF};
+          emitParticles(d.x, d.y, '#ffd700', 8, 70, 0.4);
+          Audio.item_get();
+          showFloat('🗝️ 古い鍵 ゲット！', 2.0, '#ffd700');
+        } else {
+          showFloat('🗝️ 鍵を拾えなかった…（かばんがいっぱい）', 2.0, '#aaa');
+        }
+      }
       drops.splice(i, 1);
     }
   }
@@ -385,6 +398,16 @@ function drawDrops() {
     if (d.type === 'heal') {
       ctx.fillStyle = '#2ecc71';
       ctx.fillRect(d.x - 2, d.y + bob - 6, 4, 12); ctx.fillRect(d.x - 6, d.y + bob - 2, 12, 4);
+    }
+    if (d.type === 'chest_key') {
+      // 鍵: 金色の丸 + 十字
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(d.x, d.y + bob - 3, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(d.x, d.y + bob - 3, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(d.x - 1, d.y + bob + 2, 2, 6);
+      ctx.fillRect(d.x + 1, d.y + bob + 5, 3, 2);
     }
     ctx.globalAlpha = 1;
   }

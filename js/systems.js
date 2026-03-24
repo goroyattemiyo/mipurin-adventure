@@ -85,6 +85,14 @@ function buildShop() {
       else { showFloat('アイテム枠がいっぱい！', 2.0, MSG_COLORS.warn); }
     }});
   }
+  // 鍵（宝箱ノードで自動消費・罠回避＆ボーナス）
+  if (typeof CHEST_KEY_DEF !== 'undefined') {
+    shopItems.push({ name: CHEST_KEY_DEF.name, cost: 15, icon: CHEST_KEY_DEF.icon, desc: '宝箱を安全に+ボーナス', action: () => {
+      const slot = player.consumables.indexOf(null);
+      if (slot !== -1) { player.consumables[slot] = {...CHEST_KEY_DEF}; Audio.item_get(); showFloat('🗝️ 古い鍵 ゲット！ 宝箱で自動使用', 2.5, MSG_COLORS.info); }
+      else { showFloat('アイテム枠がいっぱい！', 2.0, MSG_COLORS.warn); }
+    }});
+  }
   // Random weapon
   const _wpPool = WEAPON_DEFS.filter(w => !w.minFloor || floor >= w.minFloor); const wep = _wpPool[Math.floor(rng() * _wpPool.length)];
   shopItems.push({ name: wep.name, cost: 5 + floor * 2, icon: '⚔', desc: wep.desc, action: () => {

@@ -1,23 +1,41 @@
-function drawRoom() {
+// ===== ROOM OFFSCREEN CACHE =====
+// drawRoom() の 300タイル×複数fillRect を毎フレーム実行しないよう
+// startFloor() 後に一度だけ OffscreenCanvas へ焼き込み、以後は drawImage 1回で済ます
+let _roomBuffer = null;
+let _roomBufferFloor = -1;
+
+function bakeRoomBuffer() {
+  const oc = (typeof OffscreenCanvas !== 'undefined')
+    ? new OffscreenCanvas(CW, CH)
+    : (() => { const c = document.createElement('canvas'); c.width = CW; c.height = CH; return c; })();
+  const oc2 = oc.getContext('2d');
   const th = getTheme(floor);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     if (tileAt(roomMap, c, r) === 1) {
-      ctx.fillStyle = th.wall; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-      ctx.fillStyle = th.wallTop; ctx.fillRect(c * TILE, r * TILE, TILE, 4);
-      ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(c * TILE, r * TILE + TILE - 4, TILE, 4);
+      oc2.fillStyle = th.wall; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = th.wallTop; oc2.fillRect(c * TILE, r * TILE, TILE, 4);
+      oc2.fillStyle = 'rgba(0,0,0,0.15)'; oc2.fillRect(c * TILE, r * TILE + TILE - 4, TILE, 4);
     } else if (tileAt(roomMap, c, r) === 2) {
-      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-      ctx.fillStyle = 'rgba(180,60,60,0.45)';
+      oc2.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = 'rgba(180,60,60,0.45)';
       const sx = c * TILE, sy = r * TILE;
       for (let si = 0; si < 3; si++) for (let sj = 0; sj < 3; sj++) {
         const tx = sx + 8 + si * 18, ty = sy + 8 + sj * 18;
-        ctx.beginPath(); ctx.moveTo(tx, ty+10); ctx.lineTo(tx+5, ty); ctx.lineTo(tx+10, ty+10); ctx.fill();
+        oc2.beginPath(); oc2.moveTo(tx, ty+10); oc2.lineTo(tx+5, ty); oc2.lineTo(tx+10, ty+10); oc2.fill();
       }
     } else {
-      ctx.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.strokeStyle = 'rgba(255,255,255,0.03)'; oc2.strokeRect(c * TILE, r * TILE, TILE, TILE);
     }
   }
+  _roomBuffer = oc;
+  _roomBufferFloor = floor;
+}
+
+function drawRoom() {
+  // フロアが変わった / バッファ未生成の場合のみ再ベイク
+  if (!_roomBuffer || _roomBufferFloor !== floor) bakeRoomBuffer();
+  ctx.drawImage(_roomBuffer, 0, 0);
 }
 
 function drawEnemyShape(e, color) {

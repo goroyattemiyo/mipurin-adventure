@@ -38,7 +38,7 @@ const CW = 1280, CH = 960, TILE = 64, COLS = 20, ROWS = 15;
 
 // ===== CANVAS =====
 const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
-const DPR = window.devicePixelRatio || 1;
+const DPR = Math.min(window.devicePixelRatio || 1, 2); // スマホ高DPR(3x)による過剰描画コストを抑制
 cvs.width = CW * DPR;
 cvs.height = CH * DPR;
 cvs.style.width = '';

@@ -55,6 +55,10 @@ function updateProjectiles(dt) {
     const p = projectiles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
     const tc = Math.floor(p.x / TILE), tr = Math.floor(p.y / TILE);
     if (p.life <= 0 || tileAt(roomMap, tc, tr) === 1) { projectiles.splice(i, 1); continue; }
+    // H-A2: 弾丸がbarrelに当たったら爆発
+    if (typeof checkBarrelProjectileHit === 'function' && checkBarrelProjectileHit(p.x, p.y)) {
+      projectiles.splice(i, 1); continue;
+    }
     if (!p.friendly) {
       const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
       if (player.invTimer <= 0 && !player.dashing && rectOverlap(pb, { x: p.x - p.size, y: p.y - p.size, w: p.size * 2, h: p.size * 2 })) {

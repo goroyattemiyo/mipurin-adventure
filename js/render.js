@@ -23,6 +23,23 @@ function bakeRoomBuffer() {
         const tx = sx + 8 + si * 18, ty = sy + 8 + sj * 18;
         oc2.beginPath(); oc2.moveTo(tx, ty+10); oc2.lineTo(tx+5, ty); oc2.lineTo(tx+10, ty+10); oc2.fill();
       }
+    } else if (tileAt(roomMap, c, r) === 3) {
+      // 水場: ベース床 + 青みがかった半透明オーバーレイ
+      oc2.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = 'rgba(50,120,220,0.38)'; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.strokeStyle = 'rgba(100,180,255,0.5)'; oc2.lineWidth = 1;
+      oc2.beginPath(); oc2.moveTo(c * TILE + 6, r * TILE + TILE/2); oc2.bezierCurveTo(c * TILE + 12, r * TILE + TILE/2 - 4, c * TILE + 20, r * TILE + TILE/2 - 4, c * TILE + 26, r * TILE + TILE/2); oc2.stroke();
+      oc2.beginPath(); oc2.moveTo(c * TILE + 10, r * TILE + TILE/2 + 7); oc2.bezierCurveTo(c * TILE + 16, r * TILE + TILE/2 + 3, c * TILE + 24, r * TILE + TILE/2 + 3, c * TILE + 30, r * TILE + TILE/2 + 7); oc2.stroke();
+    } else if (tileAt(roomMap, c, r) === 4) {
+      // 草むら: ベース床 + 緑の草描画
+      oc2.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = 'rgba(40,160,60,0.45)'; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
+      oc2.fillStyle = '#27ae60';
+      const gx = c * TILE, gy = r * TILE;
+      for (let gi = 0; gi < 5; gi++) {
+        const gbx = gx + 6 + gi * 9, gby = gy + TILE - 4;
+        oc2.beginPath(); oc2.moveTo(gbx, gby); oc2.quadraticCurveTo(gbx - 3, gby - 10, gbx, gby - 14); oc2.quadraticCurveTo(gbx + 3, gby - 10, gbx, gby); oc2.fill();
+      }
     } else {
       oc2.fillStyle = (c + r) % 2 === 0 ? th.floor : th.floorAlt; oc2.fillRect(c * TILE, r * TILE, TILE, TILE);
       oc2.strokeStyle = 'rgba(255,255,255,0.03)'; oc2.strokeRect(c * TILE, r * TILE, TILE, TILE);
@@ -554,9 +571,23 @@ function draw() {
 
   const th = getTheme(floor); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, CW, CH);
   drawRoom(); drawBgParticles(); if (typeof drawHoneyPools === 'function') drawHoneyPools(); drawDashTrail(); drawDrops();
+  // H-A2: 爆発樽描画（エンティティの下レイヤー）
+  if (typeof drawBarrels === 'function') drawBarrels();
   for (const en of enemies) if (en.hp > 0) drawTelegraph(en);
   for (const en of enemies) if (en.hp > 0) { drawEntity(en, en.color, false); drawHPBar(en, -8); }
-  drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect(); drawEntity(player, COL.player, true);
+  drawBoss(); drawProjectiles(); if (typeof drawHomingProjs === 'function') drawHomingProjs(); drawAttackEffect();
+  // H-A2: 草むら中はプレイヤー半透明
+  if (player._inBush) { ctx.globalAlpha = 0.38; }
+  drawEntity(player, COL.player, true);
+  if (player._inBush) { ctx.globalAlpha = 1; }
+  // H-A2: 水場中は青いリップルエフェクト
+  if (player._inWater) {
+    const _wp = player.x + player.w/2, _wq = player.y + player.h/2;
+    const _wa = (Math.sin(Date.now() / 200) * 0.15 + 0.25);
+    ctx.globalAlpha = _wa; ctx.strokeStyle = '#60b0ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(_wp, _wq + player.h/3, player.w * 0.7, 6, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   if(typeof bubbles!=="undefined"&&bubbles.length>0){
     const b=bubbles[0]; ctx.save(); ctx.globalAlpha=Math.max(0,b.alpha);
     let bx=player.x+player.w/2, by=player.y-30; const bw2=ctx.measureText(b.text).width+24; if(bx-bw2/2<10)bx=10+bw2/2; if(bx+bw2/2>CW-10)bx=CW-10-bw2/2; if(by-30<10)by=40;

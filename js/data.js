@@ -101,8 +101,18 @@ function drawParticles() {
 
 // ===== ROOM GENERATION =====
 // ===== ROOM TEMPLATES (Sprint 2) =====
-// 0=floor, 1=wall, 2=spike
+// 0=floor, 1=wall, 2=spike, 3=water, 4=bush, 5=barrel(barrel is dynamic object, not tile)
 let roomSpikes = [];
+// === 環境ギミック (H-A2) ===
+let roomBarrels = [];  // { c, r, hp:1, exploded:false }
+// テーマ別 水場/草むら 生成有無
+const THEME_GIMMICKS = {
+  forest: { water: true, bush: false, barrel: false },
+  cave:   { water: false, bush: false, barrel: true },
+  flower: { water: false, bush: true,  barrel: false },
+  abyss:  { water: true, bush: false, barrel: false },
+  ruins:  { water: false, bush: true,  barrel: true }
+};
 const THEME_TEMPLATES = {
   forest:  ['pillars', 'scattered', 'corridors'],
   cave:    ['corridors', 'ring', 'scattered'],
@@ -212,6 +222,7 @@ function generateRoom(fl) {
     }
     applyTemplate(map, pick, fl);
     roomSpikes = [];
+    roomBarrels = [];
     if (fl >= 4 && !isBossFloor()) {
       var maxSp = Math.min(2 + Math.floor((fl - 3) * 1.5), 10);
       for (var i = 0; i < maxSp; i++) {
@@ -221,6 +232,47 @@ function generateRoom(fl) {
         if (tries < 30 && map[sr * COLS + sc] === 0) { map[sr * COLS + sc] = 2; roomSpikes.push({ c: sc, r: sr }); }
       }
     }
+    // H-A2: 環境ギミック（水場・草むら・爆発樽）
+    if (!isBossFloor()) {
+      var _gim = THEME_GIMMICKS[themeName] || {};
+      // 水場 (tile=3): fl>=2 テーマ対象
+      if (_gim.water && fl >= 2) {
+        var waterCount = 1 + Math.floor(rng() * 2);
+        for (var wi = 0; wi < waterCount; wi++) {
+          // 2×2 の水場パッチ
+          var wc0, wr0, wt = 0;
+          do { wc0 = _fb.c0 + 2 + Math.floor(rng() * Math.max(1, _fb.c1 - _fb.c0 - 5)); wr0 = _fb.r0 + 2 + Math.floor(rng() * Math.max(1, _fb.r1 - _fb.r0 - 5)); wt++; }
+          while (wt < 20 && (map[wr0 * COLS + wc0] !== 0 || safeZone(wc0, wr0)));
+          if (wt < 20) {
+            for (var dwr = 0; dwr < 2; dwr++) for (var dwc = 0; dwc < 2; dwc++) {
+              var nc = wc0 + dwc, nr = wr0 + dwr;
+              if (nc > _fb.c0 && nc < _fb.c1 && nr > _fb.r0 && nr < _fb.r1 && map[nr * COLS + nc] === 0 && !safeZone(nc, nr))
+                map[nr * COLS + nc] = 3;
+            }
+          }
+        }
+      }
+      // 草むら (tile=4): fl>=1 テーマ対象
+      if (_gim.bush && fl >= 1) {
+        var bushCount = 2 + Math.floor(rng() * 3);
+        for (var bi = 0; bi < bushCount; bi++) {
+          var bc, br, bt = 0;
+          do { bc = _fb.c0 + 1 + Math.floor(rng() * Math.max(1, _fb.c1 - _fb.c0 - 2)); br = _fb.r0 + 1 + Math.floor(rng() * Math.max(1, _fb.r1 - _fb.r0 - 2)); bt++; }
+          while (bt < 20 && (map[br * COLS + bc] !== 0 || safeZone(bc, br)));
+          if (bt < 20) map[br * COLS + bc] = 4;
+        }
+      }
+      // 爆発樽 (dynamic obj): fl>=3 テーマ対象
+      if (_gim.barrel && fl >= 3) {
+        var barrelCount = 1 + Math.floor(rng() * 2);
+        for (var bri = 0; bri < barrelCount; bri++) {
+          var bac, bar_, bat = 0;
+          do { bac = _fb.c0 + 1 + Math.floor(rng() * Math.max(1, _fb.c1 - _fb.c0 - 2)); bar_ = _fb.r0 + 1 + Math.floor(rng() * Math.max(1, _fb.r1 - _fb.r0 - 2)); bat++; }
+          while (bat < 20 && (map[bar_ * COLS + bac] !== 0 || safeZone(bac, bar_)));
+          if (bat < 20) roomBarrels.push({ c: bac, r: bar_, hp: 1, exploded: false });
+        }
+      }
+    }
     if (floodFill(map)) return map;
   }
   var map = [];
@@ -228,7 +280,7 @@ function generateRoom(fl) {
   for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
     if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || r < _fb2.r0 || r > _fb2.r1 || c < _fb2.c0 || c > _fb2.c1) map.push(1); else map.push(0);
   }
-  roomSpikes = []; return map;
+  roomSpikes = []; roomBarrels = []; return map;
 }
 function tileAt(map, c, r) { if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 1; return map[r * COLS + c]; }
 

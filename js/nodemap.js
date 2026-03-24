@@ -217,12 +217,41 @@ function executeNode(node) {
 }
 
 // ===== CHEST NODE =====
+// 鍵なし: 40%罠(HP-2) / 60%通常開封
+// 鍵あり: 必ず開封、祝福確率アップ(40%→60%)、鍵を消費
+function _hasKey() {
+  return player.consumables.some(c => c && c.id === 'chest_key');
+}
+function _consumeKey() {
+  const idx = player.consumables.findIndex(c => c && c.id === 'chest_key');
+  if (idx !== -1) player.consumables[idx] = null;
+}
+
 function openChestNode() {
+  const hasKey = _hasKey();
+  // 鍵なし: 40%で罠
+  if (!hasKey && Math.random() < 0.40) {
+    const dmg = 2;
+    player.hp = Math.max(1, player.hp - dmg);
+    emitParticles(player.x + player.w/2, player.y + player.h/2, '#e74c3c', 12, 90, 0.5);
+    Audio.player_hit && Audio.player_hit();
+    showDialog('ミプリン', ['宝箱をあけたら…', '💥 ブービートラップ！ HP-' + dmg + ' …', '🗝️ 鍵があれば安全に開けられるよ'], function() { finishTree(); });
+    return;
+  }
+  // 鍵あり: 消費してボーナス判定
+  if (hasKey) {
+    _consumeKey();
+    showFloat('🗝️ 鍵を使った！', 1.5, '#ffd700');
+  }
+  // 中身抽選（鍵あり: 祝福60% / 花粉30% / 消耗品10%、鍵なし: 祝福40% / 花粉35% / 消耗品25%）
   const roll = Math.random();
-  if (roll < 0.40) {
-    // 祝福（レア寄り: rarePlus があれば優先、なければ通常 pickBlessings）
+  const blessThresh = hasKey ? 0.60 : 0.40;
+  const pollenThresh = hasKey ? 0.90 : 0.75;
+  if (roll < blessThresh) {
+    // 祝福（鍵あり: レジェンド優先プール、鍵なし: レア+プール）
+    const topPool = BLESSING_POOL.filter(b => b.rarity === (hasKey ? 'legend' : 'rare') || b.rarity === 'legend');
     const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend');
-    const pool = rarePlus.length >= 3 ? rarePlus : BLESSING_POOL;
+    const pool = (hasKey ? (topPool.length >= 1 ? topPool : rarePlus) : (rarePlus.length >= 3 ? rarePlus : BLESSING_POOL));
     const used = new Set(activeBlessings.map(b => b.id));
     const candidates = pool.filter(b => !used.has(b.id));
     const b = candidates.length > 0
@@ -231,10 +260,11 @@ function openChestNode() {
     activeBlessings.push(b); b.apply();
     emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 20, 100, 0.6);
     Audio.blessing();
-    showDialog('ミプリン', ['宝箱をあけたよ！', b.icon + ' ' + b.name + ' をゲット！'], function() { finishTree(); });
-  } else if (roll < 0.75) {
-    // 花粉 +10〜15
-    const amt = 10 + Math.floor(Math.random() * 6);
+    const bonusMsg = hasKey ? '✨ 鍵のおかげでレア祝福確定！' : b.icon + ' ' + b.name + ' をゲット！';
+    showDialog('ミプリン', ['宝箱をあけたよ！', bonusMsg], function() { finishTree(); });
+  } else if (roll < pollenThresh) {
+    // 花粉（鍵あり: +15〜25、鍵なし: +10〜15）
+    const amt = hasKey ? 15 + Math.floor(Math.random() * 11) : 10 + Math.floor(Math.random() * 6);
     pollen += amt;
     emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 15, 80, 0.5);
     Audio.item_get();
@@ -249,7 +279,6 @@ function openChestNode() {
       Audio.item_get();
       showDialog('ミプリン', ['宝箱をあけたよ！', cdef.icon + ' ' + cdef.name + ' ゲット！'], function() { finishTree(); });
     } else {
-      // 消耗品スロットが埋まっている → 花粉に変換
       pollen += 8;
       emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 15, 80, 0.5);
       Audio.item_get();

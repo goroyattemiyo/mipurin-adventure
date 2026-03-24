@@ -35,6 +35,7 @@ function drawEnding() {
   // 隠しエンディング判定: 図鑑コンプリート && loopCount >= 1
   const _encComp = (typeof isEncyclopediaComplete === 'function') && isEncyclopediaComplete();
   const _loopOk  = (typeof loopCount !== 'undefined') && loopCount >= 1;
+  if (_encComp && _loopOk && currentBGM !== 'end_c') playBGM('end_c', 0.8);
   const endType = (_encComp && _loopOk) ? 'hidden'
     : (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true'
     : (activeBlessings.length >= 8) ? 'good' : 'normal';
@@ -83,7 +84,7 @@ function drawEnding() {
     ctx.fillText('ダークビーたちに光が戻った。', tcx, py + 158);
     ctx.restore();
     // スペシャルバッジ
-    ctx.fillStyle = 'rgba(167,139,250,0.18)'; ctx.fillRect(tcx - 160, py + 168, 320, 26);
+    ctx.fillStyle = 'rgba(167,139,250,0.18)'; ctx.fillRect(tcx - 160, py + 223, 320, 26);
     ctx.fillStyle = '#a78bfa'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('🖤 図鑑コンプリート + ループクリア達成！', tcx, py + 185);
     ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
@@ -110,6 +111,17 @@ function drawEnding() {
   ctx.fillStyle = '#87ceeb';
   if (blinkOn) ctx.fillText('X\u30AD\u30FC\u3067\u5F37\u304F\u3066\u30CB\u30E5\u30FC\u30B2\u30FC\u30E0\uFF08' + (typeof loopCount !== 'undefined' ? loopCount + 1 : 1) + '\u5468\u76EE\uFF09', tcx, py + ph - 50);
   ctx.textAlign = 'left';
+  if (endType === 'hidden') {
+    var _t = Date.now() / 1000;
+    for (var _pi = 0; _pi < 12; _pi++) {
+      var _px = (CW * 0.1) + ((_pi * 137 + Math.sin(_t + _pi) * 80) % (CW * 0.8));
+      var _py2 = (CH * 0.1) + ((_pi * 97 + Math.cos(_t * 0.7 + _pi * 2) * 60) % (CH * 0.8));
+      ctx.globalAlpha = 0.3 + Math.sin(_t * 2 + _pi) * 0.2;
+      ctx.fillStyle = _pi % 3 === 0 ? '#ffd700' : _pi % 3 === 1 ? '#a78bfa' : '#fff';
+      ctx.beginPath(); ctx.arc(_px, _py2, 2 + Math.sin(_t + _pi * 0.5) * 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
   if (fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }
 

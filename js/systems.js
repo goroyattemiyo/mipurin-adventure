@@ -3,8 +3,22 @@
 
 // ===== META PROGRESSION (Sprint 5) =====
 let nectar = 0;
-let gardenUpgrades = { hp: 0, atk: 0, speed: 0, dash: 0, magnet: 0, nectar: 0 };
-let gardenUnlocks = { speed: false, dash: false, magnet: false, nectar: false };
+let gardenUpgrades = { hp: 0, atk: 0, speed: 0, dash: 0, magnet: 0, nectar: 0, luck: 0, explore: 0, memory: 0, revival: 0 };
+let gardenUnlocks = { speed: false, dash: false, magnet: false, nectar: false, luck: false, explore: false, memory: false, revival: false };
+// 記憶の花壇: 持ち越す祝福（blessingId[]。ランクリア時に選択、次ランのapplyGardenBonusesで付与）
+let memoryBlessings = [];  // 持ち越し中の祝福IDリスト
+let revivalUsed = false;   // 不屈: このランで既に使ったか
+// memorySelect 画面用
+let memoryCursor = 0;
+let memorySelected = new Set();
+let memorySelectDest = 'title'; // 'title' or 'loop'
+function startMemorySelect(dest) {
+  memoryCursor = 0;
+  memorySelected = new Set();
+  memorySelectDest = dest || 'title';
+  gameState = 'memorySelect';
+  Audio.menu_select();
+}
 let totalClears = 0;
 const GARDEN_DEFS = [
   { id: 'hp', name: '🌱 生命の花壇', desc: '初期HP +1', cost: [10, 25, 50, 100, 200], max: 5, icon: '❤️', unlock: null },
@@ -14,7 +28,9 @@ const GARDEN_DEFS = [
   { id: 'magnet', name: '✨ 収穫の花壇', desc: '磁力 +40', cost: [15, 30, 60], max: 3, icon: '🧲', unlock: 'magnet' },
   { id: 'nectar', name: '🍯 蜜の花壇', desc: 'ネクター +10%', cost: [30, 80, 180], max: 3, icon: '🍯', unlock: 'nectar' },
   { id: 'luck', name: '🍀 幸運の花壇', desc: 'ドロップ率 +5%', cost: [20, 50, 100], max: 3, icon: '🍀', unlock: 'luck' },
-  { id: 'explore', name: '🔎 探索の花壇', desc: 'ショップ商品 +1', cost: [30, 70, 140], max: 3, icon: '🔎', unlock: 'explore' }
+  { id: 'explore', name: '🔎 探索の花壇', desc: 'ショップ商品 +1', cost: [30, 70, 140], max: 3, icon: '🔎', unlock: 'explore' },
+  { id: 'memory', name: '🌸 記憶の花壇', desc: 'クリア後に祝福1つを次ランへ持ち越す（Lv2:2個、Lv3:3個）', cost: [50, 120, 250], max: 3, icon: '🌸', unlock: 'memory' },
+  { id: 'revival', name: '🛡️ 不屈の花壇', desc: '1ランに1回だけHP1で復活（Lv2:HP3で復活）', cost: [80, 200], max: 2, icon: '🛡️', unlock: 'revival' }
 ];
 let gardenCursor = 0;
 let runNectar = 0, loopCount = 0; // nectar earned this run
@@ -25,6 +41,7 @@ function saveMeta() {
     localStorage.setItem('mipurin_garden', JSON.stringify(gardenUpgrades));
     localStorage.setItem('mipurin_unlocks', JSON.stringify(gardenUnlocks));
     localStorage.setItem('mipurin_clears', totalClears);
+    localStorage.setItem('mipurin_memory', JSON.stringify(memoryBlessings));
   } catch(e) {}
 }
 function loadMeta() {
@@ -33,6 +50,7 @@ function loadMeta() {
     const g = localStorage.getItem('mipurin_garden'); if (g) Object.assign(gardenUpgrades, JSON.parse(g));
     const u = localStorage.getItem('mipurin_unlocks'); if (u) Object.assign(gardenUnlocks, JSON.parse(u));
     const c = localStorage.getItem('mipurin_clears'); if (c !== null) totalClears = parseInt(c) || 0;
+    const m = localStorage.getItem('mipurin_memory'); if (m) memoryBlessings = JSON.parse(m) || [];
     checkGardenUnlocks();
   } catch(e) {}
 }
@@ -52,6 +70,8 @@ function checkGardenUnlocks() {
   if (totalClears >= 5) gardenUnlocks.nectar = true;
   if (totalClears >= 3) gardenUnlocks.luck = true;
   if (totalClears >= 5) gardenUnlocks.explore = true;
+  if (totalClears >= 3) gardenUnlocks.memory = true;
+  if (totalClears >= 5) gardenUnlocks.revival = true;
 }
 
 function applyGardenBonuses() {
@@ -66,6 +86,15 @@ function applyGardenBonuses() {
   player.nectarMul = (player.nectarMul || 0) + (gardenUpgrades.nectar || 0) * 0.10;
   player.luckBonus = (gardenUpgrades.luck || 0) * 0.05;
   player.exploreBonus = (gardenUpgrades.explore || 0);
+  // 不屈の花壇: ガッツ復活フラグ（このランで未使用ならtrue）
+  if ((gardenUpgrades.revival || 0) > 0) { player._revival = !revivalUsed; player._revivalHp = (gardenUpgrades.revival >= 2) ? 3 : 1; } else { player._revival = false; player._revivalHp = 1; }
+  // 記憶の花壇: 持ち越し祝福を適用
+  if (memoryBlessings.length > 0 && typeof BLESSING_DEFS !== 'undefined') {
+    for (const bid of memoryBlessings) {
+      const bdef = BLESSING_DEFS.find(b => b.id === bid);
+      if (bdef && typeof bdef.apply === 'function') { try { bdef.apply(); } catch(e) {} }
+    }
+  }
 }
 
 
@@ -128,6 +157,7 @@ function updateFade(dt) {
 // ===== GAME FLOW =====
 function startFloor() {
   if(typeof MONOLOGUES!=="undefined"&&Math.random()<0.6) setTimeout(()=>showBubble(MONOLOGUES[Math.floor(Math.random()*MONOLOGUES.length)]),800);
+  if (floor === 0 || floor === 1) { revivalUsed = false; } // 新ラン開始時に不屈リセット
   dialogMsg = null; dialogCallback = null;
   rng = mulberry32(Date.now() + floor);
   roomSpikes = []; roomMap = generateRoom(floor);

@@ -222,3 +222,121 @@ function drawTitle() {
   if (typeof fadeDir !== 'undefined' && fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
 }
 
+// ===== 記憶の花壇: 祝福持ち越し選択画面 =====
+function drawMemorySelect() {
+  // Background
+  ctx.fillStyle = '#0a0515';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Title area
+  const maxSel = Math.min((gardenUpgrades.memory || 1), activeBlessings.length);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700';
+  ctx.font = "bold 30px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('🌸 記憶の花壇', CW / 2, 52);
+  ctx.fillStyle = '#f0c0e0';
+  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('次のランに持ち越す祝福を ' + maxSel + ' 個選んでね', CW / 2, 82);
+  ctx.fillStyle = '#aaa';
+  ctx.font = "15px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('←→: 選ぶ  Z: 選択/解除  X: 決定', CW / 2, 108);
+
+  // Blessing cards
+  const blessings = activeBlessings;
+  const cardW = Math.min(160, (CW - 40) / Math.max(1, Math.min(blessings.length, 5)));
+  const cardH = 130;
+  const visMax = Math.min(blessings.length, Math.floor((CW - 40) / (cardW + 8)));
+  // Scroll window centered on cursor
+  let startIdx = Math.max(0, Math.min(memoryCursor - Math.floor(visMax / 2), blessings.length - visMax));
+  const totalW = visMax * (cardW + 8) - 8;
+  const startX = (CW - totalW) / 2;
+  const cardY = 140;
+
+  for (let i = 0; i < visMax; i++) {
+    const idx = startIdx + i;
+    if (idx >= blessings.length) break;
+    const b = blessings[idx];
+    const cx = startX + i * (cardW + 8);
+    const isCursor = (idx === memoryCursor);
+    const isChosen = memorySelected.has(b.id);
+
+    // Card background
+    ctx.save();
+    if (isCursor) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 16; }
+    ctx.fillStyle = isChosen ? 'rgba(255,215,0,0.22)' : isCursor ? 'rgba(255,255,255,0.12)' : 'rgba(30,10,50,0.75)';
+    ctx.strokeStyle = isChosen ? '#ffd700' : isCursor ? '#fff' : 'rgba(200,150,255,0.3)';
+    ctx.lineWidth = isChosen ? 2.5 : 1.5;
+    ctx.beginPath();
+    const r = 12;
+    ctx.moveTo(cx + r, cardY); ctx.lineTo(cx + cardW - r, cardY);
+    ctx.quadraticCurveTo(cx + cardW, cardY, cx + cardW, cardY + r);
+    ctx.lineTo(cx + cardW, cardY + cardH - r);
+    ctx.quadraticCurveTo(cx + cardW, cardY + cardH, cx + cardW - r, cardY + cardH);
+    ctx.lineTo(cx + r, cardY + cardH);
+    ctx.quadraticCurveTo(cx, cardY + cardH, cx, cardY + cardH - r);
+    ctx.lineTo(cx, cardY + r);
+    ctx.quadraticCurveTo(cx, cardY, cx + r, cardY);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // Icon
+    ctx.textAlign = 'center';
+    ctx.font = "36px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(b.icon || '✨', cx + cardW / 2, cardY + 46);
+
+    // Name
+    ctx.font = "bold 13px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = isChosen ? '#ffd700' : '#fff';
+    const nameTxt = b.name || b.id;
+    const shortName = nameTxt.length > 9 ? nameTxt.slice(0, 8) + '…' : nameTxt;
+    ctx.fillText(shortName, cx + cardW / 2, cardY + 68);
+
+    // Desc
+    ctx.font = "12px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = '#ccc';
+    const descTxt = b.desc || '';
+    const shortDesc = descTxt.length > 12 ? descTxt.slice(0, 11) + '…' : descTxt;
+    ctx.fillText(shortDesc, cx + cardW / 2, cardY + 86);
+
+    // Checkmark if selected
+    if (isChosen) {
+      ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText('✔', cx + cardW / 2, cardY + 108);
+    }
+  }
+
+  // Scroll arrows hint
+  if (startIdx > 0) { ctx.textAlign = 'center'; ctx.fillStyle = '#aaa'; ctx.font = "20px sans-serif"; ctx.fillText('◀', startX - 14, cardY + cardH / 2 + 8); }
+  if (startIdx + visMax < blessings.length) { ctx.textAlign = 'center'; ctx.fillStyle = '#aaa'; ctx.font = "20px sans-serif"; ctx.fillText('▶', startX + totalW + 14, cardY + cardH / 2 + 8); }
+
+  // Selected list
+  const selY = cardY + cardH + 22;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f0c0e0';
+  ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('選択中 [' + memorySelected.size + ' / ' + maxSel + ']', CW / 2, selY);
+
+  if (memorySelected.size > 0) {
+    const names = Array.from(memorySelected).map(bid => {
+      const bl = activeBlessings.find(b => b.id === bid);
+      return bl ? (bl.icon || '') + ' ' + (bl.name || bid) : bid;
+    }).join('  ');
+    ctx.fillStyle = '#ffd700';
+    ctx.font = "15px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(names.slice(0, 60), CW / 2, selY + 26);
+  }
+
+  // Confirm button hint
+  const confirmY = CH - 55;
+  ctx.fillStyle = memorySelected.size > 0 ? '#87ceeb' : 'rgba(255,255,255,0.3)';
+  ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+  if (Math.floor(Date.now() / 600) % 2 === 0 || memorySelected.size === 0) {
+    ctx.fillText('X キーで決定（0個でも進める）', CW / 2, confirmY);
+  }
+
+  ctx.textAlign = 'left';
+  // Fade
+  if (typeof fadeDir !== 'undefined' && fadeDir !== 0) { ctx.fillStyle = 'rgba(0,0,0,' + fadeAlpha + ')'; ctx.fillRect(0, 0, CW, CH); }
+}
+

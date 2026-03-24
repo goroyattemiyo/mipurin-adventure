@@ -1,3 +1,28 @@
+## v6.31 (2026-03-24) Sprint G-C: 花壇拡張（記憶・不屈）
+
+### Features
+- **G-C: 記憶の花壇 (🌸 memory)** (systems.js / update.js / ui_screens.js / render.js)
+  - クリア3回以上でアンロック。Lv1:1個、Lv2:2個、Lv3:3個の祝福を次ランへ持ち越せる
+  - エンディング画面で Z or X 決定後に `memorySelect` 画面へ遷移
+  - `memorySelect` 画面: ←→で選択カーソル移動、Z で祝福を選択/解除、X で確定
+  - 確定した祝福IDを `memoryBlessings[]` に保存 → 次ランの `applyGardenBonuses()` で即適用
+  - カード型UIで全所持祝福を表示（アイコン・名前・説明）、選択状態は金色ハイライト
+  - コスト: [50, 120, 250] 花粉
+
+- **G-C: 不屈の花壇 (🛡️ revival)** (systems.js / combat.js)
+  - クリア5回以上でアンロック。Lv1:HP1で復活、Lv2:HP3で復活
+  - 1ランに1回限り、HP0になった瞬間に `tryRevival()` が発動
+  - 発動時: 2秒無敵 + 金パーティクル12個 + 「🛡️ 不屈！ HP◯で復活！」フロート表示
+  - スパイク床・毒沼・敵接触すべての死亡判定に対応
+  - 使用後は `revivalUsed = true` → 同ラン中2回目は発動しない
+  - ラン開始時（floor=0 or 1）に自動リセット
+  - コスト: [80, 200] 花粉
+
+### Technical
+- `memoryCursor`, `memorySelected`, `memorySelectDest`, `startMemorySelect()` を systems.js に追加
+- `tryRevival()` 関数を combat.js に追加
+- render.js の draw() に `memorySelect` 状態ルーティング追加
+
 ## v6.30 (2026-03-24) Sprint H-A2: 環境ギミック
 
 ### Features

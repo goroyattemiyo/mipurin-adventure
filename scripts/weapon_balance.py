@@ -9,13 +9,13 @@ WEAPONS = [
     {"id": "vine_whip",        "name": "蔦鞭",         "dmgMul": 0.7, "range": 84,  "speed": 0.40, "tier": 1, "fx": "360"},
     {"id": "feather_shuriken", "name": "羽根手裏剣",   "dmgMul": 0.5, "range": 76,  "speed": 0.12, "tier": 1, "fx": "double"},
     {"id": "queen_staff",      "name": "女王の杖",     "dmgMul": 2.0, "range": 68,  "speed": 0.65, "tier": 1, "fx": "aoe"},
-    # Tier 2
-    {"id": "golden_needle",    "name": "蜂の金針",     "dmgMul": 1.3, "range": 68,  "speed": 0.16, "tier": 2, "fx": "double"},
-    {"id": "amber_cannon",     "name": "蜜の大砲",     "dmgMul": 1.8, "range": 120, "speed": 0.45, "tier": 2, "fx": "none"},
-    {"id": "holy_shield",      "name": "聖花の盾",     "dmgMul": 1.0, "range": 60,  "speed": 0.30, "tier": 2, "fx": "none"},
-    {"id": "cursed_thorn",     "name": "呪いの荊",     "dmgMul": 0.9, "range": 96,  "speed": 0.38, "tier": 2, "fx": "360"},
-    {"id": "storm_wing",       "name": "翼の嵐",       "dmgMul": 0.7, "range": 84,  "speed": 0.10, "tier": 2, "fx": "double"},
-    {"id": "queen_true_staff", "name": "女王の真杖",   "dmgMul": 2.5, "range": 76,  "speed": 0.50, "tier": 2, "fx": "aoe"},
+    # Tier 2 — speed adjusted 2026-03-24 to ensure T2 Lv0 >= T1 Lv3 * 1.15
+    {"id": "golden_needle",    "name": "蜂の金針",     "dmgMul": 1.3, "range": 68,  "speed": 0.064, "tier": 2, "fx": "double"},
+    {"id": "amber_cannon",     "name": "蜜の大砲",     "dmgMul": 1.8, "range": 120, "speed": 0.30,  "tier": 2, "fx": "none"},
+    {"id": "holy_shield",      "name": "聖花の盾",     "dmgMul": 1.0, "range": 60,  "speed": 0.16,  "tier": 2, "fx": "none"},
+    {"id": "cursed_thorn",     "name": "呪いの荊",     "dmgMul": 0.9, "range": 96,  "speed": 0.19,  "tier": 2, "fx": "360"},
+    {"id": "storm_wing",       "name": "翼の嵐",       "dmgMul": 0.7, "range": 84,  "speed": 0.033, "tier": 2, "fx": "double"},
+    {"id": "queen_true_staff", "name": "女王の真杖",   "dmgMul": 2.5, "range": 76,  "speed": 0.47,  "tier": 2, "fx": "aoe"},
 ]
 
 UPGRADE_MAX = 3

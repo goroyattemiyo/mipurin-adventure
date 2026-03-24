@@ -32,11 +32,16 @@ function drawPrologue() {
 
 function drawEnding() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-  const endType = (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true' : (activeBlessings.length >= 8) ? 'good' : 'normal';
+  // 隠しエンディング判定: 図鑑コンプリート && loopCount >= 1
+  const _encComp = (typeof isEncyclopediaComplete === 'function') && isEncyclopediaComplete();
+  const _loopOk  = (typeof loopCount !== 'undefined') && loopCount >= 1;
+  const endType = (_encComp && _loopOk) ? 'hidden'
+    : (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true'
+    : (activeBlessings.length >= 8) ? 'good' : 'normal';
   // --- Image: left side ---
   ctx.save(); ctx.globalAlpha = 0.9;
   const imgX = 40, imgY = 80, imgW = CW * 0.4, imgH = imgW * 0.85;
-  const endImgKey = endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a';
+  const endImgKey = endType === 'hidden' ? 'ending_c' : endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a';
   if (endingImgs[endImgKey]) {
     ctx.drawImage(endingImgs[endImgKey], imgX, imgY, imgW, imgH);
   } else if (mipurinReady) {
@@ -61,20 +66,36 @@ function drawEnding() {
     ctx.fillText(loopCount + '\u5468\u76EE\u30AF\u30EA\u30A2\uFF01', tcx, py + 35);
   }
   // Title
-  const endTitle = endType === 'true' ? '\u2728 \u30AF\u30EA\u30B9\u30BF\u30EB\u306E\u518D\u751F \u2728' : endType === 'good' ? '\uD83C\uDF38 \u304B\u3051\u3089\u306E\u5149 \uD83C\uDF38' : '\u5C0F\u3055\u306A\u5E0C\u671B';
+  const endTitle = endType === 'hidden' ? '🌟 解放の歌 🌟'
+    : endType === 'true' ? '✨ クリスタルの再生 ✨'
+    : endType === 'good' ? '🌸 かけらの光 🌸' : '小さな希望';
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText(endTitle, tcx, py + 75);
   // Story
   ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  if (endType === 'true') {
-    ctx.fillText('\u3059\u3079\u3066\u306E\u304B\u3051\u3089\u304C\u96C6\u307E\u308A\u3001\u30AF\u30EA\u30B9\u30BF\u30EB\u304C\u5149\u3092\u53D6\u308A\u623B\u3057\u305F\u3002', tcx, py + 115);
-    ctx.fillText('\u5973\u738B\u3055\u307E\u306E\u58F0\u304C\u805E\u3053\u3048\u305F\u2500\u2500\u300C\u3042\u308A\u304C\u3068\u3046\u3001\u30DF\u30D7\u30EA\u30F3\u300D', tcx, py + 145);
+  if (endType === 'hidden') {
+    // 隠しエンディング専用: 紫グロウ演出 + 特別ストーリー
+    ctx.save();
+    ctx.shadowColor = '#a78bfa'; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#e0ccff';
+    ctx.fillText('すべての影を見た者よ。', tcx, py + 108);
+    ctx.fillText('砕けたクリスタルが、いま再び歌い始める——', tcx, py + 133);
+    ctx.fillText('ダークビーたちに光が戻った。', tcx, py + 158);
+    ctx.restore();
+    // スペシャルバッジ
+    ctx.fillStyle = 'rgba(167,139,250,0.18)'; ctx.fillRect(tcx - 160, py + 168, 320, 26);
+    ctx.fillStyle = '#a78bfa'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('🖤 図鑑コンプリート + ループクリア達成！', tcx, py + 185);
+    ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  } else if (endType === 'true') {
+    ctx.fillText('すべてのかけらが集まり、クリスタルが光を取り戻した。', tcx, py + 115);
+    ctx.fillText('女王さまの声が聞こえた——「ありがとう、ミプリン」', tcx, py + 145);
   } else if (endType === 'good') {
-    ctx.fillText('\u305F\u304F\u3055\u3093\u306E\u304B\u3051\u3089\u3092\u96C6\u3081\u3001\u82B1\u306E\u56FD\u306B\u8272\u304C\u623B\u308A\u306F\u3058\u3081\u305F\u3002', tcx, py + 115);
-    ctx.fillText('\u30D5\u30ED\u30FC\u30E9\u306E\u82B1\u58C7\u306B\u898B\u305F\u3053\u3068\u306E\u306A\u3044\u82B1\u304C\u54B2\u3044\u305F\u3002', tcx, py + 145);
+    ctx.fillText('たくさんのかけらを集め、花の国に色が戻りはじめた。', tcx, py + 115);
+    ctx.fillText('フローラの花壇に見たことのない花が咲いた。', tcx, py + 145);
   } else {
-    ctx.fillText('\u95C7\u306E\u86FE\u3092\u5012\u3057\u3001\u82B1\u7C89\u304C\u5C11\u3057\u305A\u3064\u623B\u308A\u306F\u3058\u3081\u305F\u3002', tcx, py + 115);
-    ctx.fillText('\u30AF\u30EA\u30B9\u30BF\u30EB\u306F\u307E\u3060\u7815\u3051\u305F\u307E\u307E\u2026 \u3067\u3082\u5E0C\u671B\u306E\u5149\u306F\u706F\u3063\u305F\u3002', tcx, py + 145);
+    ctx.fillText('闇の蛾を倒し、花粉が少しずつ戻りはじめた。', tcx, py + 115);
+    ctx.fillText('クリスタルはまだ砕けたまま… でも希望の光は灯った。', tcx, py + 145);
   }
   // Stats
   ctx.fillStyle = '#ccc'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";

@@ -22,10 +22,12 @@ function updateCombat(dt) {
   }
 
   let mx = 0, my = 0;
-    if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
+  if (isDown('ArrowLeft') || isDown('KeyA')) mx -= 1;
   if (isDown('ArrowRight') || isDown('KeyD')) mx += 1;
   if (isDown('ArrowUp') || isDown('KeyW')) my -= 1;
   if (isDown('ArrowDown') || isDown('KeyS')) my += 1;
+  // スマホジョイスティック: touch.jsが4方向スナップ済みなので斜め入力は来ない
+  // キーボード斜め入力のみ0.707正規化（スマホ操作性を損なわない）
   if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
   if (mx !== 0 || my !== 0) {
     player.atkDir.x = Math.sign(mx || 0); player.atkDir.y = Math.sign(my || 0);

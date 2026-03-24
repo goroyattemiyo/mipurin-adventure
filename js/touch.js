@@ -56,6 +56,8 @@ function getVisibleButtons() {
 }
 
 // --- Joystick keys injection ---
+// スマホ操作はタッチで4方向スナップ: |dx|と|dy|の大きい軸のみを採用
+// → 斜め入力を排除して攻撃が届かない問題を解消
 const JOYSTICK_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
 let joystickKeysActive = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
 
@@ -64,10 +66,16 @@ function updateJoystickKeys() {
   if (joystick.active) {
     const mag = Math.hypot(joystick.dx, joystick.dy);
     if (mag > joystick.deadzone) {
-      if (joystick.dy < -0.3) newState.KeyW = true;
-      if (joystick.dy > 0.3)  newState.KeyS = true;
-      if (joystick.dx < -0.3) newState.KeyA = true;
-      if (joystick.dx > 0.3)  newState.KeyD = true;
+      // 4方向スナップ: 絶対値が大きい軸のみを採用（斜め同時入力を禁止）
+      if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
+        // 横方向優先
+        if (joystick.dx < -0.28) newState.KeyA = true;
+        if (joystick.dx >  0.28) newState.KeyD = true;
+      } else {
+        // 縦方向優先
+        if (joystick.dy < -0.28) newState.KeyW = true;
+        if (joystick.dy >  0.28) newState.KeyS = true;
+      }
     }
   }
   for (const k of JOYSTICK_KEYS) {
@@ -198,6 +206,48 @@ function onTouchStart(e) {
       return;
     }
 
+    // --- blessing: カード直タップで選択 ---
+    var gs = typeof gameState !== 'undefined' ? gameState : '';
+    if (gs === 'blessing' && typeof blessingChoices !== 'undefined') {
+      // カード座標は drawBlessing() と完全に一致させる
+      // bxBase = CW/2 - 300 + i*220, by=120, bw=180, bh=220
+      for (var ci = 0; ci < blessingChoices.length; ci++) {
+        var cbx = CW / 2 - 300 + ci * 220, cby = 120, cbw = 180, cbh = 220;
+        // スケール・スライドアニメ中でも押しやすいよう少し余裕を持たせる (+20px)
+        if (pos.x >= cbx - 10 && pos.x <= cbx + cbw + 10 && pos.y >= cby - 10 && pos.y <= cby + cbh + 10) {
+          if (typeof selectCursor !== 'undefined') selectCursor = ci;
+          // Zキー押下を発火させて既存ロジックを再利用
+          keys['KeyZ'] = true; pressed['KeyZ'] = true;
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          // 少し後にキーを解放（1フレーム以上保持）
+          setTimeout(function() { keys['KeyZ'] = false; }, 80);
+          return;
+        }
+      }
+      // カード外タップはXキー（リロール）チェック
+    }
+
+    // --- shop: アイテムカード直タップ ---
+    if (gs === 'shop' && typeof shopItems !== 'undefined' && shopItems.length > 0) {
+      // drawShop の実際の座標計算に合わせる
+      // cardW=160, padX=14, startX=CW/2-totalW/2, startY=CH*0.48+14, cardH=200
+      var sCardW2 = 160, sPadX2 = 14, sCardH2 = 200;
+      var sTotalW = shopItems.length * sCardW2 + (shopItems.length - 1) * sPadX2;
+      var sStartX2 = CW / 2 - sTotalW / 2;
+      var sStartY2 = CH * 0.48 + 14;
+      for (var si2 = 0; si2 < shopItems.length; si2++) {
+        var scx = sStartX2 + si2 * (sCardW2 + sPadX2);
+        var scy = sStartY2;
+        if (pos.x >= scx - 8 && pos.x <= scx + sCardW2 + 8 && pos.y >= scy - 8 && pos.y <= scy + sCardH2 + 8) {
+          if (typeof selectCursor !== 'undefined') selectCursor = si2;
+          keys['KeyZ'] = true; pressed['KeyZ'] = true;
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          setTimeout(function() { keys['KeyZ'] = false; }, 80);
+          return;
+        }
+      }
+    }
+
     // --- Normal mode: check context-visible buttons ---
     var visible = getVisibleButtons();
     var hitBtn = false;
@@ -285,8 +335,17 @@ function drawTouchUI() {
   ctx.moveTo(joystick.cx - joystick.radius + 10, joystick.cy);
   ctx.lineTo(joystick.cx + joystick.radius - 10, joystick.cy);
   ctx.stroke();
-  var knobX = joystick.cx + joystick.dx * joystick.radius * 0.7;
-  var knobY = joystick.cy + joystick.dy * joystick.radius * 0.7;
+  // 4方向スナップに合わせてノブ位置を表示（ビジュアルも軸スナップ）
+  var snappedDx = 0, snappedDy = 0;
+  if (joystick.active && Math.hypot(joystick.dx, joystick.dy) > joystick.deadzone) {
+    if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
+      snappedDx = joystick.dx > 0 ? 1 : -1;
+    } else {
+      snappedDy = joystick.dy > 0 ? 1 : -1;
+    }
+  }
+  var knobX = joystick.cx + (joystick.active ? joystick.dx : snappedDx) * joystick.radius * 0.65;
+  var knobY = joystick.cy + (joystick.active ? joystick.dy : snappedDy) * joystick.radius * 0.65;
   ctx.globalAlpha = joystick.active ? 0.5 : 0.2;
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(knobX, knobY, joystick.knobRadius, 0, Math.PI * 2); ctx.fill();

@@ -135,10 +135,14 @@ function spawnWave() {
 // ===== BOSS =====
 let boss = null;
 const BOSS_DEFS = [
-  { id: 'queen_hornet', name: 'スズメバチの女王', hp: 30, speed: 70, w: 112, h: 112, dmg: 3, color: '#f39c12', pattern: 'boss_charge', score: 200, phases: 2 },
-  { id: 'fungus_king', name: 'キノコの王', hp: 45, speed: 40, w: 128, h: 128, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot', score: 300, phases: 2 },
-  { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 128, h: 128, dmg: 4, color: '#3498db', pattern: 'boss_slam', score: 400, phases: 3 },
-  { id: 'shadow_moth', name: '闇の蛾', hp: 50, speed: 90, w: 104, h: 104, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2 }];
+  { id: 'queen_hornet',  name: 'スズメバチの女王',   hp: 30, speed: 70, w: 112, h: 112, dmg: 3, color: '#f39c12', pattern: 'boss_charge',   score: 200, phases: 2,
+    lore: 'かつては花の国の守護者だった。クリスタルが砕けた日から心が闇に染まり、花粉を奪い続けている。本当はミプリンを試しているのかもしれない…' },
+  { id: 'fungus_king',   name: 'キノコの王',         hp: 45, speed: 40, w: 128, h: 128, dmg: 2, color: '#e74c3c', pattern: 'boss_shoot',    score: 300, phases: 2,
+    lore: '地底の洞窟に根を張る菌糸の王。クリスタルの欠片を栄養に巨大化した。胞子の雨は花を枯らすが、王の内部には一輪の生きた花が宿っているという。' },
+  { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 128, h: 128, dmg: 4, color: '#3498db', pattern: 'boss_slam',     score: 400, phases: 3,
+    lore: '女王が遠い昔に作った不滅の番人。封印の力が失われ、命令もなく暴走を続ける。胸の核はクリスタルの最大の破片。砕けたとき、青い涙が落ちたように見えた。' },
+  { id: 'shadow_moth',   name: '闇の蛾',             hp: 50, speed: 90, w: 104, h: 104, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2,
+    lore: 'クリスタルの最後の守り手だった夜の蛾。砕け散った光の代わりに闇をまとい、世界の終わりを待っている。その羽の紋様はかつて「希望」を意味する古代語だ。' }];
 
 const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }

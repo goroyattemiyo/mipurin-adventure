@@ -8,7 +8,8 @@ const NODE_TYPES = [
   { id:'elite',   icon:'💀', name:'エリート戦', desc:'強敵！レア祝福確定',     color:'#8e44ad', weight:12 },
   { id:'shop',    icon:'🏪', name:'ショップ',   desc:'花粉でお買い物',         color:'#f39c12', weight:15 },
   { id:'rest',    icon:'🌿', name:'きゅうけい', desc:'HP30%回復',              color:'#2ecc71', weight:18 },
-  { id:'event',   icon:'❓', name:'イベント',   desc:'何が起こるかな…？',      color:'#3498db', weight:15 }
+  { id:'event',   icon:'❓', name:'イベント',   desc:'何が起こるかな…？',      color:'#3498db', weight:15 },
+  { id:'chest',   icon:'💎', name:'宝箱',       desc:'何か入ってるかも！',     color:'#f1c40f', weight:8  }
 ];
 
 const EVENT_POOL = [
@@ -210,6 +211,50 @@ function executeNode(node) {
     eventPhase = 'choose';
     treeCursor.col = 0;
     gameState = 'event';
+  } else if (node.id === 'chest') {
+    openChestNode();
+  }
+}
+
+// ===== CHEST NODE =====
+function openChestNode() {
+  const roll = Math.random();
+  if (roll < 0.40) {
+    // 祝福（レア寄り: rarePlus があれば優先、なければ通常 pickBlessings）
+    const rarePlus = BLESSING_POOL.filter(b => b.rarity === 'rare' || b.rarity === 'legend');
+    const pool = rarePlus.length >= 3 ? rarePlus : BLESSING_POOL;
+    const used = new Set(activeBlessings.map(b => b.id));
+    const candidates = pool.filter(b => !used.has(b.id));
+    const b = candidates.length > 0
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : pickBlessings()[0];
+    activeBlessings.push(b); b.apply();
+    emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 20, 100, 0.6);
+    Audio.blessing();
+    showDialog('ミプリン', ['宝箱をあけたよ！', b.icon + ' ' + b.name + ' をゲット！'], function() { finishTree(); });
+  } else if (roll < 0.75) {
+    // 花粉 +10〜15
+    const amt = 10 + Math.floor(Math.random() * 6);
+    pollen += amt;
+    emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 15, 80, 0.5);
+    Audio.item_get();
+    showDialog('ミプリン', ['宝箱をあけたよ！', '🌸 花粉が ' + amt + ' こ 入ってた！'], function() { finishTree(); });
+  } else {
+    // 消耗品
+    const cdef = CONSUMABLE_DEFS[Math.floor(Math.random() * CONSUMABLE_DEFS.length)];
+    const slot = player.consumables.indexOf(null);
+    if (slot !== -1) {
+      player.consumables[slot] = {...cdef};
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 15, 80, 0.5);
+      Audio.item_get();
+      showDialog('ミプリン', ['宝箱をあけたよ！', cdef.icon + ' ' + cdef.name + ' ゲット！'], function() { finishTree(); });
+    } else {
+      // 消耗品スロットが埋まっている → 花粉に変換
+      pollen += 8;
+      emitParticles(player.x + player.w/2, player.y + player.h/2, '#f1c40f', 15, 80, 0.5);
+      Audio.item_get();
+      showDialog('ミプリン', ['宝箱をあけたよ！', 'カバンがいっぱい…花粉 8こ もらった！'], function() { finishTree(); });
+    }
   }
 }
 

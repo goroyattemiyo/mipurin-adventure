@@ -241,6 +241,16 @@ for eid in enemy_ids:
     check(f"sprite exists for '{eid}'", eid in sprite_keys or eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth'],
         "missing from SPRITE_MAP")
 
+# NODE_TYPES must include 'chest' node (H-A-1)
+nodemap_js = read("js/nodemap.js")
+node_ids = re.findall(r"id:'(\w+)'", nodemap_js)
+check("NODE_TYPES contains 'chest'", 'chest' in node_ids,
+    "chest node missing from NODE_TYPES")
+check("openChestNode function defined", 'function openChestNode' in nodemap_js,
+    "openChestNode not defined in nodemap.js")
+check("executeNode handles 'chest'", "node.id === 'chest'" in nodemap_js,
+    "chest branch missing from executeNode")
+
 # CHARM_DEFS ids must be unique
 charms_js = read("js/charms.js")
 charm_ids = re.findall(r"id:\s*'([^']+)'", charms_js)

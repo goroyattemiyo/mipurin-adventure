@@ -41,7 +41,7 @@ function updateCombat(dt) {
    Audio.player_hurt();
    emitParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 5, 80, 0.3);
    showFloat('いたっ！ トゲ床だ！', 1.5, MSG_COLORS.warn);
-   if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
+   if (player.hp <= 0) { if (tryRevival()) {} else { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); } }
     }
   }
   // H-A2: 水場(tile=3) — 移動速度-40%、毒沼(forest/abyss)はtimer付きHP-1
@@ -60,7 +60,7 @@ function updateCombat(dt) {
           player.hp -= 1; player.invTimer = 0.3;
           emitParticles(player.x + player.w/2, player.y + player.h/2, '#27ae60', 4, 50, 0.3);
           showFloat('💧 毒沼！ HP-1', 1.5, MSG_COLORS.warn);
-          if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
+          if (player.hp <= 0) { if (tryRevival()) {} else { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); } }
         }
       } else {
         player._poisonWaterTimer = 0;
@@ -240,7 +240,7 @@ function updateCombat(dt) {
     const angle = Math.atan2(player.y - en.y, player.x - en.x); moveWithCollision(player, Math.cos(angle) * 30, Math.sin(angle) * 30);
     if (player.thorns) { en.hp -= player.thorns; en.hitFlash = 0.1; spawnDmg(en.x + en.w / 2, en.y, player.thorns, '#c0392b'); }
     } // パリィelse閉じ
-    if (player.hp <= 0) { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(0.8); }
+    if (player.hp <= 0) { if (tryRevival()) {} else { gameState = 'dead'; deadTimer = 0; Audio.game_over(); stopBGM(0.8); } }
    }
     }
   }
@@ -298,6 +298,20 @@ function updateCombat(dt) {
   updateProjectiles(dt); updateDrops(dt); updateParticles(dt); if(typeof updateBubbles==="function") updateBubbles(dt);
   for (let i = dmgNumbers.length - 1; i >= 0; i--) { dmgNumbers[i].life -= dt; dmgNumbers[i].y -= 40 * dt; if (dmgNumbers[i].life <= 0) dmgNumbers.splice(i, 1); }
   shakeTimer = Math.max(0, shakeTimer - dt);
+}
+
+// === 不屈の花壇: Guts Revival ===
+// Returns true if revival triggered (player keeps going), false if dead
+function tryRevival() {
+  if (!player._revival) return false;
+  player._revival = false;
+  revivalUsed = true;
+  player.hp = player._revivalHp || 1;
+  player.invTimer = 2.0; // 2秒の無敵
+  emitParticles(player.x + player.w/2, player.y + player.h/2, '#ffd700', 12, 100, 0.6);
+  showFloat('🛡️ 不屈！ HP' + player.hp + 'で復活！', 2.5, '#ffd700');
+  Audio.item_get();
+  return true;
 }
 
 // === HP Low-Pass Filter (Sprint G-B) ===

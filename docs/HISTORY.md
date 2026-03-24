@@ -106,8 +106,9 @@
 | perf | スマホ描画最適化3件(DPR上限/rectキャッシュ/OffscreenCanvas) | v6.28 | ✅ |
 | Sprint H-A-3 | 巨大化はちみつ(🐻 ATK+3・巨大描画×1.6・オーラ・ドロップ/ショップ販売) | v6.29 | ✅ |
 | Sprint H-A2  | 環境ギミック(💧水場/🌿草むら/💥爆発樽 テーマ別配置、gimmicks.js分離) | v6.30 | ✅ |
+| Sprint G-C2  | 花壇拡張（🌸記憶の花壇・🛡️不屈の花壇）memorySelect UI・tryRevival() Guts実装 | v6.31 | ✅ |
 
-Phase 1 目標 55/100 → 達成済み。現在 69.8/100（v6.30）。Phase 2 目標 73/100。
+Phase 1 目標 55/100 → 達成済み。現在 70.8/100（v6.31）。Phase 2 目標 73/100。
 
 ### COUNCIL議論の結論（Synapse Council）
 

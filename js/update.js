@@ -28,19 +28,56 @@ function update(dt) {
     if (wasPressed('KeyZ')) {
    totalClears++; checkGardenUnlocks();
    nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0)));
-   saveMeta(); stopBGM(); titleGuard = 1.5; gameState = 'title';
+   saveMeta(); stopBGM(); titleGuard = 1.5;
+   // 記憶の花壇: タイトルへ帰る前に祝福選択
+   if ((gardenUpgrades.memory || 0) > 0 && activeBlessings.length > 0) {
+     startMemorySelect('title'); return;
+   }
+   gameState = 'title';
     }
     if (wasPressed('KeyX')) {
    totalClears++; checkGardenUnlocks();
    nectar += Math.ceil(runNectar * (1 + (player.nectarMul || 0)));
    saveMeta();
    loopCount++;
+   revivalUsed = false;
+   // 記憶の花壇: ループ前に祝福選択
+   if ((gardenUpgrades.memory || 0) > 0 && activeBlessings.length > 0) {
+     startMemorySelect('loop'); return;
+   }
    floor = 0; runNectar = 0; score = 0;
    player.hp = player.maxHp;
    player.invTimer = 0; player.attacking = false;
    player._giantTimer = 0; player._giantAtkBoost = 0;
    stopBGM();
    nextFloor();
+    }
+    return;
+  }
+  // ===== 記憶の花壇: 祝福選択画面 =====
+  if (gameState === 'memorySelect') {
+    const maxSel = Math.min((gardenUpgrades.memory || 1), activeBlessings.length);
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { memoryCursor = (memoryCursor - 1 + activeBlessings.length) % activeBlessings.length; Audio.menu_move(); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { memoryCursor = (memoryCursor + 1) % activeBlessings.length; Audio.menu_move(); }
+    if (wasPressed('KeyZ') || wasPressed('Space')) {
+      const bid = activeBlessings[memoryCursor].id;
+      if (memorySelected.has(bid)) { memorySelected.delete(bid); Audio.menu_move(); }
+      else if (memorySelected.size < maxSel) { memorySelected.add(bid); Audio.menu_move(); }
+    }
+    if (wasPressed('KeyX') || wasPressed('Enter')) {
+      // 確定
+      memoryBlessings = Array.from(memorySelected);
+      saveMeta();
+      const dest = memorySelectDest || 'title';
+      if (dest === 'loop') {
+        floor = 0; runNectar = 0; score = 0;
+        player.hp = player.maxHp;
+        player.invTimer = 0; player.attacking = false;
+        player._giantTimer = 0; player._giantAtkBoost = 0;
+        stopBGM(); nextFloor();
+      } else {
+        gameState = 'title'; titleGuard = 1.5;
+      }
     }
     return;
   }

@@ -552,6 +552,7 @@ function drawGameState() {
 
 function draw() {
   if (gameState === 'ending') { drawEnding(); return; }
+  if (gameState === 'memorySelect') { drawMemorySelect(); return; }
   if (gameState === 'prologue') { drawPrologue(); return; } if (gameState === 'garden') { drawGarden(); return; }
   if (gameState === 'title') { drawTitle(); return; }
   if (gameState === 'cutin') {

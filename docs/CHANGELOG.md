@@ -1,3 +1,26 @@
+## 2026-03-24 — Sprint H-C: 百科事典ロア + 隠しED強化
+
+### feat
+- enemies.js: 全12種通常敵のloreを2~3文に拡充（世界観深化）
+- combat.js: ボス撃破後にBOSS_DEFSのloreを「記録」ダイアログとして表示
+- nodemap.js: 既存8イベントにフレーバーテキスト追加、新規2イベント追加（計10）
+- ui_screens.js: 隠しエンディングに専用BGM(end_c)、追加ストーリー2行、金色パーティクル演出
+
+### fix
+- data.js/render.js: 35KB超過を分割で解消 (data_room.js, render_entities.js 新設)
+- ui.js: 祝福カード背景を暗色に変更（モバイルで文字が読めない問題）
+- touch.js: 祝福タップを2段階化（1tap=選択、2tap=決定）
+- update.js: selectCursor初期値を-1に変更（ワンタップ即決定バグ修正）
+- bgm.js: トラック別MP3音量テーブル(MP3_VOL)導入で音量差を解消
+
+### refactor
+- data.js → data.js + data_room.js (26.4KB + 8.9KB)
+- render.js → render.js + render_entities.js (16.8KB + 18.2KB)
+
+### stats
+- Tests: 157/157 PASS
+- Score: 74.7/100 (Phase 2 target 73 達成)
+
 ## v6.33 (2026-03-24) Sprint: スマホ操作改善 + H-C 図鑑Lore/隠しエンディング
 
 ### Features

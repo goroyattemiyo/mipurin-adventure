@@ -207,8 +207,8 @@ UI・描画変更後は以下を実施:
 
 ## 12. 技術的負債台帳
 
-    #1 render.js 30.7KB（35KB上限に迫る） -- 中 -- 要監視
-    #2 data.js 30.2KB（同上） -- 中 -- 要監視
+    #1 render.js 16.8 KB（35KB上限に迫る） -- 中 -- 要監視
+    #2 data.js 26.4 KB（同上） -- 中 -- 要監視
     #3 未使用BGM: end_b.mp3, end_c.mp3 (計8.5MB) -- 低 -- 未着手
     #4 Tier2武器スプライトがTier1と同一画像 -- 低 -- 未着手
     #5 モンスター色とバリアント名の不一致 -- 中 -- 未着手
@@ -219,18 +219,18 @@ UI・描画変更後は以下を実施:
 ## 13. ファイルサイズ監視
 
     js/game.js        11.4KB  OK
-    js/data.js        29.0KB  要注意
+    js/data.js 26.4 KB  要注意
     js/bgm.js          9.5KB  OK
     js/enemies.js     14.5KB  OK
     js/blessings.js   20.1KB  OK
     js/systems.js     16.1KB  OK
     js/nodemap.js     13.1KB  OK
-    js/equip_ui.js    17.5KB  OK
-    js/ui.js          29.5KB  要注意
+    js/equip_ui.js 31.6 KB  OK
+    js/ui.js 31.6 KB  要注意
     js/ui_screens.js  12.6KB  OK
     js/combat.js      16.9KB  OK
     js/update.js      17.9KB  OK
-    js/render.js      30.7KB  要注意
+    js/render.js 16.8 KB  要注意
     js/touch.js       12.9KB  OK
     js/rarity.js       1.5KB  OK
     js/charms.js       4.2KB  OK

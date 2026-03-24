@@ -28,7 +28,7 @@ JS_FILES = [
     "js/blessings.js", "js/systems.js", "js/nodemap.js",
     "js/equip_ui.js", "js/ui.js", "js/ui_screens.js",
     "js/combat.js", "js/update.js", "js/render.js", "js/touch.js",
-    "js/rarity.js", "js/charms.js", "js/gimmicks.js"
+    "js/rarity.js", "js/charms.js", "js/gimmicks.js", "js/lore.js"
 ]
 for f in JS_FILES:
     exists = os.path.exists(f)

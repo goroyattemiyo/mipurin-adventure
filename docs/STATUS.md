@@ -1,20 +1,20 @@
 # ミプリンの冒険 — 開発ステータス
 
-最終更新: 2026-03-24 (v6.32)
+最終更新: 2026-03-24 (v6.33)
 
 ---
 
 ## 1. 現在の状態
 
-- バージョン: v6.32
-- スコア: 72.3/100 (目標 Phase 2: 73)
+- バージョン: v6.33
+- スコア: 73.3/100 (目標 Phase 2: 73)
 - ブランチ: main
 - テスト: 153/153 PASS
 - JS: 18ファイル (game/data/bgm/enemies/blessings/systems/nodemap/equip_ui/ui/shop_ui/ui_screens/combat/update/render/touch/rarity/charms/gimmicks)
 
 ## 2. スコア推定 (v6.30)
 
-| # | 項目 | v6.31 | v6.32 | Phase2目標 |
+| # | 項目 | v6.31 | v6.33 | Phase2目標 |
 |---|---|---|---|---|
 | 1 | コアループ | 8.3 | 8.3 | 8 |
 | 2 | メタ進行 | 7.0 | 7.0 | 7 |

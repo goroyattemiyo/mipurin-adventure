@@ -720,6 +720,8 @@ function drawBgParticles() {
   ctx.globalAlpha = 1;
 }
 
+// WORLD_LORE と isEncyclopediaComplete() は js/lore.js に移動
+
 // ===== UI ANIMATION STATE (Sprint E Step 3) =====
 let blessingAnimTimer = 0;    // blessing card slide-in timer
 let hpBounceTimer = 0;        // HP heart bounce on damage

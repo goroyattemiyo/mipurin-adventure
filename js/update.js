@@ -143,13 +143,19 @@ function update(dt) {
    
     
     if (inventoryTab === 1) {
-      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = 0; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
-      if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = 1; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      // 3サブタブ: 0=いきもの, 1=ぶき, 2=せかい
+      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = Math.max(0, collectionSubTab - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = Math.min(2, collectionSubTab + 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
     
       // Enemy collection scroll
       if (collectionSubTab === 0) {
         if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof collectionScroll !== 'undefined') collectionScroll = Math.max(0, collectionScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
         if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof collectionScroll !== 'undefined') collectionScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      }
+      // World lore scroll
+      if (collectionSubTab === 2) {
+        if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll = Math.max(0, worldLoreScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+        if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
       }
     }
     if (inventoryTab === 2) {

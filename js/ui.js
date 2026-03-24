@@ -86,20 +86,22 @@ function drawInventoryItems() {
 
 function drawCollectionTab() {
   var F = "'M PLUS Rounded 1c', sans-serif";
-  var subTabs = ['\u3044\u304d\u3082\u306e', '\u3076\u304d'];
+  // 3 sub-tabs: 0=いきもの, 1=ぶき, 2=せかい
+  var subTabs = ['\u3044\u304d\u3082\u306e', '\u3076\u304d', '\u305b\u304b\u3044'];
   for (var si = 0; si < subTabs.length; si++) {
-    var stx = 200 + si * 180, sty = 120;
+    var stx = 180 + si * 160, sty = 120;
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(stx - 60, sty - 16, 120, 32);
+    ctx.fillRect(stx - 56, sty - 16, 112, 32);
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#000' : '#ccc';
     ctx.font = 'bold 18px ' + F; ctx.textAlign = 'center';
     ctx.fillText(subTabs[si], stx, sty + 6);
   }
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 290, 155);
+  ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 340, 155);
   ctx.textAlign = 'left';
   if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) { drawWeaponCollection(); return; }
+  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 2) { drawWorldLoreTab(); return; }
 
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
   ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
@@ -203,8 +205,8 @@ function drawCollectionTab() {
       ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
       ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36);
       if (ek.lore) {
-        ctx.fillStyle = '#888'; ctx.font = '11px ' + F;
-        var ls = ek.lore.length > 45 ? ek.lore.slice(0, 45) + '..' : ek.lore;
+        ctx.fillStyle = '#aaa'; ctx.font = '11px ' + F;
+        var ls = ek.lore.length > 55 ? ek.lore.slice(0, 55) + '\u2026' : ek.lore;
         ctx.fillText(ls, txX, ey + 52);
       }
     } else {
@@ -228,6 +230,98 @@ function drawCollectionTab() {
     ctx.textAlign = 'left';
   }
 
+  // 図鑑コンプリートバッジ
+  if (typeof isEncyclopediaComplete === 'function' && isEncyclopediaComplete()) {
+    ctx.fillStyle = 'rgba(255,215,0,0.15)';
+    ctx.fillRect(CW - 230, 185, 210, 30);
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
+    ctx.fillText('🌟 図鑑コンプリート！', CW - 125, 205);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ===== 世界ロアタブ (H-C) =====
+// let worldLoreScroll は update.js から参照するため宣言はここに
+var worldLoreScroll = 0;
+
+function drawWorldLoreTab() {
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  var tc = typeof totalClears !== 'undefined' ? totalClears : 0;
+  var lores = (typeof WORLD_LORE !== 'undefined') ? WORLD_LORE : [];
+
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
+  ctx.fillText('🌍 せかいのきろく', 120, 190);
+
+  // アンロック済みエントリ
+  var unlocked = lores.filter(function(e) { return e.minClears <= tc; });
+  var locked = lores.filter(function(e) { return e.minClears > tc; });
+
+  // 進捗バー
+  ctx.fillStyle = '#333'; ctx.fillRect(120, 200, 400, 14);
+  ctx.fillStyle = '#a78bfa'; ctx.fillRect(120, 200, 400 * (unlocked.length / Math.max(1, lores.length)), 14);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px ' + F; ctx.textAlign = 'center';
+  ctx.fillText(unlocked.length + ' / ' + lores.length, 320, 211);
+  ctx.textAlign = 'left';
+
+  var cardH2 = 90, padY2 = 6, startY2 = 225, startX2 = 120;
+  var cardW2 = CW - 250;
+  var maxRows2 = Math.floor((CH - 80 - startY2) / (cardH2 + padY2));
+  var allEntries = unlocked.concat(locked.map(function(e) { return { id: e.id, title: '???', icon: '🔒', minClears: e.minClears, text: 'クリア回数 ' + e.minClears + ' 回でアンロック', _locked: true }; }));
+
+  worldLoreScroll = Math.max(0, Math.min(worldLoreScroll, Math.max(0, allEntries.length - maxRows2)));
+
+  for (var wi = 0; wi < Math.min(allEntries.length - worldLoreScroll, maxRows2); wi++) {
+    var we = allEntries[wi + worldLoreScroll];
+    var wy = startY2 + wi * (cardH2 + padY2);
+    var isLocked = we._locked;
+
+    ctx.fillStyle = isLocked ? 'rgba(20,20,30,0.7)' : 'rgba(30,20,55,0.88)';
+    ctx.fillRect(startX2, wy, cardW2, cardH2);
+    ctx.strokeStyle = isLocked ? '#333' : '#a78bfa'; ctx.lineWidth = isLocked ? 1 : 2;
+    ctx.strokeRect(startX2, wy, cardW2, cardH2);
+
+    // アイコン
+    ctx.fillStyle = isLocked ? '#444' : '#fff'; ctx.font = '32px ' + F;
+    ctx.textAlign = 'center'; ctx.fillText(we.icon, startX2 + 36, wy + 38); ctx.textAlign = 'left';
+
+    // タイトル
+    ctx.fillStyle = isLocked ? '#555' : '#d4b4ff'; ctx.font = 'bold 16px ' + F;
+    ctx.fillText(we.title, startX2 + 68, wy + 24);
+
+    // 本文（折り返しなし・1行表示）
+    if (!isLocked) {
+      ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
+      var txt = we.text || '';
+      var maxLen = cardW2 - 80;
+      // 幅オーバー分は省略
+      while (txt.length > 0 && ctx.measureText(txt).width > maxLen) { txt = txt.slice(0, -1); }
+      if (txt.length < (we.text || '').length) txt += '…';
+      ctx.fillText(txt, startX2 + 68, wy + 46);
+      // 2行目（残り）
+      var rest = (we.text || '').slice(txt.replace(/…$/, '').length);
+      if (rest && !txt.endsWith('…')) {
+        var rest2 = rest;
+        while (rest2.length > 0 && ctx.measureText(rest2).width > maxLen) rest2 = rest2.slice(0, -1);
+        if (rest2.length < rest.length) rest2 += '…';
+        ctx.fillText(rest2, startX2 + 68, wy + 62);
+      }
+    } else {
+      ctx.fillStyle = '#555'; ctx.font = '12px ' + F;
+      ctx.fillText(we.text, startX2 + 68, wy + 46);
+    }
+  }
+
+  // スクロールバー
+  if (allEntries.length > maxRows2) {
+    var sbX2 = CW - 130, sbY2 = startY2, sbH2 = maxRows2 * (cardH2 + padY2);
+    var thumbH2 = Math.max(20, sbH2 * (maxRows2 / allEntries.length));
+    var thumbY2 = sbY2 + (sbH2 - thumbH2) * (worldLoreScroll / Math.max(1, allEntries.length - maxRows2));
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX2, sbY2, 8, sbH2);
+    ctx.fillStyle = 'rgba(167,139,250,0.5)'; ctx.fillRect(sbX2, thumbY2, 8, thumbH2);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
+    ctx.fillText('↑↓: スクロール', CW / 2, CH - 55);
+    ctx.textAlign = 'left';
+  }
 }
 
 

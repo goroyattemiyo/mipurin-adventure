@@ -223,9 +223,9 @@ function update(dt) {
     return;
   }
   if (gameState === 'blessing') {
-    if (wasPressed('KeyX') && pollen >= 15) { pollen -= 15; blessingChoices = pickBlessings(); selectCursor = 0; blessingAnimTimer = 0; Audio.menu_select(); showFloat('\uD83C\uDF3C \u82B1\u7C89-15 \u30EA\u30ED\u30FC\u30EB\uFF01', 1.5, '#f1c40f'); return; }
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
+    if (wasPressed('KeyX') && pollen >= 15) { pollen -= 15; blessingChoices = pickBlessings(); selectCursor = -1; blessingAnimTimer = 0; Audio.menu_select(); showFloat('\uD83C\uDF3C \u82B1\u7C89-15 \u30EA\u30ED\u30FC\u30EB\uFF01', 1.5, '#f1c40f'); return; }
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = selectCursor < 0 ? blessingChoices.length - 1 : (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = selectCursor < 0 ? 0 : (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
     if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
     if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
     if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }

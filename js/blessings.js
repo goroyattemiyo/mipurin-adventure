@@ -142,6 +142,6 @@ function pickBlessings() {
     const b = weighted[Math.floor(rng() * weighted.length)];
     if (!used.has(b.id)) { used.add(b.id); picks.push(b); }
   }
-  selectCursor = 0;
+  selectCursor = -1;
   return picks;
 }

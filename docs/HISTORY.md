@@ -108,8 +108,10 @@
 | Sprint H-A2  | 環境ギミック(💧水場/🌿草むら/💥爆発樽 テーマ別配置、gimmicks.js分離) | v6.30 | ✅ |
 | Sprint G-C2  | 花壇拡張（🌸記憶の花壇・🛡️不屈の花壇）memorySelect UI・tryRevival() Guts実装 | v6.31 | ✅ |
 | Sprint H-B   | 武器固有アクション(parry強化/storm_wing3連射/megaaoe) + 花壇UIリデザイン(フローラ大型化) | v6.32 | ✅ |
+| スマホ操作改善 | 祝福/ショップカード直タップ選択 + ジョイスティック4方向スナップ（斜め移動廃止・攻撃ミス解消） | v6.33 | ✅ |
+| Sprint H-C   | 図鑑「せかい」サブタブ(WORLD_LORE 10件・totalClearsアンロック) + 隠しエンディング「解放の歌」(図鑑コンプ+ループクリア) + js/lore.js分離 | v6.33 | ✅ |
 
-Phase 1 目標 55/100 → 達成済み。現在 72.3/100（v6.32）。Phase 2 目標 73/100。
+Phase 1 目標 55/100 → 達成済み。現在 **73.3/100（v6.33）**。Phase 2 目標 73/100 → **達成✅**。
 
 ### COUNCIL議論の結論（Synapse Council）
 

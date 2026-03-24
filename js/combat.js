@@ -327,7 +327,14 @@ function updateCombat(dt) {
    'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] }
     };
     const _bd = _bdd[boss.id]; lastBossId = boss.id; boss = null;
-    if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }); }
+    if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() {
+      // ボスロア表示（BOSS_DEFS の lore フィールド）
+      var _bossLore = null;
+      for (var _bi = 0; _bi < BOSS_DEFS.length; _bi++) { if (BOSS_DEFS[_bi].id === lastBossId) { _bossLore = BOSS_DEFS[_bi].lore; break; } }
+      if (_bossLore) {
+        showDialog(String.fromCodePoint(0x1F4D6) + ' ' + _bd.s + ' \u306E\u8A18\u9332', [_bossLore], function() { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; });
+      } else { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
+    }); }
     else { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
   }
 

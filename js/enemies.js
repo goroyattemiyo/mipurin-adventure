@@ -21,18 +21,18 @@ function spawnDmg(x, y, val, color) { dmgNumbers.push({ x, y, val: String(val), 
 const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#e67e22', '#3498db', '#1abc9c', '#e84393', '#d35400', '#2c3e50', '#c0392b', '#6c5ce7', '#00b894', '#fd79a8'];
 
 const ENEMY_DEFS = {
-  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom', name: 'どくキノコ', lore: '闇の胞子で変異したキノコ。もとは花の国の薬草だった' },
-  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob', name: 'はちみつスライム', lore: 'こぼれた蜜から生まれた。ぷるぷるしていてちょっとかわいい' },
-  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider', name: 'あみぐもちゃん', lore: '花の国の糸使い。すばしっこくて追いかけてくる！' },
-  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat', name: 'やみコウモリ', lore: '洞窟に住む小さなコウモリ。暗いところが大好き' },
-  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', name: 'かぶとむしナイト', lore: '立派なツノで突進してくる！赤く光ったら要注意', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
-  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp', name: 'わるいハチ', lore: 'ミプリンと違って意地悪なハチ。すごく速い！' },
-  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', name: 'パクパクフラワー', lore: '動けないけど花粉弾を飛ばしてくる。きれいだけど危険！', shootInterval: 2.0 },
-  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm', name: 'もぐもぐイモムシ', lore: 'のんびり屋だけど体が丈夫。踏まないように注意！' },
-  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost', name: 'ひとだまホタル', lore: 'クリスタルの破片に引き寄せられた霊体。光に未練があるらしい…' },
-  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', name: 'いわいわゴーレム', lore: '女王さまがつくった古い番人。封印の力が弱まり暴走している', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
-  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', name: 'つるつるツタ', lore: '地面から生えたツタ。種を飛ばして攻撃してくる', shootInterval: 1.5 },
-  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee', name: 'ダークビー', lore: '闇の胞子に染まったミツバチ。かつてはミプリンの仲間だった… クリスタルが元に戻れば救えるかもしれない' }
+  mushroom:  { hp: 3, speed: 55, w: 48, h: 48, dmg: 1, pattern: 'wander', score: 10, color: '#e74c3c', shape: 'mushroom', name: 'どくキノコ', lore: '闇の胞子で変異したキノコ。もとは花の国の薬草だった。かつてはフローラが煎じ薬に使っていたという。胞子が晴れれば、きっと元の優しい草に戻れる' },
+  slime:     { hp: 4, speed: 45, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 10, color: '#2ecc71', shape: 'blob', name: 'はちみつスライム', lore: 'こぼれた蜜から生まれた。ぷるぷるしていてちょっとかわいい。クリスタルの光を浴びると虹色に輝くらしい。甘い匂いがするので、ミプリンはちょっと食べてみたいと思っている' },
+  spider:    { hp: 4, speed: 90, w: 48, h: 48, dmg: 1, pattern: 'chase', score: 20, color: '#8e44ad', shape: 'spider', name: 'あみぐもちゃん', lore: '花の国の糸使い。すばしっこくて追いかけてくる！その糸はかつて花のブランコを編むのに使われていた。闇に染まってからは、光を嫌って暗い角に巣を張っている' },
+  bat:       { hp: 3, speed: 110, w: 42, h: 42, dmg: 1, pattern: 'chase', score: 15, color: '#34495e', shape: 'bat', name: 'やみコウモリ', lore: '洞窟に住む小さなコウモリ。暗いところが大好き。実は花の国の夜警だった。クリスタルが光っていた頃は、その反射で美しく飛んでいたという' },
+  beetle:    { hp: 6, speed: 50, w: 52, h: 52, dmg: 2, pattern: 'charge', score: 30, color: '#e67e22', shape: 'beetle', name: 'かぶとむしナイト', lore: '立派なツノで突進してくる！赤く光ったら要注意。花の国では騎士として尊敬されていた。闇に操られても、その誇り高い突進だけは変わらない', chargeSpeed: 300, telegraphTime: 0.6, chargeTime: 0.3 },
+  wasp:      { hp: 5, speed: 100, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 25, color: '#f1c40f', shape: 'wasp', name: 'わるいハチ', lore: 'ミプリンと違って意地悪なハチ。すごく速い！でも本当は、クリスタルの光を失って不安なだけなのかもしれない。ミプリンを見ると少しだけ動きが鈍る気がする…' },
+  flower:    { hp: 7, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 25, color: '#e84393', shape: 'flower', name: 'パクパクフラワー', lore: '動けないけど花粉弾を飛ばしてくる。きれいだけど危険！クリスタルの光があった頃は、旅人に道を教える優しい花だった。いまは誰かれ構わず花粉を撃ってしまう', shootInterval: 2.0 },
+  worm:      { hp: 8, speed: 35, w: 52, h: 40, dmg: 2, pattern: 'wander', score: 20, color: '#a0522d', shape: 'worm', name: 'もぐもぐイモムシ', lore: 'のんびり屋だけど体が丈夫。踏まないように注意！花の国の土を耕す大切な存在だった。いまも本能で土を掘り続けている。いつか蝶になる夢を見ているらしい' },
+  ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost', name: 'ひとだまホタル', lore: 'クリスタルの破片に引き寄せられた霊体。光に未練があるらしい…その正体は、クリスタルが砕けた夜に消えた蛍の魂だという。光を取り戻せば、きっと安らかに眠れる' },
+  golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', name: 'いわいわゴーレム', lore: '女王さまがつくった古い番人。封印の力が弱まり暴走している。胸に刻まれた紋章は「守護」の古代語。命令者を失ってもなお、何かを守ろうとしている姿が切ない', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
+  vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', name: 'つるつるツタ', lore: '地面から生えたツタ。種を飛ばして攻撃してくる。花の国の壁や橋を支えていた縁の下の力持ち。クリスタルの光を失い、行き場のないエネルギーを種にこめて撃ち出している', shootInterval: 1.5 },
+  darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee', name: 'ダークビー', lore: '闇の胞子に染まったミツバチ。かつてはミプリンの仲間だった。クリスタルが砕けた夜、仲間を守ろうとして闇に飲まれた。その目にはまだ微かな光が残っている——きっと救える' }
 };
 
 const THEME_ENEMIES = {

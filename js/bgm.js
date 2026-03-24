@@ -35,6 +35,14 @@ const ChipBGM = (() => {
     ending:{mel:T_MEL,bas:T_BAS,bpm:56,mT:'sine',bT:'triangle',mV:.12,bV:.08},
     nest_boss:{mel:B_MEL,bas:B_BAS,bpm:120,mT:'sawtooth',bT:'square',mV:.11,bV:.09}
   };
+  // MP3 per-track volume normalization (1.0 = no change)
+  const MP3_VOL = {
+    title: 0.7, village: 0.75, shop: 0.8, ending: 0.75,
+    forest_south: 1.0, cave: 1.0, flower_field: 1.0,
+    forest_north: 1.0, nest: 1.0, abyss: 1.0,
+    boss: 0.85, nest_boss: 0.85
+  };
+  function getMp3Vol(name) { return MP3_VOL[name] || 1.0; }
   function initCtx() {
     if (actx) return true;
     try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return false; }
@@ -83,7 +91,7 @@ const ChipBGM = (() => {
     if (mp3Source) { try { mp3Source.disconnect(); } catch(e) {} mp3Source = null; }
     mp3Audio = new window.Audio('assets/music/' + name + '.mp3');
     mp3Audio.loop = true;
-    var target = _vol * 0.3;
+    var target = _vol * 0.3 * getMp3Vol(name);
     if (fadeIn) {
       mp3Audio.volume = 0; mp3Audio.play().catch(function(){});
       var step = 0.05, inc = target / Math.max(1, fadeIn / step);
@@ -99,7 +107,7 @@ const ChipBGM = (() => {
         mp3Source = actx.createMediaElementSource(mp3Audio);
         mp3Source.connect(lpFilter);
         mp3Audio.volume = 1.0; // Volume controlled by masterGain
-        if (masterGain) masterGain.gain.value = _vol * 0.3;
+        if (masterGain) masterGain.gain.value = _vol * 0.3 * getMp3Vol(name);
       } catch(e) { /* fallback: direct playback without filter */ }
     }
   }

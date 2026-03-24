@@ -446,7 +446,7 @@ function drawBlessing() {
   if (gameState !== 'blessing') return;
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
   ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('← → で選んで Z で決定', CW / 2, 95);
+  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 95);
   for (let i = 0; i < blessingChoices.length; i++) {
     const sel = selectCursor === i;
     const b = blessingChoices[i], bxBase = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;

@@ -110,6 +110,17 @@ function updateCombat(dt) {
   }
   if (player.attacking) { player.atkTimer -= dt; if (player.atkTimer <= 0) player.attacking = false; }
   player.invTimer = Math.max(0, player.invTimer - dt);
+  // 巨大化はちみつ: タイマーカウントダウン・期限で解除
+  if (player._giantTimer > 0) {
+    player._giantTimer -= dt;
+    if (player._giantTimer <= 0) {
+      player._giantTimer = 0;
+      const boost = player._giantAtkBoost || 3;
+      player.atk = Math.max(1, player.atk - boost);
+      player._giantAtkBoost = 0;
+      showFloat('🐻 巨大化おわり', 1.5, '#f0a030');
+    }
+  }
   player.animTimer += dt; if (player.animTimer > 0.15) { player.animTimer = 0; player.frame = (player.frame + 1) % 4; }
 
   for (const en of enemies) {
@@ -208,6 +219,8 @@ function updateCombat(dt) {
    if (Math.random() < 0.20 + (player.luckBonus || 0)) spawnDrop(enemies[i].x + enemies[i].w / 2 + 10, enemies[i].y + enemies[i].h / 2, 'heal');
    // 5% で鍵をドロップ（luck祝福で最大8%）
    if (Math.random() < 0.05 + (player.luckBonus || 0) * 0.5) spawnDrop(enemies[i].x + enemies[i].w / 2 - 10, enemies[i].y + enemies[i].h / 2, 'chest_key');
+   // 3% で巨大化はちみつをドロップ
+   if (Math.random() < 0.03) spawnDrop(enemies[i].x + enemies[i].w / 2 + 16, enemies[i].y + enemies[i].h / 2, 'giant_honey');
    recordEnemy(enemies[i].name || enemies[i].type, true);
    enemies.splice(i, 1);
     }

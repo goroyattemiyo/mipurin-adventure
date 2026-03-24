@@ -38,6 +38,7 @@ function update(dt) {
    floor = 0; runNectar = 0; score = 0;
    player.hp = player.maxHp;
    player.invTimer = 0; player.attacking = false;
+   player._giantTimer = 0; player._giantAtkBoost = 0;
    stopBGM();
    nextFloor();
     }

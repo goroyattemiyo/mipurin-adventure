@@ -102,44 +102,179 @@ function isGardenVisible(def) {
 function drawGarden() {
   if (currentBGM !== 'garden') playBGM('garden', 0.6);
   const visibleDefs = GARDEN_DEFS.filter(d => isGardenVisible(d));
-  ctx.fillStyle = '#1a0a2e'; ctx.fillRect(0, 0, CW, CH);
-  for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.3 + Math.sin(Date.now()/1000 + i) * 0.2; ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc((i*137)%CW, (i*97)%CH, 1.5, 0, Math.PI*2); ctx.fill(); }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 52px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-  ctx.fillText('🌸 ミプリンの花壇 🌸', CW/2, 55);
-  ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('ネクター: ' + nectar + '  クリア回数: ' + totalClears, CW/2, 85);
-  const floraW=220, floraH=340, floraX=40, floraY=100;
-  const floraFloat = Math.sin(Date.now()/800)*5;
-  ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.beginPath(); ctx.roundRect(floraX-10, floraY-10, floraW+20, floraH+60, 16); ctx.fill();
-  if (typeof floraReady !== 'undefined' && floraReady) { ctx.save(); ctx.globalAlpha=0.95; ctx.drawImage(floraImg, floraX, floraY+floraFloat, floraW, floraH); ctx.restore(); }
-  ctx.fillStyle = '#90ee90'; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-  ctx.fillText('🌸 フローラ', floraX+floraW/2, floraY+floraH+25);
-  const bx=floraX+floraW+20, by=floraY, bw=320, bh=90;
-  ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 12); ctx.fill();
-  ctx.fillStyle = '#333'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-  const ftext = (function(){var g=['お花を育てて、冒険を有利にしよう！','ネクターで花壇を強化できるわよ！','新しい花が咲いたら教えてね！','ミプリン、がんばってね～！'];return g[Math.floor(Date.now()/10000)%g.length]})();
-  const chars = ftext.split(''); let fline = '', fly = by+25;
-  for (const ch of chars) { fline += ch; if (ctx.measureText(fline).width > bw-30) { ctx.fillText(fline, bx+15, fly); fly += 22; fline = ''; } }
-  if (fline) ctx.fillText(fline, bx+15, fly);
-  const cardX=380, cardW=860, cardH=68, startY=110;
-  const gap = Math.min(75, (CH-startY-50)/Math.max(visibleDefs.length, 1));
-  for (let i = 0; i < visibleDefs.length; i++) {
-    const def = visibleDefs[i]; const lv = gardenUpgrades[def.id]||0; const cost = getGardenCost(def.id); const y = startY + i*gap; const selected = i === gardenCursor;
-    ctx.fillStyle = selected ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(cardX, y, cardW, cardH, 10); ctx.fill();
-    if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth=2; ctx.beginPath(); ctx.roundRect(cardX, y, cardW, cardH, 10); ctx.stroke(); }
-    ctx.fillStyle = '#fff'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
-    ctx.fillText(def.icon + ' ' + def.name, cardX+15, y+28);
-    ctx.fillStyle = '#ccc'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(def.desc, cardX+15, y+52);
-    ctx.fillStyle = '#ffd700'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right';
-    let lvText = 'Lv.' + lv + ' / ' + def.max; if (lv >= def.max) lvText += ' (MAX)';
-    ctx.fillText(lvText, cardX+cardW-15, y+28);
-    if (cost > 0) { ctx.fillStyle = nectar >= cost ? '#8f8' : '#f88'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('コスト: ' + cost + ' ネクター', cardX+cardW-15, y+52); }
-    else { ctx.fillStyle = '#ffd700'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('✅ 最大強化済', cardX+cardW-15, y+52); }
+  const now = Date.now();
+
+  // ── 背景 ──────────────────────────────────────────
+  ctx.fillStyle = '#120820'; ctx.fillRect(0, 0, CW, CH);
+  // 星粒
+  for (let i = 0; i < 55; i++) {
+    ctx.globalAlpha = 0.2 + Math.sin(now / 1100 + i * 1.7) * 0.18;
+    ctx.fillStyle = i % 3 === 0 ? '#f9a8d4' : i % 3 === 1 ? '#ffd700' : '#a5f3fc';
+    ctx.beginPath(); ctx.arc((i * 173) % CW, (i * 113) % CH, i % 2 === 0 ? 1.2 : 1.8, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップで選択・購入' : '↑↓で選択 / Zで購入 / Xで戻る', CW/2, CH-15);
+  ctx.globalAlpha = 1;
+
+  // ── ヘッダー (高さ72px) ───────────────────────────
+  const hdrH = 72;
+  // ヘッダー帯
+  const hdrGrad = ctx.createLinearGradient(0, 0, CW, 0);
+  hdrGrad.addColorStop(0, 'rgba(255,182,193,0.18)');
+  hdrGrad.addColorStop(0.5, 'rgba(255,215,0,0.22)');
+  hdrGrad.addColorStop(1, 'rgba(255,182,193,0.18)');
+  ctx.fillStyle = hdrGrad; ctx.fillRect(0, 0, CW, hdrH);
+  ctx.strokeStyle = 'rgba(255,215,0,0.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, hdrH); ctx.lineTo(CW, hdrH); ctx.stroke();
+  // タイトル
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold 38px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('🌸 ミプリンの花壇 🌸', CW / 2, 44);
+  // ネクター / クリア（右上）
+  ctx.textAlign = 'right'; ctx.fillStyle = '#ffd700'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('🍯 ' + nectar, CW - 20, 32);
+  ctx.fillStyle = '#a5f3fc'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('クリア ' + totalClears + '回', CW - 20, 56);
+
+  // ── フローラ エリア (左側) ───────────────────────
+  // flora: アスペクト 2:3、CH=960 の場合 下揃え余白30
+  const floraH = Math.round(CH * 0.72);        // 691
+  const floraW = Math.round(floraH * (2 / 3)); // 461
+  const floraX = 18;
+  const floraY = CH - floraH - 28;             // 241
+  const floraFloat = Math.sin(now / 750) * 6;
+
+  // フローラ背後グロー（柔らかいピンク光輪）
+  const glowR = floraW * 0.62;
+  const glowCx = floraX + floraW / 2;
+  const glowCy = floraY + floraH * 0.42;
+  const glow = ctx.createRadialGradient(glowCx, glowCy, 0, glowCx, glowCy, glowR);
+  glow.addColorStop(0, 'rgba(255,182,193,0.28)');
+  glow.addColorStop(0.55, 'rgba(255,215,0,0.10)');
+  glow.addColorStop(1, 'rgba(255,182,193,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.ellipse(glowCx, glowCy, glowR * 1.1, glowR, 0, 0, Math.PI * 2); ctx.fill();
+
+  // フローラ足元グラデ
+  const footGrad = ctx.createLinearGradient(floraX, floraY + floraH - 80, floraX, floraY + floraH + 28);
+  footGrad.addColorStop(0, 'rgba(18,8,32,0)');
+  footGrad.addColorStop(1, 'rgba(18,8,32,0.85)');
+  ctx.fillStyle = footGrad; ctx.fillRect(floraX, floraY + floraH - 80, floraW, 108);
+
+  // フローラ画像
+  if (typeof floraReady !== 'undefined' && floraReady) {
+    ctx.save(); ctx.globalAlpha = 0.97;
+    ctx.drawImage(floraImg, floraX, floraY + floraFloat, floraW, floraH);
+    ctx.restore();
+  } else {
+    // 未ロード時フォールバック
+    ctx.fillStyle = 'rgba(255,182,193,0.12)';
+    ctx.beginPath(); ctx.roundRect(floraX, floraY, floraW, floraH, 20); ctx.fill();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#f9a8d4'; ctx.font = "48px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('🌸', floraX + floraW / 2, floraY + floraH / 2);
+  }
+
+  // 「フローラ」名前バッジ
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(18,8,32,0.6)'; ctx.beginPath(); ctx.roundRect(floraX + floraW / 2 - 62, CH - 28 - 24, 124, 28, 14); ctx.fill();
+  ctx.fillStyle = '#f9a8d4'; ctx.font = "bold 17px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('🌸 フローラ', floraX + floraW / 2, CH - 28 - 5);
+
+  // ── フローラ吹き出し ────────────────────────────
+  const FLORA_LINES = [
+    'お花を育てて、冒険を有利にしよう！',
+    'ネクターをたくさん集めてね～♪',
+    '新しい花が咲いたら教えてね！',
+    'ミプリン、いつも応援してるよ！',
+    '花壇の力で、どんな敵も怖くないよ！',
+    'まだ咲いてない花もあるかも…？',
+    '一緒にがんばろうね、ミプリン！',
+    'ネクターが増えると花がキラキラするよ！',
+  ];
+  const ftext = FLORA_LINES[Math.floor(now / 8000) % FLORA_LINES.length];
+  const bx = floraX + floraW + 14;
+  const bw = 290, bh = 78;
+  const by = floraY + floraFloat + 18; // 吹き出しをフローラ上部に合わせる
+  // 吹き出しシェイプ
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.fill();
+  ctx.strokeStyle = '#f9a8d4'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 14); ctx.stroke();
+  // 吹き出し三角（左向き）
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.beginPath(); ctx.moveTo(bx, by + 26); ctx.lineTo(bx - 14, by + 36); ctx.lineTo(bx, by + 48); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#f9a8d4'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(bx, by + 26); ctx.lineTo(bx - 14, by + 36); ctx.lineTo(bx, by + 48); ctx.stroke();
+  // テキスト折り返し
+  ctx.fillStyle = '#444'; ctx.font = "16px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  let fline = '', fly2 = by + 28;
+  for (const ch of ftext.split('')) {
+    fline += ch;
+    if (ctx.measureText(fline).width > bw - 24) { ctx.fillText(fline, bx + 12, fly2); fly2 += 22; fline = ''; }
+  }
+  if (fline) ctx.fillText(fline, bx + 12, fly2);
+
+  // ── 花壇カードリスト ───────────────────────────
+  const cardX = floraX + floraW + 14;
+  const cardW = CW - cardX - 18;
+  const cardH = 64;
+  const listTop = by + bh + 18; // 吹き出し直下
+  const listBot = CH - 42;
+  const maxVisible = Math.floor((listBot - listTop) / (cardH + 8));
+  // スクロールウィンドウ
+  const scrollStart = Math.max(0, Math.min(gardenCursor - Math.floor(maxVisible / 2), visibleDefs.length - maxVisible));
+
+  for (let vi = 0; vi < maxVisible; vi++) {
+    const i = scrollStart + vi;
+    if (i >= visibleDefs.length) break;
+    const def = visibleDefs[i];
+    const lv = gardenUpgrades[def.id] || 0;
+    const cost = getGardenCost(def.id);
+    const cy = listTop + vi * (cardH + 8);
+    const selected = i === gardenCursor;
+
+    // カード背景
+    ctx.save();
+    if (selected) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 18; }
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.roundRect(cardX, cy, cardW, cardH, 12); ctx.fill();
+    if (selected) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(cardX, cy, cardW, cardH, 12); ctx.stroke(); }
+    ctx.restore();
+
+    // アイコン + 名前
+    ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(def.icon + ' ' + def.name, cardX + 14, cy + 26);
+    // 説明
+    ctx.fillStyle = '#bbb'; ctx.font = "15px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(def.desc, cardX + 14, cy + 50);
+
+    // Lv バー（右側）
+    const barX = cardX + cardW - 200, barY = cy + 14, barW = 130, barH2 = 12;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH2, 6); ctx.fill();
+    if (lv > 0) {
+      const barFill = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      barFill.addColorStop(0, '#ffd700'); barFill.addColorStop(1, '#ff9800');
+      ctx.fillStyle = barFill;
+      ctx.beginPath(); ctx.roundRect(barX, barY, barW * (lv / def.max), barH2, 6); ctx.fill();
+    }
+    ctx.textAlign = 'right'; ctx.fillStyle = lv >= def.max ? '#ffd700' : '#ccc'; ctx.font = "bold 17px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText(lv >= def.max ? 'MAX' : 'Lv.' + lv + '/' + def.max, cardX + cardW - 14, cy + 24);
+
+    // コスト
+    if (cost > 0) {
+      ctx.fillStyle = nectar >= cost ? '#86efac' : '#fca5a5'; ctx.font = "15px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('🍯 ' + cost, cardX + cardW - 14, cy + 50);
+    } else {
+      ctx.fillStyle = '#ffd700'; ctx.font = "15px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('✅ 完了', cardX + cardW - 14, cy + 50);
+    }
+  }
+
+  // スクロールインジケーター
+  if (scrollStart > 0) { ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,215,0,0.6)'; ctx.font = "16px sans-serif"; ctx.fillText('▲', cardX + cardW / 2, listTop - 6); }
+  if (scrollStart + maxVisible < visibleDefs.length) { ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,215,0,0.6)'; ctx.font = "16px sans-serif"; ctx.fillText('▼', cardX + cardW / 2, listBot + 4); }
+
+  // フッター操作ヒント
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = "17px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップで選択・購入' : '↑↓ 選択　Z 購入　X 戻る', CW / 2, CH - 12);
   ctx.textAlign = 'left';
 }
 

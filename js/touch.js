@@ -206,25 +206,27 @@ function onTouchStart(e) {
       return;
     }
 
-    // --- blessing: カード直タップで選択 ---
+    // --- blessing: カード直タップで選択（2段階: 選択→確認タップで決定） ---
     var gs = typeof gameState !== 'undefined' ? gameState : '';
     if (gs === 'blessing' && typeof blessingChoices !== 'undefined') {
-      // カード座標は drawBlessing() と完全に一致させる
-      // bxBase = CW/2 - 300 + i*220, by=120, bw=180, bh=220
       for (var ci = 0; ci < blessingChoices.length; ci++) {
         var cbx = CW / 2 - 300 + ci * 220, cby = 120, cbw = 180, cbh = 220;
-        // スケール・スライドアニメ中でも押しやすいよう少し余裕を持たせる (+20px)
         if (pos.x >= cbx - 10 && pos.x <= cbx + cbw + 10 && pos.y >= cby - 10 && pos.y <= cby + cbh + 10) {
-          if (typeof selectCursor !== 'undefined') selectCursor = ci;
-          // Zキー押下を発火させて既存ロジックを再利用
-          keys['KeyZ'] = true; pressed['KeyZ'] = true;
-          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
-          // 少し後にキーを解放（1フレーム以上保持）
-          setTimeout(function() { keys['KeyZ'] = false; }, 80);
+          if (typeof selectCursor !== 'undefined') {
+            if (selectCursor === ci) {
+              // 既に選択中 → 決定
+              keys['KeyZ'] = true; pressed['KeyZ'] = true;
+              if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+              setTimeout(function() { keys['KeyZ'] = false; }, 80);
+            } else {
+              // 未選択 → カーソル移動のみ
+              selectCursor = ci;
+              if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+            }
+          }
           return;
         }
       }
-      // カード外タップはXキー（リロール）チェック
     }
 
     // --- shop: アイテムカード直タップ ---

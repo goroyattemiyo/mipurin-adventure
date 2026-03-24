@@ -1,3 +1,15 @@
+## v6.30 (2026-03-24) Sprint H-A2: 環境ギミック
+
+### Features
+- **H-A2: 環境ギミック** (data.js / gimmicks.js / combat.js / render.js / enemies.js)
+  - **💧 水場 (tile=3)**: forest/abyss テーマのフロアに配置（fl≥2）。踏むと移動速度-40%。forest/abyss では毒沼判定（3秒ごとHP-1）
+  - **🌿 草むら (tile=4)**: flower/ruins テーマのフロアに配置（fl≥1）。プレイヤーが踏むと半透明(α=0.38)でステルス可能
+  - **💥 爆発樽**: cave/ruins テーマ（fl≥3）に動的オブジェクトとして配置。近接/弾丸/接触で半径80px爆発→プレイヤー・敵・ボスに3ダメージ
+  - **gimmicks.js 新設**: barrel処理を data.js から分離（data.js 35KB 以内に維持）
+  - 水場: bakeRoomBuffer に青い波紋タイル描画追加
+  - 草むら: bakeRoomBuffer に緑の草模様描画追加
+  - 水場エフェクト: プレイヤーが踏んでいる間、足元に青いリップルエフェクト描画
+
 ## v6.29 (2026-03-24) Sprint H-A-3 + 技術負債解消
 
 ### Features

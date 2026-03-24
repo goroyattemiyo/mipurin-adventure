@@ -44,6 +44,39 @@ function updateCombat(dt) {
    if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
     }
   }
+  // H-A2: 水場(tile=3) — 移動速度-40%、毒沼(forest/abyss)はtimer付きHP-1
+  {
+    const twc = Math.floor((player.x + player.w/2) / TILE);
+    const twr = Math.floor((player.y + player.h/2) / TILE);
+    const onWater = twc >= 0 && twc < COLS && twr >= 0 && twr < ROWS && roomMap[twr * COLS + twc] === 3;
+    player._inWater = onWater;
+    if (onWater) {
+      // 毒沼判定（forest/abyss）
+      const themeName = (typeof getTheme === 'function') ? getTheme(floor).name : '';
+      if ((themeName === 'forest' || themeName === 'abyss') && player.invTimer <= 0) {
+        player._poisonWaterTimer = (player._poisonWaterTimer || 0) + dt;
+        if (player._poisonWaterTimer >= 3.0) {
+          player._poisonWaterTimer = 0;
+          player.hp -= 1; player.invTimer = 0.3;
+          emitParticles(player.x + player.w/2, player.y + player.h/2, '#27ae60', 4, 50, 0.3);
+          showFloat('💧 毒沼！ HP-1', 1.5, MSG_COLORS.warn);
+          if (player.hp <= 0) { gameState = 'dead'; Audio.game_over(); stopBGM(0.8); }
+        }
+      } else {
+        player._poisonWaterTimer = 0;
+      }
+    } else {
+      player._poisonWaterTimer = 0;
+    }
+  }
+  // H-A2: 草むら(tile=4) — プレイヤー在中フラグのみ（render.jsで透明化）
+  {
+    const tbc = Math.floor((player.x + player.w/2) / TILE);
+    const tbr = Math.floor((player.y + player.h/2) / TILE);
+    player._inBush = tbc >= 0 && tbc < COLS && tbr >= 0 && tbr < ROWS && roomMap[tbr * COLS + tbc] === 4;
+  }
+  // H-A2: 爆発樽 barrel 更新
+  if (typeof updateBarrels === 'function') updateBarrels(dt);
   if (player.dashing) { player.dashTimer -= dt; if (player.dashTimer <= 0) player.dashing = false;
     else moveWithCollision(player, player.dashDir.x * player.dashSpeed * dt, player.dashDir.y * player.dashSpeed * dt); }
   else {
@@ -53,7 +86,10 @@ function updateCombat(dt) {
    player.dashDir.y = (mx !== 0 || my !== 0) ? my : player.atkDir.y; player.invTimer = player.dashDuration; Audio.dash();
    emitParticles(player.x + player.w / 2, player.y + player.h / 2, COL.player, 5, 60, 0.2);
     }
-    if (!player.dashing && !player.attacking) moveWithCollision(player, mx * player.speed * dt, my * player.speed * dt);
+    if (!player.dashing && !player.attacking) {
+      const _waterMul = player._inWater ? 0.6 : 1.0;
+      moveWithCollision(player, mx * player.speed * _waterMul * dt, my * player.speed * _waterMul * dt);
+    }
   }
 
   player.atkCooldown = Math.max(0, player.atkCooldown - dt);
@@ -79,6 +115,14 @@ function updateCombat(dt) {
     const angle = Math.atan2(en.y - player.y, en.x - player.x);
     moveWithCollision(en, Math.cos(angle) * (wfx === 'pierce' ? 8 : 20), Math.sin(angle) * (wfx === 'pierce' ? 8 : 20));
     hitEnList.push(en); } }
+    // H-A2: 近接攻撃がbarrelにヒットしたら爆発
+    if (typeof roomBarrels !== 'undefined') {
+      for (const _b of roomBarrels) {
+        if (_b.exploded) continue;
+        const _bx = _b.c * TILE + TILE / 2, _by = _b.r * TILE + TILE / 2;
+        if (rectOverlap(hitBox, { x: _bx - TILE/2, y: _by - TILE/2, w: TILE, h: TILE })) explodeBarrel(_b);
+      }
+    }
     const _cfx = player.weapon.comboFx || '';
     if (_cfx === 'shockwave') {
    player._comboCount = (player._comboCount || 0) + 1;

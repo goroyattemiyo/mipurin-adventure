@@ -581,6 +581,21 @@ function draw() {
   if (player._inBush) { ctx.globalAlpha = 0.38; }
   drawEntity(player, COL.player, true);
   if (player._inBush) { ctx.globalAlpha = 1; }
+  // H-B: パリィ窓ビジュアル（盾の光輪）
+  if (player._parryWindow > 0) {
+    const _pr = (player.w * 0.72) * (player.weapon.id === 'holy_shield' ? 1.3 : 1.0);
+    const _pa = player._parryWindow * (player.weapon.id === 'holy_shield' ? 2.8 : 5.0); // フェード
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.8, _pa);
+    ctx.strokeStyle = player.weapon.id === 'holy_shield' ? '#fff0d0' : '#f1c40f';
+    ctx.lineWidth = player.weapon.id === 'holy_shield' ? 3.5 : 2.5;
+    ctx.shadowColor = player.weapon.id === 'holy_shield' ? '#fff0d0' : '#ffd700';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(player.x + player.w/2, player.y + player.h/2, _pr, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
   // H-A2: 水場中は青いリップルエフェクト
   if (player._inWater) {
     const _wp = player.x + player.w/2, _wq = player.y + player.h/2;

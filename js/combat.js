@@ -96,7 +96,12 @@ function updateCombat(dt) {
   if (wasPressed('KeyZ') && player.atkCooldown <= 0 && !player.attacking && !player.dashing) {
     player.attacking = true; player.atkTimer = player.weapon.dur; Audio.attack(); Audio.voice_attack();
     if (Math.random() < 0.15) showBubble('えいっ！', 0.8);
-    if (player.weapon.comboFx === 'parry') player._parryWindow = 0.2; player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
+    if (player.weapon.comboFx === 'parry') {
+      // H-B: holy_shield(T2) はパリィ窓が長く(0.35s)、通常 pollen_shield(T1) は短め(0.2s)
+      player._parryWindow = player.weapon.id === 'holy_shield' ? 0.35 : 0.2;
+      showFloat('🛡️ 構え！', 0.6, '#fff0d0');
+    }
+    player.atkCooldown = player.weapon.speed * (1 - Math.min(player.atkSpeedBonus, 0.7));
     const atkDmg = Math.ceil(player.atk * player.weapon.dmgMul);
     const wfx = player.weapon.fx || 'none';
     const r360 = 40 + (player.atkRangeBonus || 0); const box = wfx === '360' ? {x: player.x + player.w/2 - r360, y: player.y + player.h/2 - r360, w: r360 * 2, h: r360 * 2} : getAttackBox();
@@ -145,7 +150,34 @@ function updateCombat(dt) {
    for (const _he of hitEnList) { _he._poisonTimer = 2.0; _he._poisonTick = 0.5; _he._poisonDmg = Math.max(1, Math.ceil(atkDmg * 0.3)); }
    if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) { boss._poisonTimer = 2.0; boss._poisonTick = 0.5; boss._poisonDmg = Math.max(1, Math.ceil(atkDmg * 0.3)); }
     }
-    if (_cfx === 'homing') { spawnHomingProj(player.x+player.w/2, player.y+player.h/2, Math.max(1, Math.ceil(atkDmg * 0.5))); }
+    // H-B: homing — feather(1発) vs storm_wing(3連射)
+    if (_cfx === 'homing') {
+      const _homDmg = Math.max(1, Math.ceil(atkDmg * 0.5));
+      const _shots = player.weapon.id === 'storm_wing' ? 3 : 1;
+      for (let _si = 0; _si < _shots; _si++) {
+        setTimeout(() => { if (gameState !== 'playing') return; spawnHomingProj(player.x+player.w/2, player.y+player.h/2, _homDmg); }, _si * 80);
+      }
+      if (player.weapon.id === 'storm_wing') { showFloat('🌪️ 嵐の羽！', 1.0, '#00bcd4'); emitParticles(player.x+player.w/2, player.y+player.h/2, '#00bcd4', 8, 70, 0.3); }
+    }
+    // H-B: megaaoe — queen_true_staff: 爆発範囲1.5倍 + クリスタルパーティクル
+    if (_cfx === 'megaaoe') {
+      const _mR = 72 + (player.atkRangeBonus || 0) * 1.5; // 通常aoe より1.5倍
+      const _mcx = box.x + box.w/2, _mcy = box.y + box.h/2;
+      shakeTimer = 0.18; shakeIntensity = 9;
+      emitParticles(_mcx, _mcy, '#e1bee7', 18, 130, 0.5);
+      emitParticles(_mcx, _mcy, '#ffd700', 10, 110, 0.4);
+      showFloat('💎 クリスタル爆発！', 1.5, '#e1bee7');
+      for (const _en of enemies) { if (_en.hp <= 0) continue;
+        if (Math.hypot(_en.x+_en.w/2-_mcx, _en.y+_en.h/2-_mcy) < _mR) {
+          _en.hp -= atkDmg; _en.hitFlash = 0.15; spawnDmg(_en.x+_en.w/2, _en.y, atkDmg, '#e1bee7');
+          emitParticles(_en.x+_en.w/2, _en.y+_en.h/2, '#e1bee7', 4, 60, 0.25);
+        }
+      }
+      if (boss && boss.hp > 0 && Math.hypot(boss.x+boss.w/2-_mcx, boss.y+boss.h/2-_mcy) < _mR) {
+        boss.hp -= atkDmg; boss.hitFlash = 0.15; spawnDmg(boss.x+boss.w/2, boss.y, atkDmg, '#e1bee7');
+        emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#e1bee7', 8, 100, 0.4);
+      }
+    }
     if (boss && boss.hp > 0 && rectOverlap(hitBox, boss)) {
    boss.hp -= atkDmg; boss.hitFlash = 0.12; hitStopTimer = 0.09; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#ffd700', 6, 90, 0.25); spawnDmg(boss.x + boss.w / 2, boss.y, atkDmg, COL.dmg);
    shakeTimer = 0.06; shakeIntensity = 4; Audio.hit();
@@ -154,6 +186,8 @@ function updateCombat(dt) {
   }
   if (player.attacking) { player.atkTimer -= dt; if (player.atkTimer <= 0) player.attacking = false; }
   player.invTimer = Math.max(0, player.invTimer - dt);
+  // H-B: パリィ窓カウントダウン
+  if (player._parryWindow > 0) { player._parryWindow = Math.max(0, player._parryWindow - dt); }
   // 巨大化はちみつ: タイマーカウントダウン・期限で解除
   if (player._giantTimer > 0) {
     player._giantTimer -= dt;
@@ -227,12 +261,18 @@ function updateCombat(dt) {
     if (player.invTimer <= 0 && !player.dashing) {
    if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
     if (player.weapon.comboFx === 'parry' && player._parryWindow > 0) {
-     en.hp -= Math.ceil(player.atk * 4); en.hitFlash = 0.2; shakeTimer = 0.15; shakeIntensity = 8;
-     spawnDmg(en.x+en.w/2, en.y, Math.ceil(player.atk*4), '#fff0d0');
-     emitParticles(player.x+player.w/2, player.y+player.h/2, '#fff0d0', 15, 100, 0.4);
-     player.hp = Math.min(player.hp + 1, player.maxHp); player.invTimer = 0.5;
-     showFloat('✨ パリィ！', 1.5, MSG_COLORS.buff); Audio.level_up();
-     player._parryWindow = 0;
+      // H-B: T2 holy_shield は ATK×4+HP回復、T1 pollen_shield は ATK×2のみ
+      const _isT2Parry = player.weapon.id === 'holy_shield';
+      const _parryMul = _isT2Parry ? 4 : 2;
+      const _parryDmg = Math.ceil(player.atk * _parryMul);
+      en.hp -= _parryDmg; en.hitFlash = 0.2; shakeTimer = 0.15; shakeIntensity = 8;
+      spawnDmg(en.x+en.w/2, en.y, _parryDmg, '#fff0d0');
+      emitParticles(player.x+player.w/2, player.y+player.h/2, '#fff0d0', _isT2Parry ? 18 : 10, 100, 0.4);
+      player.invTimer = _isT2Parry ? 0.8 : 0.5;
+      if (_isT2Parry) { player.hp = Math.min(player.hp + 2, player.maxHp); showFloat('✨ 聖花パリィ！ HP+2', 1.8, '#fff0d0'); }
+      else { showFloat('🛡️ パリィ！', 1.5, '#fff0d0'); }
+      Audio.level_up();
+      player._parryWindow = 0;
     } else {
     player.hp -= en.dmg; player.invTimer = player.invDuration; hpBounceTimer = 0.3; shakeTimer = 0.1; shakeIntensity = 5;
     spawnDmg(player.x + player.w / 2, player.y, en.dmg, '#fff'); Audio.player_hurt();

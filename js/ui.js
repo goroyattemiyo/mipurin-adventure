@@ -460,9 +460,9 @@ function drawBlessing() {
     ctx.scale(cardScale, cardScale);
     ctx.globalAlpha = eased;
     const bx = -bw/2, byLocal = -bh/2 + slideOff;
-    ctx.fillStyle = sel ? 'rgba(50,50,80,0.95)' : COL.blessBox; ctx.fillRect(bx, byLocal, bw, bh);
+    ctx.fillStyle = sel ? 'rgba(70,60,120,0.98)' : 'rgba(35,30,55,0.92)'; ctx.fillRect(bx, byLocal, bw, bh);
     const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
-    ctx.strokeStyle = sel ? '#fff' : rCol; ctx.lineWidth = sel ? 3 : 2; ctx.strokeRect(bx, byLocal, bw, bh);
+    ctx.strokeStyle = sel ? '#ffd700' : rCol; ctx.lineWidth = sel ? 4 : 1.5; ctx.strokeRect(bx, byLocal, bw, bh);
     if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, byLocal, bw, bh); }
     ctx.fillStyle = COL.text; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55);
     ctx.fillStyle = rCol; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80);

@@ -6,9 +6,14 @@
 let touchActive = false;
 
 // --- Canvas coordinate conversion ---
+// rectキャッシュ: resize/orientationchange 時のみ更新し毎タッチのレイアウト再計算を防ぐ
+let _cachedRect = null;
+function _updateRect() { _cachedRect = cvs.getBoundingClientRect(); }
+window.addEventListener('resize', _updateRect, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(_updateRect, 200), { passive: true });
 function screenToCanvas(tx, ty) {
-  const rect = cvs.getBoundingClientRect();
-  return { x: (tx - rect.left) / rect.width * CW, y: (ty - rect.top) / rect.height * CH };
+  if (!_cachedRect) _cachedRect = cvs.getBoundingClientRect();
+  return { x: (tx - _cachedRect.left) / _cachedRect.width * CW, y: (ty - _cachedRect.top) / _cachedRect.height * CH };
 }
 
 // --- Joystick ---

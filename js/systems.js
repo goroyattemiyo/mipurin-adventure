@@ -123,6 +123,7 @@ function startFloor() {
   dialogMsg = null; dialogCallback = null;
   rng = mulberry32(Date.now() + floor);
   roomSpikes = []; roomMap = generateRoom(floor);
+  if (typeof _roomBuffer !== 'undefined') { _roomBuffer = null; _roomBufferFloor = -1; } // ルームキャッシュをクリア
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;
     // Boss entrance dialog
     if (boss) { cutinBossId = boss.id; cutinTimer = 0; cutinPhase = 'slidein'; gameState = 'cutin'; lastBossId = boss.id; }

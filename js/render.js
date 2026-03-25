@@ -198,9 +198,21 @@ function drawGameState() {
 
       ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
       if (deadTimer > 2.0) {
-        const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
-        ctx.fillStyle = blinkOn ? '#fff' : 'rgba(255,255,255,0.3)';
-        ctx.fillText('Zキーでタイトルへ', CW/2, panelY + 320);
+        if (typeof touchActive !== 'undefined' && touchActive) {
+          ctx.fillStyle = '#ffcc00';
+          var _dbx=CW/2-200,_dby=panelY+290,_dbw=400,_dbh=60;
+          ctx.beginPath(); ctx.moveTo(_dbx+30,_dby); ctx.lineTo(_dbx+_dbw-30,_dby);
+          ctx.quadraticCurveTo(_dbx+_dbw,_dby,_dbx+_dbw,_dby+30); ctx.lineTo(_dbx+_dbw,_dby+_dbh-30);
+          ctx.quadraticCurveTo(_dbx+_dbw,_dby+_dbh,_dbx+_dbw-30,_dby+_dbh); ctx.lineTo(_dbx+30,_dby+_dbh);
+          ctx.quadraticCurveTo(_dbx,_dby+_dbh,_dbx,_dby+_dbh-30); ctx.lineTo(_dbx,_dby+30);
+          ctx.quadraticCurveTo(_dbx,_dby,_dbx+30,_dby); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#1a1a2e'; ctx.font = "bold 26px 'M PLUS Rounded 1c', sans-serif";
+          ctx.fillText('タップしてタイトルへ', CW/2, _dby+38);
+        } else {
+          const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+          ctx.fillStyle = blinkOn ? '#fff' : 'rgba(255,255,255,0.3)';
+          ctx.fillText('Zキーでタイトルへ', CW/2, panelY + 320);
+        }
       } else {
         ctx.fillStyle = '#888';
         ctx.fillText('しばらくおまちください...', CW/2, panelY + 320);

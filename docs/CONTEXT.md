@@ -1,5 +1,5 @@
 # CONTEXT.md — ミプリンの冒険（毎回必須）
-> 最終更新: 2026-03-24 | v6.34 | Sprint H-C 完了
+> 最終更新: 2026-03-25 | v6.34 | Sprint H-C 完了
 > **セッション開始時はこのファイル1つだけ渡せばよい**
 
 ---
@@ -175,7 +175,84 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 
 ## 7. ルール変更履歴
 
+- 2026-03-25: テキスト描画を「縮小のみ」から「自動改行＋動的行間」へ移行し、視認性を確保
+- 2026-03-25: UIManager v2 導入（drawSmartText / drawHelpIcon / showModal）、祝福選択画面をカルーセル形式にリニューアル（Tween.js 導入）
+- 2026-03-25: Section 8「外部ライブラリ導入ロードマップ」追加
 - 2026-03-24: CONTEXT/REFERENCE/ARCHIVE の3ファイル体制へ再編
 - 2026-03-22: セクション15追加（Claude使用効率化）
 - 2026-03-22: ファイルサイズ監視テーブル更新(v6.25対応)
 - 2026-03-21: v2 → main 統合
+
+---
+
+## 8. 開発ロードマップ — 外部ライブラリ導入方針
+
+### 方針サマリー
+
+現在の自前実装（Web Audio API・手書き lerp・手書きダンジョン生成）は
+ファイルサイズの肥大化と保守コストの主因になっている。
+Sprint I 完了後、以下の3ライブラリを**順次**導入し、
+「既存コードの置き換え」と「演出品質の向上」を同時に達成する。
+
+---
+
+### Phase A — Howler.js（音声管理）
+
+| 項目 | 内容 |
+|------|------|
+| 対象ファイル | `js/bgm.js`（10.1 KB）|
+| 削減見込み | bgm.js をほぼ全廃 → **約 -9 KB** |
+| 演出強化 | ループポイント指定・フェードイン/アウト・空間音響 (Spatial) |
+| CDN | `howler.min.js` (~8 KB gzip) |
+| 注意 | Web Audio API との二重初期化を避けるため `Audio` オブジェクトを段階移行 |
+
+**導入手順（概要）**
+1. `<script src="https://cdn.jsdelivr.net/npm/howler@2/dist/howler.min.js">` を `index.html` に追加
+2. `bgm.js` の `playBGM` / `stopBGM` を Howler.Howl に置き換え
+3. SE は `Audio.play()` を残しつつ、段階的に Howler へ移行
+
+---
+
+### Phase B — Tween.js（アニメーション補間）
+
+| 項目 | 内容 |
+|------|------|
+| 対象ファイル | `js/update.js`・`js/render.js`（合計 ~37 KB）|
+| 削減見込み | 手書き lerp / タイマー管理を置き換え → **約 -3〜4 KB** |
+| 演出強化 | Ease in/out・Spring・カットイン演出の品質向上 |
+| CDN | `@tweenjs/tween.js` (~8 KB gzip) |
+| 注意 | `update.js` の `update(dt)` 内で `TWEEN.update(timestamp)` を呼ぶ |
+
+**主な置き換え対象**
+- HP バーのバウンスアニメーション（`hpBounce`）
+- フェード処理（`fadeAlpha`）
+- カットイン演出（`cutinTimer`）
+
+---
+
+### Phase C — rot.js（ローグライク演算）
+
+| 項目 | 内容 |
+|------|------|
+| 対象ファイル | `js/data_room.js`（8.9 KB）・`js/combat.js` 一部 |
+| 削減見込み | 部屋生成・経路探索を置き換え → **約 -4 KB** |
+| 演出強化 | FOV（視野計算）・BSP ダンジョン・A* 経路探索 |
+| CDN | `rot.min.js` (~22 KB gzip) |
+| 注意 | グローバル名前空間汚染を防ぐため `ROT` プレフィックスを確認 |
+
+**主な活用箇所**
+- `generateRoom()` → `ROT.Map.Digger` に置き換え
+- 敵 AI の経路探索 → `ROT.Path.AStar` に移行（combat.js 簡略化）
+
+---
+
+### 導入優先順位と判断基準
+
+```
+Phase A（Howler）→ Phase B（Tween）→ Phase C（rot.js）
+```
+
+- 各 Phase は独立して導入可能（依存関係なし）
+- Phase 開始前に Synapse Council（Performance Engineer 必須）を招集
+- CDN 導入後は Service Worker の `sw.js` キャッシュリストに追加すること
+- ライブラリ追加後も **全 JS の合計サイズ 400 KB 以下** を維持する

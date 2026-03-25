@@ -15,13 +15,30 @@ function drawPrologue() {
   }
   const txt = prologueTexts[prologuePage] || '';
   if (txt) {
-    const barH = 80 + 56*_M;
+    const fontSize = 28 * _M;
+    const lineH = Math.ceil(fontSize * 1.4);
+    const maxW = Math.floor(CW * 0.85);
+    ctx.font = "bold " + fontSize + "px 'M PLUS Rounded 1c', sans-serif";
+    // 自動改行: 文字単位で幅を計測しながら折り返す
+    var lines = [], cur = '';
+    for (var _ci = 0; _ci < txt.length; _ci++) {
+      var _test = cur + txt[_ci];
+      if (ctx.measureText(_test).width > maxW && cur.length > 0) {
+        lines.push(cur); cur = txt[_ci];
+      } else { cur = _test; }
+    }
+    if (cur) lines.push(cur);
+    const pad = 16 * _M;
+    const hintH = 36 * _M;
+    const barH = Math.max(80 + 56*_M, lines.length * lineH + pad * 2 + hintH);
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, CH - barH, CW, barH);
     ctx.fillStyle = '#fff';
-    ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillText(txt, CW / 2, CH - barH/2 - 10);
+    const baseY = CH - barH + pad + fontSize;
+    for (var _li = 0; _li < lines.length; _li++) {
+      ctx.fillText(lines[_li], CW / 2, baseY + _li * lineH);
+    }
   }
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";

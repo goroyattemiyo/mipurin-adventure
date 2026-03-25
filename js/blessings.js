@@ -115,6 +115,9 @@ const DUO_DEFS = [
 
 let activeDuos = [];
 let blessingChoices = [], activeBlessings = [], selectCursor = 0;
+let blessingCarouselX = 0;    // Tween でアニメーションするカルーセル位置（小数カードindex）
+let blessingDetailOpen = false; // 詳細ポップアップ表示中
+let blessingDetailAnimT = 0;    // 詳細ポップアップ入場アニメーション (0→1)
 
 function checkDuos() {
   const fams = new Set(activeBlessings.map(b => b.family));

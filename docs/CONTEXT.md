@@ -87,6 +87,39 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 ヒアドキュメント内にバッククォート3連を含めない。
 代替: `fence = chr(96) * 3` または `~~~js` チルダ記法を使う。
 
+### Synapse Council（設計判断）
+
+複数ファイルにまたがる新機能・設計変更の際に招集する有識者会議。
+
+**メンバー選定（タスク性質から自動選択）**
+
+| 専門家 | 招集条件 |
+|--------|---------|
+| Roguelite Designer | ゲームループ・バランス変更 |
+| Game Balance Designer | 数値調整・難易度設計 |
+| Narrative Editor | ストーリー・ダイアログ追加 |
+| **Implementer** | **常に招集（必須）** |
+| UI Designer | UI/UX変更 |
+| Audio Director | BGM・SE追加 |
+| Performance Engineer | 描画・ファイルサイズ最適化 |
+
+**フロー**
+```
+1. メンバー選定
+2. 各専門家が意見を出す
+3. スコアリング（40点満点）
+   → 32点以上: 着手許可
+   → 32点未満: 再設計・再評価
+4. 承認された判断を REFERENCE.md の DECISIONS に追記
+```
+
+**省略条件**
+1〜2ファイルに閉じるバグ修正はSynapse Councilをスキップしてよい。
+
+**モデル切り替えルール**
+- 通常実装: **Sonnet**（デフォルト）
+- 複雑な設計・行き詰まり時: **Opus**（`/model` コマンドで切替）
+
 ---
 
 ## 4. ファイルサイズ制限

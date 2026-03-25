@@ -56,8 +56,7 @@ function getVisibleButtons() {
 }
 
 // --- Joystick keys injection ---
-// スマホ操作はタッチで4方向スナップ: |dx|と|dy|の大きい軸のみを採用
-// → 斜め入力を排除して攻撃が届かない問題を解消
+// 8方向対応: 両軸を独立して判定し斜め移動を許可
 const JOYSTICK_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
 let joystickKeysActive = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
 
@@ -66,16 +65,10 @@ function updateJoystickKeys() {
   if (joystick.active) {
     const mag = Math.hypot(joystick.dx, joystick.dy);
     if (mag > joystick.deadzone) {
-      // 4方向スナップ: 絶対値が大きい軸のみを採用（斜め同時入力を禁止）
-      if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
-        // 横方向優先
-        if (joystick.dx < -0.28) newState.KeyA = true;
-        if (joystick.dx >  0.28) newState.KeyD = true;
-      } else {
-        // 縦方向優先
-        if (joystick.dy < -0.28) newState.KeyW = true;
-        if (joystick.dy >  0.28) newState.KeyS = true;
-      }
+      if (joystick.dx < -0.28) newState.KeyA = true;
+      if (joystick.dx >  0.28) newState.KeyD = true;
+      if (joystick.dy < -0.28) newState.KeyW = true;
+      if (joystick.dy >  0.28) newState.KeyS = true;
     }
   }
   for (const k of JOYSTICK_KEYS) {
@@ -341,17 +334,8 @@ function drawTouchUI() {
   ctx.moveTo(joystick.cx - joystick.radius + 10, joystick.cy);
   ctx.lineTo(joystick.cx + joystick.radius - 10, joystick.cy);
   ctx.stroke();
-  // 4方向スナップに合わせてノブ位置を表示（ビジュアルも軸スナップ）
-  var snappedDx = 0, snappedDy = 0;
-  if (joystick.active && Math.hypot(joystick.dx, joystick.dy) > joystick.deadzone) {
-    if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
-      snappedDx = joystick.dx > 0 ? 1 : -1;
-    } else {
-      snappedDy = joystick.dy > 0 ? 1 : -1;
-    }
-  }
-  var knobX = joystick.cx + (joystick.active ? joystick.dx : snappedDx) * joystick.radius * 0.65;
-  var knobY = joystick.cy + (joystick.active ? joystick.dy : snappedDy) * joystick.radius * 0.65;
+  var knobX = joystick.cx + joystick.dx * joystick.radius * 0.65;
+  var knobY = joystick.cy + joystick.dy * joystick.radius * 0.65;
   ctx.globalAlpha = joystick.active ? 0.5 : 0.2;
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(knobX, knobY, joystick.knobRadius, 0, Math.PI * 2); ctx.fill();

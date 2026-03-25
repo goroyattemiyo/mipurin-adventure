@@ -92,7 +92,7 @@ def main():
     print("-" * 50)
 
     ok = skip = err = 0
-    overwrite_all = False
+    overwrite_all = "--yes" in sys.argv or "-y" in sys.argv
 
     for fname in png_files:
         src = os.path.join(INPUT_DIR, fname)

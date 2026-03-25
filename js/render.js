@@ -145,6 +145,7 @@ function drawGameState() {
       ctx.textAlign = 'left';
     }
     if (gameState === 'dead') {
+      const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
       ctx.fillStyle = 'rgba(30,10,25,0.78)'; ctx.fillRect(0, 0, CW, CH);
 
       if (deadImgReady) {
@@ -160,7 +161,8 @@ function drawGameState() {
         ctx.restore();
       }
 
-      const panelX = CW/2 - 320, panelY = 100, panelW = 640, panelH = 360;
+      const panelW = Math.min(900 * _M, CW - 40), panelH = 80 + 70*_M + 60*_M + 50*_M + 80*_M + 80*_M;
+      const panelX = CW/2 - panelW/2, panelY = Math.max(20, (CH - panelH) / 2 - 40);
       ctx.fillStyle = 'rgba(20,5,15,0.72)';
       ctx.beginPath();
       const pr = 20;
@@ -177,45 +179,45 @@ function drawGameState() {
       ctx.strokeStyle = 'rgba(255,100,120,0.3)'; ctx.lineWidth = 2; ctx.stroke();
 
       ctx.fillStyle = COL.hpLost;
-      ctx.font = "bold 64px 'M PLUS Rounded 1c', sans-serif";
+      ctx.font = "bold " + (64*_M) + "px 'M PLUS Rounded 1c', sans-serif";
       ctx.textAlign = 'center';
-      ctx.fillText('おやすみ、ミプリン…', CW/2, panelY + 80);
+      ctx.fillText('おやすみ、ミプリン…', CW/2, panelY + 60*_M);
 
       ctx.fillStyle = '#ddd';
-      ctx.font = "28px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText('スコア: ' + score + '  フロア: ' + floor + '  花粉: ' + pollen, CW/2, panelY + 145);
+      ctx.font = (28*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('スコア: ' + score + '  フロア: ' + floor + '  花粉: ' + pollen, CW/2, panelY + 130*_M);
 
       ctx.fillStyle = '#ffd700';
-      ctx.font = "bold 26px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillText('獲得ネクター: +' + runNectar, CW/2, panelY + 195);
+      ctx.font = "bold " + (26*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('獲得ネクター: +' + runNectar, CW/2, panelY + 180*_M);
 
       if (deadTimer > 1.0) {
         const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
-        ctx.font = "italic 22px 'M PLUS Rounded 1c', sans-serif";
+        ctx.font = "italic " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = '#ffb7c5';
-        ctx.fillText('\u300C' + DEATH_LINES[Math.floor((deadTimer - 1.0) * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 260);
+        ctx.fillText('\u300C' + DEATH_LINES[Math.floor((deadTimer - 1.0) * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 240*_M);
       }
 
-      ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
+      ctx.font = (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
       if (deadTimer > 2.0) {
         if (typeof touchActive !== 'undefined' && touchActive) {
           ctx.fillStyle = '#ffcc00';
-          var _dbx=CW/2-200,_dby=panelY+290,_dbw=400,_dbh=60;
+          var _dbx=CW/2-200*_M,_dby=panelY+270*_M,_dbw=400*_M,_dbh=60*_M;
           ctx.beginPath(); ctx.moveTo(_dbx+30,_dby); ctx.lineTo(_dbx+_dbw-30,_dby);
           ctx.quadraticCurveTo(_dbx+_dbw,_dby,_dbx+_dbw,_dby+30); ctx.lineTo(_dbx+_dbw,_dby+_dbh-30);
           ctx.quadraticCurveTo(_dbx+_dbw,_dby+_dbh,_dbx+_dbw-30,_dby+_dbh); ctx.lineTo(_dbx+30,_dby+_dbh);
           ctx.quadraticCurveTo(_dbx,_dby+_dbh,_dbx,_dby+_dbh-30); ctx.lineTo(_dbx,_dby+30);
           ctx.quadraticCurveTo(_dbx,_dby,_dbx+30,_dby); ctx.closePath(); ctx.fill();
-          ctx.fillStyle = '#1a1a2e'; ctx.font = "bold 26px 'M PLUS Rounded 1c', sans-serif";
-          ctx.fillText('タップしてタイトルへ', CW/2, _dby+38);
+          ctx.fillStyle = '#1a1a2e'; ctx.font = "bold " + (26*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+          ctx.fillText('タップしてタイトルへ', CW/2, _dby+38*_M);
         } else {
           const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
           ctx.fillStyle = blinkOn ? '#fff' : 'rgba(255,255,255,0.3)';
-          ctx.fillText('Zキーでタイトルへ', CW/2, panelY + 320);
+          ctx.fillText('Zキーでタイトルへ', CW/2, panelY + 300*_M);
         }
       } else {
         ctx.fillStyle = '#888';
-        ctx.fillText('しばらくおまちください...', CW/2, panelY + 320);
+        ctx.fillText('しばらくおまちください...', CW/2, panelY + 300*_M);
       }
       ctx.textAlign = 'left';
     }

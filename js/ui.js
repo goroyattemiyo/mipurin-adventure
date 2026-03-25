@@ -17,93 +17,98 @@ const UI_TEXT_STYLE = {
 
 function drawInventory() {
   if (!inventoryOpen) return;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, CW, CH);
   const tabs = ['持ち物', '図鑑', '装備'];
   for (let i = 0; i < tabs.length; i++) {
-    const tx = CW / 2 - 120 + i * 240, ty = 60;
+    const tx = CW / 2 - 120 + i * 240, ty = 50 + 10*_M;
     ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(tx - 80, ty - 20, 160, 40);
+    ctx.fillRect(tx - 80, ty - 20*_M, 160, 40*_M);
     ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
-    ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillText(tabs[i], tx, ty + 7);
+    ctx.fillText(tabs[i], tx, ty + 7*_M);
   }
   ctx.textAlign = 'left';
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
   if (inventoryTab === 2) drawEquipTab(80, 110, CW - 160, CH - 160);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
+  if (_M === 1) ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
   ctx.textAlign = 'left';
 }
 
 function drawInventoryItems() {
-  const lx = 120, ly = 140;
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
+  const lx = 80, ly = 100 + 40*_M;
+  const sp = 30 * _M; // line spacing
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('ステータス', lx, ly);
-  ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillStyle = '#fff'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
-  for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + 40 + i * 30);
-  const wx = CW / 2 + 40, wy = 140;
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
+  for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + sp + i * sp);
+  const wx = CW / 2 + 40, wy = ly;
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('武器', wx, wy);
-  ctx.fillStyle = player.weapon.color; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + 40);
-  ctx.fillStyle = '#ccc'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + 65);
-  ctx.fillText('射程: ' + ((player.weapon.range||44) + (player.atkRangeBonus||0)), wx + 20, wy + 85);
-    ctx.fillStyle = '#ffd700'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('【おきにいり】', wx + 20, wy + 130);
-    const w0 = player.weapons[0];
-    if (w0) { ctx.fillStyle = w0.color; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + 150); }
-    ctx.fillStyle = '#aaa'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText('【もうひとつ】', wx + 20, wy + 175);
-    const w1 = player.weapons[1];
-    if (w1) { ctx.fillStyle = w1.color; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + 195); }
-    else { ctx.fillStyle = '#666'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('- なし -', wx + 30, wy + 195); }
-  ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + 105);
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('祝福', wx, wy + 220);
-  if (activeBlessings.length === 0) { ctx.fillStyle = '#bbb'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('なし', wx + 20, wy + 255); }
-  else { for (let i = 0; i < Math.min(activeBlessings.length, 8); i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + 255 + i * 35); ctx.fillStyle = '#aaa'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.desc, wx + 50, wy + 275 + i * 35); } }
-    if (activeBlessings.length > 8) { ctx.fillStyle = '#aaa'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('...他 ' + (activeBlessings.length - 8) + ' 個', wx + 20, wy + 255 + 8 * 35); }
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 24px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('アイテム', lx, ly + 280);
+  ctx.fillStyle = player.weapon.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + sp);
+  ctx.fillStyle = '#ccc'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + sp*2);
+  ctx.fillText('射程: ' + ((player.weapon.range||44) + (player.atkRangeBonus||0)), wx + 20, wy + sp*3);
+  ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + sp*4);
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('【おきにいり】', wx + 20, wy + sp*5);
+  const w0 = player.weapons[0];
+  if (w0) { ctx.fillStyle = w0.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + sp*6); }
+  ctx.fillStyle = '#aaa'; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('【もうひとつ】', wx + 20, wy + sp*7);
+  const w1 = player.weapons[1];
+  if (w1) { ctx.fillStyle = w1.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + sp*8); }
+  else { ctx.fillStyle = '#666'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('- なし -', wx + 30, wy + sp*8); }
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('祝福', wx, wy + sp*9 + 10);
+  if (activeBlessings.length === 0) { ctx.fillStyle = '#bbb'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('なし', wx + 20, wy + sp*10 + 10); }
+  else { for (let i = 0; i < Math.min(activeBlessings.length, 5); i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + sp*10 + 10 + i * sp); ctx.fillStyle = '#aaa'; ctx.font = (16*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.desc, wx + 50, wy + sp*10 + 10 + i * sp + 18*_M); } }
+  if (activeBlessings.length > 5) { ctx.fillStyle = '#aaa'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('...他 ' + (activeBlessings.length - 5) + ' 個', wx + 20, wy + sp*10 + 10 + 5 * sp); }
+  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText('アイテム', lx, ly + sp * 8);
   for (let i = 0; i < 3; i++) {
-    const sx = lx + 30 + i * 80, sy = ly + 320;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, 28, 0, Math.PI * 2); ctx.fill();
+    const sz = 28 * _M;
+    const sx = lx + sz + i * (sz * 2 + 16 * _M), sy = ly + sp * 8 + sz + 10;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, sz, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    ctx.fillText('[' + (i + 1) + ']', sx, sy + 46);
-    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = "40px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(player.consumables[i].icon, sx, sy + 8); }
-    else { ctx.fillStyle = '#555'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('空', sx, sy + 5); }
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+    ctx.fillText('[' + (i + 1) + ']', sx, sy + sz + 16*_M);
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = (40*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(player.consumables[i].icon, sx, sy + 10*_M); }
+    else { ctx.fillStyle = '#555'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('空', sx, sy + 5*_M); }
     ctx.textAlign = 'left';
   }
 }
 
 function drawCollectionTab() {
   var F = "'M PLUS Rounded 1c', sans-serif";
+  var _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   // 3 sub-tabs: 0=いきもの, 1=ぶき, 2=せかい
   var subTabs = ['\u3044\u304d\u3082\u306e', '\u3076\u304d', '\u305b\u304b\u3044'];
   for (var si = 0; si < subTabs.length; si++) {
     var stx = 180 + si * 160, sty = 120;
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(stx - 56, sty - 16, 112, 32);
+    ctx.fillRect(stx - 56, sty - 16, 112, 32*_M);
     ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#000' : '#ccc';
-    ctx.font = 'bold 18px ' + F; ctx.textAlign = 'center';
-    ctx.fillText(subTabs[si], stx, sty + 6);
+    ctx.font = 'bold ' + (18*_M) + 'px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(subTabs[si], stx, sty + 6*_M);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px ' + F; ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = (14*_M) + 'px ' + F; ctx.textAlign = 'center';
   ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 340, 155);
   ctx.textAlign = 'left';
   if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) { drawWeaponCollection(); return; }
   if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 2) { drawWorldLoreTab(); return; }
 
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold ' + (22*_M) + 'px ' + F;
   ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
 
   var allEnemies = (typeof ENEMY_DEFS === "object" && !Array.isArray(ENEMY_DEFS)) ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
@@ -134,11 +139,11 @@ function drawCollectionTab() {
   var pctE = Math.floor(ownedE / totalE * 100);
   ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
   ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 200, 400 * (ownedE / totalE), 16);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + F; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (12*_M) + 'px ' + F; ctx.textAlign = 'center';
   ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
-  var cardH = 62, padY = 4, startY = 228, startX = 120;
+  var cardH = 62 * _M, padY = 4 * _M, startY = 228, startX = 120;
   var maxRows = Math.floor((CH - 80 - startY) / (cardH + padY));
   // Scroll clamp
   if (typeof collectionScroll === 'undefined') collectionScroll = 0;
@@ -154,21 +159,21 @@ function drawCollectionTab() {
     var known = defeatedC > 0;
 
     ctx.fillStyle = known ? 'rgba(40,35,60,0.85)' : 'rgba(25,25,25,0.7)';
-    ctx.fillRect(startX, ey, CW - 240, cardH);
+    ctx.fillRect(startX, ey, CW - 160, cardH);
     var borderCol = known ? (ek.color || '#888') : '#333';
     if (known && lp > 0 && typeof loopHueShift === 'function') borderCol = loopHueShift(ek.color || '#888', lp);
     ctx.strokeStyle = borderCol;
     ctx.lineWidth = known ? 2 : 1;
-    ctx.strokeRect(startX, ey, CW - 240, cardH);
+    ctx.strokeRect(startX, ey, CW - 160, cardH);
 
     if (lp > 0) {
-      ctx.fillStyle = 'rgba(255,215,0,0.2)'; ctx.fillRect(startX + CW - 242 - 48, ey + 2, 46, 18);
-      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('Loop ' + lp, startX + CW - 242 - 44, ey + 14);
+      ctx.fillStyle = 'rgba(255,215,0,0.2)'; ctx.fillRect(startX + CW - 242 - 48*_M, ey + 2, 46*_M, 18*_M);
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold ' + (11*_M) + 'px ' + F;
+      ctx.fillText('Loop ' + lp, startX + CW - 242 - 44*_M, ey + 14*_M);
     }
 
     var sprX = startX + 6, sprY = ey + 7;
-    var sprW = 48, sprH = 48;
+    var sprW = 48 * _M, sprH = 48 * _M;
     var sprId = ek.shape;
     if (known) {
       ctx.save();
@@ -196,25 +201,26 @@ function drawCollectionTab() {
       ctx.restore();
     }
 
-    var txX = startX + 66;
+    var txX = startX + 60 * _M;
     if (known) {
       var dispColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-      ctx.fillStyle = dispColor; ctx.font = 'bold 16px ' + F;
+      ctx.fillStyle = dispColor; ctx.font = 'bold ' + (16*_M) + 'px ' + F;
       var displayName = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : (ek.name + (lp > 0 ? ' [Loop ' + lp + ']' : ''));
-      ctx.fillText(displayName, txX, ey + 20);
-      ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F;
-      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36);
+      ctx.fillText(displayName, txX, ey + 20*_M);
+      ctx.fillStyle = '#ccc'; ctx.font = (12*_M) + 'px ' + F;
+      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36*_M);
       if (ek.lore) {
-        ctx.fillStyle = '#aaa'; ctx.font = '11px ' + F;
-        var ls = ek.lore.length > 55 ? ek.lore.slice(0, 55) + '\u2026' : ek.lore;
-        ctx.fillText(ls, txX, ey + 52);
+        ctx.fillStyle = '#aaa'; ctx.font = (11*_M) + 'px ' + F;
+        var maxLore = _M === 2 ? 30 : 55;
+        var ls = ek.lore.length > maxLore ? ek.lore.slice(0, maxLore) + '\u2026' : ek.lore;
+        ctx.fillText(ls, txX, ey + 52*_M);
       }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = 'bold 16px ' + F;
+      ctx.fillStyle = '#555'; ctx.font = 'bold ' + (16*_M) + 'px ' + F;
       var unknownName = (lp > 0) ? '??? [Loop ' + lp + ']' : '???';
-      ctx.fillText(unknownName, txX, ey + 20);
-      ctx.fillStyle = '#444'; ctx.font = '12px ' + F;
-      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36);
+      ctx.fillText(unknownName, txX, ey + 20*_M);
+      ctx.fillStyle = '#444'; ctx.font = (12*_M) + 'px ' + F;
+      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36*_M);
     }
   }
 
@@ -402,21 +408,27 @@ function drawDialogWindow() {
 }
 
 function drawHUD() {
-  const hs = 22, hSpacing = hs + 6, hPerRow = 15;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
+  const hs = 22 * _M, hSpacing = hs + 6, hPerRow = _M === 2 ? 10 : 15;
   for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); const hBounce = (hpBounceTimer > 0 && i < player.hp) ? Math.sin((hpBounceTimer * 20) + i * 0.5) * 4 : 0; ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8) + hBounce); }
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
-  ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 56);
+  // On mobile, skip score/pollen (overlaps with touch item buttons area) and show compact at center-right
+  if (_M === 1) {
+    ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
+    ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 56);
+  }
   ctx.textAlign = 'center';
   if (!isBossFloor() || !boss) {
-    ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 40);
+    ctx.fillStyle = COL.bless; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 40*_M);
   } else {
-    ctx.fillStyle = '#e74c3c'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40);
+    ctx.fillStyle = '#e74c3c'; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40*_M);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = player.weapon.color; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
-  ctx.fillStyle = COL.text; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
-  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillStyle = player.weapon.color; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
+  ctx.fillStyle = COL.text; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
+  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
+  // Item box: only draw on PC (mobile uses touch buttons in top-right)
+  if (_M === 1) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 50, 170, 55);
     ctx.fillStyle = '#ffd700'; ctx.font = "bold 19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('アイテム', CW - 178, 62);
     for (let i = 0; i < 3; i++) {
@@ -432,32 +444,41 @@ function drawHUD() {
       ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
       ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText((i + 1), sx - 16, sy + 20);
     }
+  }
     if (player.weapons[1] !== null) {
       const subW = player.weapons[1 - player.weaponIdx];
       if (subW) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160, 30);
-        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160, 30);
-        ctx.fillStyle = '#aaa'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('もうひとつ', 14, CH - 52);
-        ctx.fillStyle = subW.color || '#fff'; ctx.font = "bold 19px 'M PLUS Rounded 1c', sans-serif";
-        ctx.fillText('Q: ' + subW.name, 14, CH - 38);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160 * _M, 30 * _M);
+        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160 * _M, 30 * _M);
+        ctx.fillStyle = '#aaa'; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('もうひとつ', 14, CH - 52);
+        ctx.fillStyle = subW.color || '#fff'; ctx.font = "bold " + (19*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+        ctx.fillText((_M === 2 ? '' : 'Q: ') + subW.name, 14, CH - 38);
       }
     }
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
-    if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
-    if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
-    ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';
+    if (_M === 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+      let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+      if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
+      if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
+      ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';
+    }
 }
 
 function drawBlessing() {
   if (gameState !== 'blessing') return;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 95);
+  ctx.fillStyle = COL.bless; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 50 + 20*_M);
+  ctx.fillStyle = COL.text; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 50 + 45*_M);
+  const bw = 180 * _M, bh = 220 * _M;
+  const totalW = blessingChoices.length * bw + (blessingChoices.length - 1) * 20 * _M;
+  const bStartX = CW / 2 - totalW / 2;
   for (let i = 0; i < blessingChoices.length; i++) {
     const sel = selectCursor === i;
-    const b = blessingChoices[i], bxBase = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
+    const b = blessingChoices[i];
+    const bxBase = bStartX + i * (bw + 20 * _M);
+    const by = 50 + 70*_M;
     const cardDelay = i * 0.15;
     const cardProg = Math.min(1, Math.max(0, (blessingAnimTimer - cardDelay) * 2));
     const eased = 1 - Math.pow(1 - cardProg, 3);
@@ -472,18 +493,18 @@ function drawBlessing() {
     const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
     ctx.strokeStyle = sel ? '#ffd700' : rCol; ctx.lineWidth = sel ? 4 : 1.5; ctx.strokeRect(bx, byLocal, bw, bh);
     if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, byLocal, bw, bh); }
-    ctx.fillStyle = COL.text; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55);
-    ctx.fillStyle = rCol; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80);
-    ctx.fillStyle = COL.bless; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 105);
-    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135;
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
-      for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18; dline = ''; } }
+    ctx.fillStyle = COL.text; ctx.font = "bold " + (36*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55*_M);
+    ctx.fillStyle = rCol; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80*_M);
+    ctx.fillStyle = COL.bless; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 108*_M);
+    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135*_M;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+      for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18*_M; dline = ''; } }
       if (dline) ctx.fillText(dline, bx + bw/2, dly); }
-    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, byLocal + bh - 25);
     ctx.restore();
   }
-  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
+  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
   ctx.textAlign = 'left';
 }
 

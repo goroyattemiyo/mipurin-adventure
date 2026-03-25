@@ -21,6 +21,10 @@ print("=" * 50)
 print("  MIPURIN ADVENTURE AUTO TEST")
 print("=" * 50)
 
+# === 0. Script existence ===
+print("\n--- Script Checks ---")
+check("exists: scripts/process_sprites.py", os.path.exists("scripts/process_sprites.py"))
+
 # === 1. File existence & size ===
 print("\n--- File Checks ---")
 JS_FILES = [

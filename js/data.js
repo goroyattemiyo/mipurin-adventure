@@ -15,17 +15,17 @@ function recordEnemy(name, defeated) {
 
 // === Enemy Variant Names ===
 const ENEMY_VARIANT_NAMES = {
-  mushroom:  ['どくキノコ',       'あおキノコ',       'きんキノコ',       'やみキノコ'],
+  mushroom:  ['どくキノコ',       'ほのおキノコ',     'きんキノコ',       'やみキノコ'],
   blob:      ['はちみつスライム', 'みずあめスライム',     'ほしぞらスライム',   'にじいろスライム'],
-  spider:    ['あみぐもちゃん',   'くろぐもちゃん',   'どくぐもちゃん',   'おにぐもちゃん'],
-  bat:       ['やみコウモリ',     'あかコウモリ',     'こおりコウモリ',   'きんコウモリ'],
+  spider:    ['あみぐもちゃん',   'さくらぐもちゃん', 'どくぐもちゃん',   'おにぐもちゃん'],
+  bat:       ['やみコウモリ',     'よるコウモリ',     'まほうコウモリ',   'さくらコウモリ'],
   beetle:    ['かぶとむしナイト', 'くわがたナイト',   'ダイヤナイト',     'りゅうナイト'],
   wasp:      ['わるいハチ',       'どくバチ',         'おおスズメバチ',   'まおうバチ'],
-  flower:    ['パクパクフラワー', 'もえもえフラワー', 'こおりフラワー',   'やみフラワー'],
+  flower:    ['パクパクフラワー', 'もえもえフラワー', 'ほのおフラワー',   'きんフラワー'],
   worm:      ['もぐもぐイモムシ', 'ぴかぴかイモムシ', 'とげとげイモムシ', 'おおイモムシ'],
   ghost:     ['ひとだまホタル',   'あおびホタル',     'おにびホタル',     'れいこんホタル'],
-  golem:     ['いわいわゴーレム', 'こおりゴーレム',   'マグマゴーレム',   'クリスタルゴーレム'],
-  vine:      ['つるつるツタ',     'もえるツタ',       'こおるツタ',       'やみのツタ'],
+  golem:     ['いわいわゴーレム', 'こおりゴーレム',   'まほうゴーレム',   'クリスタルゴーレム'],
+  vine:      ['つるつるツタ',     'みずのツタ',       'こおるツタ',       'やみのツタ'],
   darkbee:   ['ダークビー',       'シャドービー',     'ファントムビー',   'デスビー']
 };
 function getVariantName(shape, loop) {
@@ -107,19 +107,19 @@ function getTheme(floor) { return THEMES[(floor - 1) % THEMES.length]; }
 
 // ===== WEAPONS =====
 const WEAPON_DEFS = [
-  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 64, speed: 0.18, dur: 0.15, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
+  { id: 'needle', name: '\ud83d\udc1d 蜂の針', dmgMul: 1, range: 80, speed: 0.18, dur: 0.15, desc: 'ミプリンの初期装備！素早い3連撃', color: '#ffd700', fx: 'double' },
   { id: 'honey_cannon', name: '\ud83c\udf6f 蜜砲', dmgMul: 1.5, range: 108, speed: 0.5, dur: 0.2, desc: '甘い蜜の弾を飛ばす遠距離武器', color: '#f0a030', fx: 'none' },
-  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 52, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
-  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 84, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
-  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 76, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
-  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 68, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' },
+  { id: 'pollen_shield', name: '\ud83d\udee1\ufe0f 花粉盾', dmgMul: 0.8, range: 68, speed: 0.35, dur: 0.15, desc: 'カウンター！パリィで2倍反撃', color: '#f1c40f', fx: 'none' },
+  { id: 'vine_whip', name: '\ud83c\udf3f 蔦鞭', dmgMul: 0.7, range: 100, speed: 0.4, dur: 0.18, desc: '広範囲なぎ払い＋毒付与', color: '#27ae60', fx: '360' },
+  { id: 'feather_shuriken', name: '\ud83e\udeb6 羽根手裏剣', dmgMul: 0.5, range: 92, speed: 0.12, dur: 0.08, desc: '連射！小さな羽が追尾する', color: '#87ceeb', fx: 'double' },
+  { id: 'queen_staff', name: '\ud83d\udc51 女王の杖', dmgMul: 2.0, range: 84, speed: 0.65, dur: 0.25, desc: 'チャージで範囲爆発！最強武器', color: '#e040fb', fx: 'aoe' },
   // T2 speed を T1 Lv3 比 +15% EffDPS になるよう調整（BACKLOG: 武器進化DPSダウングレード修正）
-  { id: 'golden_needle',   name: '🐝 蜂の金針', dmgMul: 1.3, range: 68, speed: 0.064, dur: 0.13, desc: '3撃目に衝撃波！金色の連撃', color: '#ffaa00', fx: 'double', tier: 2, minFloor: 6, comboFx: 'shockwave' },
+  { id: 'golden_needle',   name: '🐝 蜂の金針', dmgMul: 1.3, range: 84, speed: 0.064, dur: 0.13, desc: '3撃目に衝撃波！金色の連撃', color: '#ffaa00', fx: 'double', tier: 2, minFloor: 6, comboFx: 'shockwave' },
   { id: 'amber_cannon',    name: '🍯 蜜の大砲', dmgMul: 1.8, range: 120, speed: 0.30, dur: 0.2,  desc: '着弾に蜜だまり。敵が減速する', color: '#cc7700', fx: 'none',   tier: 2, minFloor: 6, comboFx: 'honeypool' },
-  { id: 'holy_shield',     name: '✨ 聖花の盾', dmgMul: 1.0, range: 60,  speed: 0.16, dur: 0.18, desc: 'パリィ成功でATK×4＋HP回復！', color: '#fff0d0', fx: 'none',   tier: 2, minFloor: 9, comboFx: 'parry' },
-  { id: 'cursed_thorn',    name: '💜 呪いの荊', dmgMul: 0.9, range: 96,  speed: 0.19, dur: 0.2,  desc: '攻撃に毒付与。毒撃破で毒霧拡散', color: '#8e44ad', fx: '360',  tier: 2, minFloor: 9, comboFx: 'poison' },
-  { id: 'storm_wing',      name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 84,  speed: 0.033, dur: 0.07, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
-  { id: 'queen_true_staff',name: '💎 女王の真杖', dmgMul: 2.5, range: 76, speed: 0.47, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe',   tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
+  { id: 'holy_shield',     name: '✨ 聖花の盾', dmgMul: 1.0, range: 76,  speed: 0.16, dur: 0.18, desc: 'パリィ成功でATK×4＋HP回復！', color: '#fff0d0', fx: 'none',   tier: 2, minFloor: 9, comboFx: 'parry' },
+  { id: 'cursed_thorn',    name: '💜 呪いの荊', dmgMul: 0.9, range: 112, speed: 0.19, dur: 0.2,  desc: '攻撃に毒付与。毒撃破で毒霧拡散', color: '#8e44ad', fx: '360',  tier: 2, minFloor: 9, comboFx: 'poison' },
+  { id: 'storm_wing',      name: '🌪️ 翼の嵐', dmgMul: 0.7, range: 100, speed: 0.033, dur: 0.07, desc: '羽がホーミングで敵を追尾する！', color: '#00bcd4', fx: 'double', tier: 2, minFloor: 9, comboFx: 'homing' },
+  { id: 'queen_true_staff',name: '💎 女王の真杖', dmgMul: 2.5, range: 92, speed: 0.47, dur: 0.3, desc: '爆発範囲1.5倍！クリスタルの光', color: '#e1bee7', fx: 'aoe',   tier: 2, minFloor: 12, comboFx: 'megaaoe' }];
 
 // ===== WEAPON COLLECTION =====
 

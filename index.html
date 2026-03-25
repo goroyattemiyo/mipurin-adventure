@@ -32,6 +32,18 @@ canvas{
     height:min(calc(100vw * 3 / 4), 100vh);
   }
 }
+/* PWA install banner */
+#pwa-banner{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;
+  background:rgba(26,26,46,0.94);border-top:2px solid #ffd700;
+  color:#ffd700;font:bold 14px 'M PLUS Rounded 1c',sans-serif;
+  padding:10px 16px;text-align:center;line-height:1.5;
+  backdrop-filter:blur(4px);
+}
+#pwa-banner.show{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+#pwa-add{background:#ffd700;color:#1a1a2e;border:none;border-radius:20px;
+  padding:6px 18px;font:bold 14px 'M PLUS Rounded 1c',sans-serif;cursor:pointer}
+#pwa-close{background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
 /* Portrait overlay */
 @media (orientation:portrait){
   body::after{
@@ -51,6 +63,55 @@ canvas{
 </head>
 <body>
 <canvas id="c" width="1280" height="960"></canvas>
+<div id="pwa-banner">
+  <span id="pwa-msg"></span>
+  <button id="pwa-add" style="display:none">ホーム画面に追加</button>
+  <button id="pwa-close">✕</button>
+</div>
+<script>
+(function(){
+  // スタンドアロン(インストール済み)なら表示しない
+  if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  if(localStorage.getItem('pwa_dismissed')) return;
+  var banner=document.getElementById('pwa-banner');
+  var msg=document.getElementById('pwa-msg');
+  var addBtn=document.getElementById('pwa-add');
+  var closeBtn=document.getElementById('pwa-close');
+  var deferredPrompt=null;
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  function show(){
+    if(isIOS){
+      msg.textContent='📲 ホーム画面に追加するとアプリとして遊べるよ！ → 「共有」→「ホーム画面に追加」';
+    } else {
+      msg.textContent='📲 ホーム画面に追加してアプリとして遊ぼう！';
+      if(deferredPrompt) addBtn.style.display='';
+    }
+    banner.classList.add('show');
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); deferredPrompt=e;
+    setTimeout(show, 4000);
+  });
+  if(isIOS) setTimeout(show, 4000);
+  addBtn.addEventListener('click',function(){
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){
+      deferredPrompt=null;
+      banner.classList.remove('show');
+      localStorage.setItem('pwa_dismissed','1');
+    });
+  });
+  closeBtn.addEventListener('click',function(){
+    banner.classList.remove('show');
+    localStorage.setItem('pwa_dismissed','1');
+  });
+  // Service Worker 登録
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
 <script src='js/game.js?v=1639'></script>
 <script src='js/data.js?v=1639'></script>
 <script src='js/data_room.js?v=1639'></script>

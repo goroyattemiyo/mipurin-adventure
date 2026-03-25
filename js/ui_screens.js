@@ -360,11 +360,35 @@ function drawTitle() {
   ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText(VERSION, CW/2, 420);
 
-  // === Start prompt (blink) ===
-  if (Math.sin(titleBlink * 3) > -0.3) {
-    ctx.fillStyle = '#ffcc00';
-    ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップでスタート' : 'Zキーでスタート', CW/2, 500);
+  // === Start prompt ===
+  if (typeof touchActive !== 'undefined' && touchActive) {
+    // モバイル: スタート／花壇ボタンを描画
+    var _btnY=470, _btnH=72, _gap=24, _bwS=330, _bwG=220;
+    var _bxS=CW/2 - (_bwS+_gap+_bwG)/2, _bxG=_bxS+_bwS+_gap, _rr=36;
+    // スタートボタン（黄）
+    ctx.fillStyle='#ffcc00';
+    ctx.beginPath(); ctx.moveTo(_bxS+_rr,_btnY); ctx.lineTo(_bxS+_bwS-_rr,_btnY);
+    ctx.quadraticCurveTo(_bxS+_bwS,_btnY,_bxS+_bwS,_btnY+_rr); ctx.lineTo(_bxS+_bwS,_btnY+_btnH-_rr);
+    ctx.quadraticCurveTo(_bxS+_bwS,_btnY+_btnH,_bxS+_bwS-_rr,_btnY+_btnH); ctx.lineTo(_bxS+_rr,_btnY+_btnH);
+    ctx.quadraticCurveTo(_bxS,_btnY+_btnH,_bxS,_btnY+_btnH-_rr); ctx.lineTo(_bxS,_btnY+_rr);
+    ctx.quadraticCurveTo(_bxS,_btnY,_bxS+_rr,_btnY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.font="bold 30px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('🌟 スタート', _bxS+_bwS/2, _btnY+46);
+    // 花壇ボタン（緑）
+    ctx.fillStyle='#4caf50';
+    ctx.beginPath(); ctx.moveTo(_bxG+_rr,_btnY); ctx.lineTo(_bxG+_bwG-_rr,_btnY);
+    ctx.quadraticCurveTo(_bxG+_bwG,_btnY,_bxG+_bwG,_btnY+_rr); ctx.lineTo(_bxG+_bwG,_btnY+_btnH-_rr);
+    ctx.quadraticCurveTo(_bxG+_bwG,_btnY+_btnH,_bxG+_bwG-_rr,_btnY+_btnH); ctx.lineTo(_bxG+_rr,_btnY+_btnH);
+    ctx.quadraticCurveTo(_bxG,_btnY+_btnH,_bxG,_btnY+_btnH-_rr); ctx.lineTo(_bxG,_btnY+_rr);
+    ctx.quadraticCurveTo(_bxG,_btnY,_bxG+_rr,_btnY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font="bold 28px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('🌸 花壇', _bxG+_bwG/2, _btnY+46);
+  } else {
+    if (Math.sin(titleBlink * 3) > -0.3) {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillText('Zキーでスタート', CW/2, 500);
+    }
   }
 
   // === Info panel (bottom) ===
@@ -391,7 +415,7 @@ function drawTitle() {
   // Garden + Nectar (1 line)
   ctx.fillStyle = '#ffd700';
   ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('🌸 ネクター: ' + nectar + '　　　Xキーで花壇メニュー', CW/2, panelY + 80);
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? '🌸 ネクター: ' + nectar : '🌸 ネクター: ' + nectar + '　　　Xキーで花壇メニュー', CW/2, panelY + 80);
 
   // === Volume control ===
   if (typeof titleVolSel === 'undefined') titleVolSel = -1;

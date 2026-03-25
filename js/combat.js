@@ -324,7 +324,8 @@ function updateCombat(dt) {
    'queen_hornet': { s: 'スズメバチの女王', l: ['…はっ… わたし…なにを…？', 'ありがとう、ちいさなハチさん。闇の胞子がわたしを操っていたの…', 'クリスタルのかけらを感じる… もっと奥に…気をつけて'] },
    'fungus_king': { s: 'キノコの王', l: ['…やっと… 楽になれた…', '地下にもっと深い闇がある… クリスタルを砕いたやつが…', 'どうか… この森を… たのむ…'] },
    'crystal_golem': { s: 'クリスタルゴーレム', l: ['…封印の力が… 弱まっている…', 'わたしは女王さまにつくられた番人… クリスタルを守るために…', 'あの闇の蛾を止めてくれ… 奥に進め…'] },
-   'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] }
+   'shadow_moth': { s: '闇の蛾', l: ['バカな… こんなちいさなハチに…', 'だが遅い… クリスタルはもう砕けた… 女王の力も消えた…', '…いや… おまえの中に光が…？ そんな…バカな…'] },
+   'dark_root': { s: '闇の根', l: ['お前たちが…咲かせた花が…私を目覚めさせた…', '…光に…負けるとは……！', '…女王の……声が…聞こえる……'] }
     };
     const _bd = _bdd[boss.id]; lastBossId = boss.id; boss = null;
     if (_bd) { gameState = 'dialog'; showDialog(_bd.s, _bd.l, function() {
@@ -332,8 +333,8 @@ function updateCombat(dt) {
       var _bossLore = null;
       for (var _bi = 0; _bi < BOSS_DEFS.length; _bi++) { if (BOSS_DEFS[_bi].id === lastBossId) { _bossLore = BOSS_DEFS[_bi].lore; break; } }
       if (_bossLore) {
-        showDialog(String.fromCodePoint(0x1F4D6) + ' ' + _bd.s + ' \u306E\u8A18\u9332', [_bossLore], function() { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; });
-      } else { lastBossId = ''; floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
+        showDialog(String.fromCodePoint(0x1F4D6) + ' ' + _bd.s + ' \u306E\u8A18\u9332', [_bossLore], function() { var _wdr=lastBossId==='dark_root'; lastBossId=''; floorClearAnimTimer=0; if(_wdr){if(typeof queenReturned!=='undefined')queenReturned=true;gameState='dialog';showDialog('女王フローラ',['…ミプリン……やっと会えたね','あなたの光が咲かせた花が…闇の根を目覚めさせてしまった…','でも……その光こそが、クリスタルを取り戻す唯一の力','ありがとう、私の花の国の……希望の光よ'],function(){gameState='floorClear';clearTimer=0;});}else{gameState='floorClear';clearTimer=0;} });
+      } else { var _wdr2=lastBossId==='dark_root'; lastBossId=''; floorClearAnimTimer=0; if(_wdr2){if(typeof queenReturned!=='undefined')queenReturned=true;gameState='dialog';showDialog('女王フローラ',['…ミプリン……やっと会えたね','あなたの光が咲かせた花が…闇の根を目覚めさせてしまった…','でも……その光こそが、クリスタルを取り戻す唯一の力','ありがとう、私の花の国の……希望の光よ'],function(){gameState='floorClear';clearTimer=0;});}else{gameState='floorClear';clearTimer=0;} }
     }); }
     else { floorClearAnimTimer = 0; gameState = 'floorClear'; clearTimer = 0; }
   }

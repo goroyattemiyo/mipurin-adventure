@@ -37,12 +37,13 @@ function drawEnding() {
   const _loopOk  = (typeof loopCount !== 'undefined') && loopCount >= 1;
   if (_encComp && _loopOk && currentBGM !== 'end_c') playBGM('end_c', 0.8);
   const endType = (_encComp && _loopOk) ? 'hidden'
+    : (typeof queenReturned !== 'undefined' && queenReturned) ? 'queen'
     : (activeBlessings.length >= 12 && activeDuos.length >= 3) ? 'true'
     : (activeBlessings.length >= 8) ? 'good' : 'normal';
   // --- Image: left side ---
   ctx.save(); ctx.globalAlpha = 0.9;
   const imgX = 40, imgY = 80, imgW = CW * 0.4, imgH = imgW * 0.85;
-  const endImgKey = endType === 'hidden' ? 'ending_c' : endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a';
+  const endImgKey = endType === 'hidden' ? 'ending_c' : endType === 'queen' ? 'ending_c' : endType === 'true' ? 'ending_c' : endType === 'good' ? 'ending_b' : 'ending_a';
   if (endingImgs[endImgKey]) {
     ctx.drawImage(endingImgs[endImgKey], imgX, imgY, imgW, imgH);
   } else if (mipurinReady) {
@@ -68,6 +69,7 @@ function drawEnding() {
   }
   // Title
   const endTitle = endType === 'hidden' ? '🌟 解放の歌 🌟'
+    : endType === 'queen' ? '👑 女王帰還 — 光の再誕 👑'
     : endType === 'true' ? '✨ クリスタルの再生 ✨'
     : endType === 'good' ? '🌸 かけらの光 🌸' : '小さな希望';
   ctx.fillStyle = '#ffd700'; ctx.font = "bold 34px 'M PLUS Rounded 1c', sans-serif";
@@ -87,6 +89,18 @@ function drawEnding() {
     ctx.fillStyle = 'rgba(167,139,250,0.18)'; ctx.fillRect(tcx - 160, py + 223, 320, 26);
     ctx.fillStyle = '#a78bfa'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText('🖤 図鑑コンプリート + ループクリア達成！', tcx, py + 185);
+    ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  } else if (endType === 'queen') {
+    // 女王帰還エンディング: 金グロウ演出
+    ctx.save();
+    ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#fffde7';
+    ctx.fillText('闇の根が砕けた瞬間——', tcx, py + 108);
+    ctx.fillText('女王フローラの声が、花の国に響き渡った。', tcx, py + 133);
+    ctx.fillText('クリスタルの光が、完全に取り戻された。', tcx, py + 158);
+    ctx.restore();
+    ctx.fillStyle = '#ffd700'; ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('👑 最終ボス撃破 — 女王帰還エンディング達成！', tcx, py + 185);
     ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
   } else if (endType === 'true') {
     ctx.fillText('すべてのかけらが集まり、クリスタルが光を取り戻した。', tcx, py + 115);
@@ -119,6 +133,17 @@ function drawEnding() {
       ctx.globalAlpha = 0.3 + Math.sin(_t * 2 + _pi) * 0.2;
       ctx.fillStyle = _pi % 3 === 0 ? '#ffd700' : _pi % 3 === 1 ? '#a78bfa' : '#fff';
       ctx.beginPath(); ctx.arc(_px, _py2, 2 + Math.sin(_t + _pi * 0.5) * 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (endType === 'queen') {
+    var _qt = Date.now() / 1000;
+    for (var _qi = 0; _qi < 10; _qi++) {
+      var _qx = (CW * 0.05) + ((_qi * 151 + Math.sin(_qt + _qi) * 90) % (CW * 0.9));
+      var _qy3 = (CH * 0.05) + ((_qi * 89 + Math.cos(_qt * 0.7 + _qi * 2) * 70) % (CH * 0.9));
+      ctx.globalAlpha = 0.35 + Math.sin(_qt * 2 + _qi) * 0.2;
+      ctx.fillStyle = _qi % 2 === 0 ? '#ffd700' : '#fffde7';
+      ctx.beginPath(); ctx.arc(_qx, _qy3, 3 + Math.sin(_qt + _qi * 0.5) * 2, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
   }

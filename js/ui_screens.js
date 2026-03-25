@@ -2,6 +2,7 @@
 // Full-screen UI: title, prologue, ending, garden
 // Extracted from ui.js for Phase 2 expansion
 function drawPrologue() {
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, CW, CH);
   const img = prologueImages[prologuePage];
@@ -14,15 +15,16 @@ function drawPrologue() {
   }
   const txt = prologueTexts[prologuePage] || '';
   if (txt) {
+    const barH = 80 + 56*_M;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, CH - 160, CW, 160);
+    ctx.fillRect(0, CH - barH, CW, barH);
     ctx.fillStyle = '#fff';
-    ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillText(txt, CW / 2, CH - 80);
+    ctx.fillText(txt, CW / 2, CH - barH/2 - 10);
   }
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
   ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'タップで次へ' : 'Zキーで次へ  /  Xキーでスキップ', CW / 2, CH - 20);
   ctx.textAlign = 'left';
@@ -396,9 +398,10 @@ function drawTitle() {
   }
 
   // === Info panel (bottom) ===
-  const panelY = 560;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
+  const panelY = _M === 2 ? 570 : 560;
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  const pw = 700, px = CW/2 - pw/2, ph = CH - panelY - 20;
+  const pw = Math.min(700 * _M, CW - 40), px = CW/2 - pw/2, ph = CH - panelY - 20;
   ctx.beginPath();
   const cr = 16;
   ctx.moveTo(px + cr, panelY); ctx.lineTo(px + pw - cr, panelY);
@@ -413,13 +416,13 @@ function drawTitle() {
 
   // Controls (1 line, compact)
   ctx.fillStyle = '#e0d6c2';
-  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'ジョイスティックで移動　ボタンで操作' : '移動: WASD / 矢印　　攻撃: Z　　ダッシュ: X　　アイテム: 1·2·3', CW/2, panelY + 40);
+  ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? 'ジョイスティックで移動　ボタンで操作' : '移動: WASD / 矢印　　攻撃: Z　　ダッシュ: X　　アイテム: 1·2·3', CW/2, panelY + 40*_M);
 
   // Garden + Nectar (1 line)
   ctx.fillStyle = '#ffd700';
-  ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? '🌸 ネクター: ' + nectar : '🌸 ネクター: ' + nectar + '　　　Xキーで花壇メニュー', CW/2, panelY + 80);
+  ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(typeof touchActive !== 'undefined' && touchActive ? '🌸 ネクター: ' + nectar : '🌸 ネクター: ' + nectar + '　　　Xキーで花壇メニュー', CW/2, panelY + 80*_M);
 
   // === Volume control ===
   if (typeof titleVolSel === 'undefined') titleVolSel = -1;
@@ -427,15 +430,15 @@ function drawTitle() {
     const labels = ['BGM', 'SE'];
     const vols = [typeof bgmVolume !== 'undefined' ? bgmVolume : 0.7, typeof seVolume !== 'undefined' ? seVolume : 0.7];
     for (let i = 0; i < 2; i++) {
-      const vy = panelY + 120 + i * 30;
+      const vy = panelY + (120 + i * 30) * _M;
       ctx.fillStyle = titleVolSel === i ? '#ffd700' : '#ccc';
-      ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
+      ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif";
       ctx.fillText(labels[i] + '  \u25C0 ' + Math.round(vols[i] * 100) + '% \u25B6', CW/2, vy);
     }
   } else {
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = "16px 'M PLUS Rounded 1c', sans-serif";
-    if (typeof touchActive === 'undefined' || !touchActive) ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, panelY + 130);
+    ctx.font = (16*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+    if (typeof touchActive === 'undefined' || !touchActive) ctx.fillText('↑↓: 音量調整  ←→: 変更', CW/2, panelY + 130*_M);
   }
 
   ctx.textAlign = 'left';

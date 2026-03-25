@@ -363,7 +363,7 @@ function drawFloatMessages() {
 function drawDialogWindow() {
   if (!dialogMsg) return;
   ctx.save();
-  const dw = CW - 160, dh = 120;
+  const dw = CW - 160, dh = 150;
   const dx = 80, dy = CH - dh - 40;
   ctx.globalAlpha = 0.92;
   ctx.fillStyle = '#0d0d2b'; ctx.fillRect(dx, dy, dw, dh);
@@ -380,7 +380,15 @@ function drawDialogWindow() {
   ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
   const line = dialogMsg.lines[dialogMsg.lineIdx];
   const shown = line.substring(0, dialogMsg.charIdx);
-  ctx.fillText(shown, dx + 24, dy + 45);
+  // CJK折り返し（文字単位）
+  const _tmw = dw - 48;
+  let _wl = '', _wr = 0;
+  for (const _ch of shown) {
+    const _t = _wl + _ch;
+    if (ctx.measureText(_t).width > _tmw) { ctx.fillText(_wl, dx + 24, dy + 48 + _wr * 28); _wl = _ch; _wr++; }
+    else { _wl = _t; }
+  }
+  if (_wl) ctx.fillText(_wl, dx + 24, dy + 48 + _wr * 28);
   if (dialogMsg.charIdx >= line.length) {
     ctx.fillStyle = '#ffd700'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right';
     const pageText = dialogMsg.lineIdx < dialogMsg.lines.length - 1 ? 'Z: つぎへ ▼' : 'Z: とじる ▼';

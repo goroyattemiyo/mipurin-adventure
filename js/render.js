@@ -189,10 +189,12 @@ function drawGameState() {
       ctx.font = "bold 26px 'M PLUS Rounded 1c', sans-serif";
       ctx.fillText('獲得ネクター: +' + runNectar, CW/2, panelY + 195);
 
-      const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
-      ctx.font = "italic 22px 'M PLUS Rounded 1c', sans-serif";
-      ctx.fillStyle = '#ffb7c5';
-      ctx.fillText('\u300C' + DEATH_LINES[Math.floor(deadTimer * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 260);
+      if (deadTimer > 1.0) {
+        const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
+        ctx.font = "italic 22px 'M PLUS Rounded 1c', sans-serif";
+        ctx.fillStyle = '#ffb7c5';
+        ctx.fillText('\u300C' + DEATH_LINES[Math.floor((deadTimer - 1.0) * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 260);
+      }
 
       ctx.font = "22px 'M PLUS Rounded 1c', sans-serif";
       if (deadTimer > 2.0) {

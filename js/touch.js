@@ -262,7 +262,11 @@ function onTouchStart(e) {
         hitBtn = true; break;
       }
     }
-    if (!hitBtn && pos.x < CW * 0.45 && joystick.touchId === null) {
+    if (!hitBtn && gs === 'title' && (typeof titleVolSel === 'undefined' || titleVolSel < 0) && (typeof titleGuard === 'undefined' || titleGuard <= 0)) {
+      keys['KeyZ'] = true; pressed['KeyZ'] = true;
+      setTimeout(function() { keys['KeyZ'] = false; }, 80);
+    }
+    if (!hitBtn && gs !== 'title' && pos.x < CW * 0.45 && joystick.touchId === null) {
       joystick.active = true; joystick.touchId = t.identifier;
       var dx = pos.x - joystick.cx, dy = pos.y - joystick.cy;
       var dist = Math.hypot(dx, dy);

@@ -347,6 +347,7 @@ function updatePrologue(dt) {
 
 function resetGame() {
   dialogMsg = null; dialogCallback = null;
+  lastBossId = ''; cutinBossId = ''; cutinTimer = 0; cutinPhase = 'none';
   floor = 1; wave = 0; score = 0; pollen = 0; boss = null; runNectar = 0;
   player.hp = 5; player.maxHp = 5; player.atk = 1; player.speed = 200;
   player.invDuration = 0.6; player.dashCooldown = 0.5; player.atkRangeBonus = 0;

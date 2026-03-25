@@ -25,8 +25,8 @@ const joystick = {
 
 // --- Buttons (resized for 48dp+ compliance) ---
 const TOUCH_BUTTONS = [
-  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.790, r: 60, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'KeyX',   label: 'X',  baseX: 0.800, baseY: 0.870, r: 50, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.775, r: 76, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyX',   label: 'X',  baseX: 0.795, baseY: 0.865, r: 66, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit1', label: '1',  baseX: 0.720, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit2', label: '2',  baseX: 0.800, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit3', label: '3',  baseX: 0.880, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },

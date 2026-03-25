@@ -142,7 +142,9 @@ const BOSS_DEFS = [
   { id: 'crystal_golem', name: 'クリスタルゴーレム', hp: 60, speed: 30, w: 128, h: 128, dmg: 4, color: '#3498db', pattern: 'boss_slam',     score: 400, phases: 3,
     lore: '女王が遠い昔に作った不滅の番人。封印の力が失われ、命令もなく暴走を続ける。胸の核はクリスタルの最大の破片。砕けたとき、青い涙が落ちたように見えた。' },
   { id: 'shadow_moth',   name: '闇の蛾',             hp: 50, speed: 90, w: 104, h: 104, dmg: 3, color: '#9b59b6', pattern: 'boss_teleport', score: 350, phases: 2,
-    lore: 'クリスタルの最後の守り手だった夜の蛾。砕け散った光の代わりに闇をまとい、世界の終わりを待っている。その羽の紋様はかつて「希望」を意味する古代語だ。' }];
+    lore: 'クリスタルの最後の守り手だった夜の蛾。砕け散った光の代わりに闇をまとい、世界の終わりを待っている。その羽の紋様はかつて「希望」を意味する古代語だ。' },
+  { id: 'dark_root',     name: '闇の根',             hp: 90, speed: 45, w: 128, h: 128, dmg: 5, color: '#2d0040', pattern: 'boss_dark_root', score: 600, phases: 3,
+    lore: '花の国の地底深くに眠っていた原初の闇。ミプリンたちが咲かせた花の光に目覚めた。その根は世界中に張り巡らされ、光あるものを飲み込もうとしていた。しかし…光を知った根は、もう闇だけには戻れなかった。' }];
 
 const MAX_FLOOR = 15;
 function isBossFloor() { return floor % 3 === 0; }
@@ -150,12 +152,14 @@ function isBossFloor() { return floor % 3 === 0; }
 function spawnBoss() { Audio.boss_appear();
   shakeTimer = 0.3; shakeIntensity = 8; emitParticles(CW/2, CH/2, '#ffd700', 15, 100, 0.6);
   // Boss dialog will be triggered after spawn
-  const bi = Math.floor((floor / 3 - 1) % BOSS_DEFS.length);
+  const _bPool = BOSS_DEFS.length - 1; // dark_root を通常ローテーションから除外
+  const bi = floor >= MAX_FLOOR ? BOSS_DEFS.length - 1 : Math.floor((floor / 3 - 1) % _bPool);
   const def = BOSS_DEFS[bi];
   const lc = (typeof loopCount !== 'undefined') ? loopCount : 0; const sc = (1 + floor * 0.12) * (1 + lc * 0.5);
   boss = { ...def, x: CW / 2 - def.w / 2, y: TILE * 4, hp: Math.ceil(def.hp * sc), maxHp: Math.ceil(def.hp * sc),
     dmg: Math.ceil(def.dmg * (1 + floor * 0.08) * (1 + lc * 0.3)), phase: 1, stateTimer: 0, state: 'idle', hitFlash: 0,
-    chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0 };
+    chargeDir: null, telegraphTimer: 0, shootTimer: 0, slamTimer: 0, teleTimer: 0,
+    rootSummonTimer: 4.0, erosionTimer: 3.5, _lastPhase: 1 };
 }
 
 function updateBoss(dt) {
@@ -204,6 +208,34 @@ function updateBoss(dt) {
       while (tileAt(roomMap, Math.floor(boss.x / TILE), Math.floor(boss.y / TILE)) === 1) { boss.x = TILE * (2 + Math.floor(rng() * (COLS - 4))); boss.y = TILE * (2 + Math.floor(rng() * (ROWS - 4))); }
       emitParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, boss.color, 8, 80, 0.3); }
     if (boss.shootTimer > 1) { boss.shootTimer = 0; spawnProjectile(boss.x + boss.w / 2, boss.y + boss.h / 2, dx, dy, 140, boss.dmg - 1, false); }
+  }
+
+  if (boss.pattern === 'boss_dark_root') {
+    // フェーズ遷移アナウンス
+    if (boss.phase !== boss._lastPhase) {
+      if (boss.phase === 2) { showFloat('⚠ フェーズ2：フィールド侵食！', 2.5, MSG_COLORS.boss); shakeTimer = 0.4; shakeIntensity = 10; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#2d0040', 20, 120, 0.6); }
+      else if (boss.phase === 3) { showFloat('💀 フェーズ3：本体解放！', 2.5, MSG_COLORS.boss); shakeTimer = 0.6; shakeIntensity = 15; emitParticles(boss.x+boss.w/2, boss.y+boss.h/2, '#2d0040', 30, 150, 0.8); }
+      boss._lastPhase = boss.phase;
+    }
+    const _drSpd = boss.phase >= 3 ? 2.2 : boss.phase >= 2 ? 1.4 : 0.5;
+    moveWithCollision(boss, (dx/d)*boss.speed*_drSpd*dt, (dy/d)*boss.speed*_drSpd*dt);
+    // Phase 1: 根っこ召喚
+    if (boss.phase === 1) {
+      boss.rootSummonTimer -= dt;
+      if (boss.rootSummonTimer <= 0) { boss.rootSummonTimer = 4.0; const [_rc,_rr] = randEnemyPos(); spawnEnemy('vine', _rc, _rr); emitParticles(_rc*TILE+TILE/2, _rr*TILE+TILE/2, '#27ae60', 8, 60, 0.4); showFloat('🌿 根っこが召喚された！', 1.5, MSG_COLORS.boss); }
+    }
+    // Phase 2: フィールド侵食 + 3方向弾
+    if (boss.phase === 2) {
+      boss.erosionTimer -= dt;
+      if (boss.erosionTimer <= 0) { boss.erosionTimer = 3.5; let _et=0; const _pc2=Math.floor((player.x+player.w/2)/TILE); const _pr2=Math.floor((player.y+player.h/2)/TILE); while(_et++<20){const _ec=2+Math.floor(rng()*(COLS-4)); const _er=2+Math.floor(rng()*(ROWS-4)); if(tileAt(roomMap,_ec,_er)!==1&&(Math.abs(_ec-_pc2)>1||Math.abs(_er-_pr2)>1)){roomMap[_er*COLS+_ec]=1; if(typeof _roomBufferFloor!=='undefined')_roomBufferFloor=-1; emitParticles(_ec*TILE+TILE/2,_er*TILE+TILE/2,'#2d0040',10,70,0.5); shakeTimer=0.15; shakeIntensity=5; showFloat('🌑 床が侵食される！', 1.5, MSG_COLORS.boss); break;}} }
+      boss.shootTimer += dt;
+      if (boss.shootTimer >= 1.4) { boss.shootTimer = 0; for (const _a of [-0.35,0,0.35]) { const _ca=Math.cos(_a),_sa=Math.sin(_a); spawnProjectile(boss.x+boss.w/2, boss.y+boss.h/2, (dx/d)*_ca-(dy/d)*_sa, (dx/d)*_sa+(dy/d)*_ca, 135, boss.dmg-1, false); } }
+    }
+    // Phase 3: 高速追尾 + 5方向連射
+    if (boss.phase >= 3) {
+      boss.shootTimer += dt;
+      if (boss.shootTimer >= 0.7) { boss.shootTimer = 0; for (let _ai=0; _ai<5; _ai++) { const _a2=(_ai-2)*0.28; const _ca2=Math.cos(_a2),_sa2=Math.sin(_a2); spawnProjectile(boss.x+boss.w/2, boss.y+boss.h/2, (dx/d)*_ca2-(dy/d)*_sa2, (dx/d)*_sa2+(dy/d)*_ca2, 165, boss.dmg-1, false); } }
+    }
   }
 
   // Boss contact damage

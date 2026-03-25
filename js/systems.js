@@ -34,6 +34,7 @@ const GARDEN_DEFS = [
 ];
 let gardenCursor = 0;
 let runNectar = 0, loopCount = 0; // nectar earned this run
+let queenReturned = false; // 闇の根撃破で女王帰還フラグ
 
 function saveMeta() {
   try {
@@ -157,7 +158,7 @@ function updateFade(dt) {
 // ===== GAME FLOW =====
 function startFloor() {
   if(typeof MONOLOGUES!=="undefined"&&Math.random()<0.6) setTimeout(()=>showBubble(MONOLOGUES[Math.floor(Math.random()*MONOLOGUES.length)]),800);
-  if (floor === 0 || floor === 1) { revivalUsed = false; } // 新ラン開始時に不屈リセット
+  if (floor === 0 || floor === 1) { revivalUsed = false; queenReturned = false; } // 新ラン開始時にリセット
   dialogMsg = null; dialogCallback = null;
   rng = mulberry32(Date.now() + floor);
   roomSpikes = []; roomMap = generateRoom(floor);
@@ -204,6 +205,7 @@ const SPRITE_MAP = {
   // Aliases (shape name -> sprite)
   blob: 'assets/sprites/enemy_slime.webp',
   // Bosses
+  dark_root: 'assets/sprites/boss_shadow_moth.webp', // placeholder sprite
   queen_hornet: 'assets/sprites/boss_queen_hornet.webp',
   fungus_king: 'assets/sprites/boss_fungus_king.webp',
   crystal_golem: 'assets/sprites/boss_crystal_golem.webp',

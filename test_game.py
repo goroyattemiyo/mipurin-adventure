@@ -229,7 +229,7 @@ enemy_ids = re.findall(r"id:\s*'([^']+)'", enemies_js)
 variant_keys = re.findall(r"^\s+(\w+):\s*\[", enemies_js, re.MULTILINE)
 if variant_keys:
     for eid in enemy_ids:
-        if eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth']:
+        if eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth', 'dark_root']:
             continue  # bosses may not have variants
         check(f"enemy '{eid}' has variant names", eid in variant_keys,
             f"missing from ENEMY_VARIANT_NAMES")
@@ -238,7 +238,7 @@ if variant_keys:
 systems_js = read("js/systems.js")
 sprite_keys = re.findall(r"'([^']+)'\s*:", systems_js[systems_js.find("SPRITE_MAP"):systems_js.find("SPRITE_MAP")+3000])
 for eid in enemy_ids:
-    check(f"sprite exists for '{eid}'", eid in sprite_keys or eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth'],
+    check(f"sprite exists for '{eid}'", eid in sprite_keys or eid in ['queen_hornet', 'fungus_king', 'crystal_golem', 'shadow_moth', 'dark_root'],
         "missing from SPRITE_MAP")
 
 # NODE_TYPES must include 'chest' node (H-A-1)

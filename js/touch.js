@@ -25,8 +25,8 @@ const joystick = {
 
 // --- Buttons (resized for 48dp+ compliance) ---
 const TOUCH_BUTTONS = [
-  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.790, r: 60, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'KeyX',   label: 'X',  baseX: 0.800, baseY: 0.870, r: 50, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.775, r: 76, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'KeyX',   label: 'X',  baseX: 0.795, baseY: 0.865, r: 66, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit1', label: '1',  baseX: 0.720, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit2', label: '2',  baseX: 0.800, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'Digit3', label: '3',  baseX: 0.880, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
@@ -49,15 +49,15 @@ function getVisibleButtons() {
   const inv = typeof inventoryOpen !== 'undefined' && inventoryOpen;
   if (inv) return TOUCH_BUTTONS.filter(b => b.id === 'Tab' || b.id === 'Escape');
   if (gs === 'playing') return TOUCH_BUTTONS.filter(b => isBtnVisible(b));
-  if (gs === 'title' || gs === 'garden' || gs === 'ending') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Tab' || b.id === 'Escape');
+  if (gs === 'title') return [];  // タイトルは専用ボタンを canvas 上に描画
+  if (gs === 'garden' || gs === 'ending') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Tab' || b.id === 'Escape');
   if (gs === 'shop' || gs === 'blessing') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
   if (gs === 'dead') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'Escape');
   return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
 }
 
 // --- Joystick keys injection ---
-// スマホ操作はタッチで4方向スナップ: |dx|と|dy|の大きい軸のみを採用
-// → 斜め入力を排除して攻撃が届かない問題を解消
+// 8方向対応: 両軸を独立して判定し斜め移動を許可
 const JOYSTICK_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
 let joystickKeysActive = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
 
@@ -66,16 +66,10 @@ function updateJoystickKeys() {
   if (joystick.active) {
     const mag = Math.hypot(joystick.dx, joystick.dy);
     if (mag > joystick.deadzone) {
-      // 4方向スナップ: 絶対値が大きい軸のみを採用（斜め同時入力を禁止）
-      if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
-        // 横方向優先
-        if (joystick.dx < -0.28) newState.KeyA = true;
-        if (joystick.dx >  0.28) newState.KeyD = true;
-      } else {
-        // 縦方向優先
-        if (joystick.dy < -0.28) newState.KeyW = true;
-        if (joystick.dy >  0.28) newState.KeyS = true;
-      }
+      if (joystick.dx < -0.28) newState.KeyA = true;
+      if (joystick.dx >  0.28) newState.KeyD = true;
+      if (joystick.dy < -0.28) newState.KeyW = true;
+      if (joystick.dy >  0.28) newState.KeyS = true;
     }
   }
   for (const k of JOYSTICK_KEYS) {
@@ -262,7 +256,19 @@ function onTouchStart(e) {
         hitBtn = true; break;
       }
     }
-    if (!hitBtn && pos.x < CW * 0.45 && joystick.touchId === null) {
+    if (gs === 'title' && (typeof titleVolSel === 'undefined' || titleVolSel < 0) && (typeof titleGuard === 'undefined' || titleGuard <= 0)) {
+      // 花壇ボタン判定（drawTitle と同じ座標）
+      var _bwS=330, _bwG=220, _gap=24, _btnY=470, _btnH=72;
+      var _bxS=CW/2-(_bwS+_gap+_bwG)/2, _bxG=_bxS+_bwS+_gap;
+      if (pos.x>=_bxG && pos.x<=_bxG+_bwG && pos.y>=_btnY && pos.y<=_btnY+_btnH) {
+        keys['KeyX'] = true; pressed['KeyX'] = true;
+        setTimeout(function() { keys['KeyX'] = false; }, 80);
+      } else {
+        keys['KeyZ'] = true; pressed['KeyZ'] = true;
+        setTimeout(function() { keys['KeyZ'] = false; }, 80);
+      }
+    }
+    if (!hitBtn && gs !== 'title' && pos.x < CW * 0.45 && joystick.touchId === null) {
       joystick.active = true; joystick.touchId = t.identifier;
       var dx = pos.x - joystick.cx, dy = pos.y - joystick.cy;
       var dist = Math.hypot(dx, dy);
@@ -337,17 +343,8 @@ function drawTouchUI() {
   ctx.moveTo(joystick.cx - joystick.radius + 10, joystick.cy);
   ctx.lineTo(joystick.cx + joystick.radius - 10, joystick.cy);
   ctx.stroke();
-  // 4方向スナップに合わせてノブ位置を表示（ビジュアルも軸スナップ）
-  var snappedDx = 0, snappedDy = 0;
-  if (joystick.active && Math.hypot(joystick.dx, joystick.dy) > joystick.deadzone) {
-    if (Math.abs(joystick.dx) >= Math.abs(joystick.dy)) {
-      snappedDx = joystick.dx > 0 ? 1 : -1;
-    } else {
-      snappedDy = joystick.dy > 0 ? 1 : -1;
-    }
-  }
-  var knobX = joystick.cx + (joystick.active ? joystick.dx : snappedDx) * joystick.radius * 0.65;
-  var knobY = joystick.cy + (joystick.active ? joystick.dy : snappedDy) * joystick.radius * 0.65;
+  var knobX = joystick.cx + joystick.dx * joystick.radius * 0.65;
+  var knobY = joystick.cy + joystick.dy * joystick.radius * 0.65;
   ctx.globalAlpha = joystick.active ? 0.5 : 0.2;
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(knobX, knobY, joystick.knobRadius, 0, Math.PI * 2); ctx.fill();

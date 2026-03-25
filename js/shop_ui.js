@@ -38,6 +38,7 @@ function pickShopLine(category) {
 function drawShop() {
   if (gameState !== 'shop') return;
   var F = "'M PLUS Rounded 1c', sans-serif";
+  var _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
 
   // === Full background (warm wood tone) ===
   ctx.fillStyle = '#1a1210';
@@ -52,9 +53,9 @@ function drawShop() {
 
   // === Shop title ===
   ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 26px ' + F;
+  ctx.font = 'bold ' + (26*_M) + 'px ' + F;
   ctx.textAlign = 'center';
-  ctx.fillText('\u2606 \u30C6\u30F3\u3061\u3083\u3093\u306E\u304A\u307F\u305B \u2606', CW / 2, 34);
+  ctx.fillText('\u2606 \u30C6\u30F3\u3061\u3083\u3093\u306E\u304A\u307F\u305B \u2606', CW / 2, 20 + 14*_M);
 
   // === Ten-chan bust-up (left, large) ===
   var tenX = 30, tenY = 45, tenW = 260, tenH = 400;
@@ -98,22 +99,22 @@ function drawShop() {
 
   // Speech text
   ctx.fillStyle = '#4a3520';
-  ctx.font = 'bold 22px ' + F;
+  ctx.font = 'bold ' + (22*_M) + 'px ' + F;
   ctx.textAlign = 'left';
   var displayLine = shopLine || SHOP_LINES.enter[0];
-  ctx.fillText(displayLine, bubX + 20, bubY + 35);
+  ctx.fillText(displayLine, bubX + 20, bubY + 20 + 15*_M);
   ctx.fillStyle = '#c0392b';
-  ctx.font = 'bold 15px ' + F;
-  ctx.fillText('\u30C6\u30F3\u3061\u3083\u3093', bubX + 20, bubY + 62);
+  ctx.font = 'bold ' + (15*_M) + 'px ' + F;
+  ctx.fillText('\u30C6\u30F3\u3061\u3083\u3093', bubX + 20, bubY + 20 + 42*_M);
 
   // === Pollen balance ===
   var balX = bubX, balY = bubY + bubH + 14;
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(balX, balY, 210, 36);
+  ctx.fillRect(balX, balY, 210*_M, 36*_M);
   ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 20px ' + F;
+  ctx.font = 'bold ' + (20*_M) + 'px ' + F;
   ctx.textAlign = 'center';
-  ctx.fillText('\uD83D\uDC9B \u82B1\u7C89: ' + pollen, balX + 105, balY + 25);
+  ctx.fillText('\uD83D\uDC9B \u82B1\u7C89: ' + pollen, balX + 105*_M, balY + 22*_M);
 
   // === Showcase divider ===
   var divY = CH * 0.48;
@@ -126,7 +127,7 @@ function drawShop() {
   ctx.fillText('\u2500\u2500 \u30B7\u30E7\u30FC\u30B1\u30FC\u30B9 \u2500\u2500', CW / 2, divY - 6);
 
   // === Product cards ===
-  var cardW = 160, cardH = 200, padX = 14;
+  var cardW = 160 * _M, cardH = 200 * _M, padX = 14 * _M;
   var totalW = shopItems.length * cardW + (shopItems.length - 1) * padX;
   if (totalW > CW - 60) { cardW = Math.floor((CW - 60 - (shopItems.length - 1) * padX) / shopItems.length); totalW = shopItems.length * cardW + (shopItems.length - 1) * padX; }
   var startX = CW / 2 - totalW / 2;
@@ -156,31 +157,30 @@ function drawShop() {
     ctx.lineWidth = sel ? 3 : 1; ctx.stroke();
     if (sel) { ctx.save(); ctx.globalAlpha = 0.06 + Math.sin(Date.now() / 300) * 0.04; ctx.fillStyle = '#ffd700'; ctx.fill(); ctx.restore(); }
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff'; ctx.font = '44px ' + F;
-    ctx.fillText(s.icon, sx + cardW / 2, sy + 55);
-    ctx.fillStyle = canBuy ? '#fff' : '#777'; ctx.font = 'bold 16px ' + F;
+    ctx.fillStyle = '#fff'; ctx.font = (44*_M) + 'px ' + F;
+    ctx.fillText(s.icon, sx + cardW / 2, sy + 55*_M);
+    ctx.fillStyle = canBuy ? '#fff' : '#777'; ctx.font = 'bold ' + (16*_M) + 'px ' + F;
     var nm = s.name.length > 8 ? s.name.slice(0, 8) + '..' : s.name;
-    ctx.fillText(nm, sx + cardW / 2, sy + 85);
+    ctx.fillText(nm, sx + cardW / 2, sy + 85*_M);
     ctx.fillStyle = canBuy ? 'rgba(255,215,0,0.2)' : 'rgba(255,50,50,0.2)';
-    ctx.fillRect(sx + 20, sy + 95, cardW - 40, 28);
-    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 18px ' + F;
-    ctx.fillText(s.cost + ' \u82B1\u7C89', sx + cardW / 2, sy + 115);
-    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '13px ' + F; var desc = s.desc.length > 14 ? s.desc.slice(0, 14) + '..' : s.desc; ctx.fillText(desc, sx + cardW / 2, sy + 142); }
-    if (sel) { ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold 16px ' + F; ctx.fillText(canBuy ? '\u25B6 Z\u3067\u304B\u3046 \u25C0' : '\u2716 \u82B1\u7C89\u4E0D\u8DB3', sx + cardW / 2, sy + 175); }
-    else { ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '13px ' + F; ctx.fillText('\u25C0\u25B6\u3067\u3048\u3089\u3076', sx + cardW / 2, sy + 178); }
+    ctx.fillRect(sx + 20, sy + 95*_M, cardW - 40, 28*_M);
+    ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold ' + (18*_M) + 'px ' + F;
+    ctx.fillText(s.cost + ' \u82B1\u7C89', sx + cardW / 2, sy + 110*_M);
+    if (sel && s.desc) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = (13*_M) + 'px ' + F; var desc = s.desc.length > 14 ? s.desc.slice(0, 14) + '..' : s.desc; ctx.fillText(desc, sx + cardW / 2, sy + 142*_M); }
+    if (sel) { ctx.fillStyle = canBuy ? '#ffd700' : '#f66'; ctx.font = 'bold ' + (16*_M) + 'px ' + F; ctx.fillText(canBuy ? '\u25B6 Z\u3067\u304B\u3046 \u25C0' : '\u2716 \u82B1\u7C89\u4E0D\u8DB3', sx + cardW / 2, sy + 175*_M); }
+    else { ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = (13*_M) + 'px ' + F; ctx.fillText('\u25C0\u25B6\u3067\u3048\u3089\u3076', sx + cardW / 2, sy + 178*_M); }
   }
 
   // Skip
   var skipSel = selectCursor >= shopItems.length;
-  var rows = 1;
   var skipY = startY + cardH + 20;
   ctx.fillStyle = skipSel ? '#ffd700' : 'rgba(255,255,255,0.35)';
-  ctx.font = (skipSel ? 'bold 20px ' : '18px ') + F;
+  ctx.font = (skipSel ? 'bold ' + (20*_M) + 'px ' : (18*_M) + 'px ') + F;
   ctx.textAlign = 'center';
   ctx.fillText(skipSel ? '\u25B6 \u3064\u304E\u3078\u3059\u3059\u3080 (Z) \u25C0' : 'X\u30AD\u30FC / Esc\u3067\u3064\u304E\u3078', CW / 2, skipY);
 
   // Bottom hint
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '14px ' + F;
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = (14*_M) + 'px ' + F;
   if (typeof touchActive !== 'undefined' && touchActive) {
     ctx.fillText('\u30BF\u30C3\u30D7: \u3048\u3089\u3076  \u30C0\u30D6\u30EB\u30BF\u30C3\u30D7: \u304B\u3046', CW / 2, CH - 14);
   } else {

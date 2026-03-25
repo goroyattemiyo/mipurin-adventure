@@ -3,7 +3,9 @@
 // Unified handler: no override chains
 
 // --- Mobile detection ---
-let touchActive = false;
+// Capability-based: true if device has touch support (doesn't require first touch event)
+let touchActive = (typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+let _touchInited = false; // one-time init flag for fullscreen/audio unlock
 
 // --- Canvas coordinate conversion ---
 // rectキャッシュ: resize/orientationchange 時のみ更新し毎タッチのレイアウト再計算を防ぐ
@@ -24,12 +26,13 @@ const joystick = {
 };
 
 // --- Buttons (resized for 48dp+ compliance) ---
+// Digit1/2/3: top-right item buttons with large radius; icons drawn from player.consumables
 const TOUCH_BUTTONS = [
   { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.775, r: 76, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'KeyX',   label: 'X',  baseX: 0.795, baseY: 0.865, r: 66, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit1', label: '1',  baseX: 0.720, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit2', label: '2',  baseX: 0.800, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit3', label: '3',  baseX: 0.880, baseY: 0.940, r: 36, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit1', label: '1',  baseX: 0.820, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit2', label: '2',  baseX: 0.895, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit3', label: '3',  baseX: 0.970, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'KeyQ',   label: 'Q',  baseX: 0.700, baseY: 0.790, r: 36, color: '#e056fd', alwaysShow: false, pressed: false, touchId: null },
   { id: 'Tab',    label: '\u2630', baseX: 0.955, baseY: 0.060, r: 32, color: '#aaa', alwaysShow: true, pressed: false, touchId: null },
   { id: 'Escape', label: '◀', baseX: 0.055, baseY: 0.060, r: 52, color: '#f66', alwaysShow: true, pressed: false, touchId: null }
@@ -44,16 +47,18 @@ function isBtnVisible(btn) {
 }
 
 // --- Context: which buttons to show per gameState ---
+// Z, X, Escape(◀) are always visible. Items shown in playing state only.
 function getVisibleButtons() {
   const gs = typeof gameState !== 'undefined' ? gameState : 'title';
   const inv = typeof inventoryOpen !== 'undefined' && inventoryOpen;
-  if (inv) return TOUCH_BUTTONS.filter(b => b.id === 'Tab' || b.id === 'Escape');
+  const base = TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
+  if (inv) return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Tab' || b.id === 'Escape');
   if (gs === 'playing') return TOUCH_BUTTONS.filter(b => isBtnVisible(b));
-  if (gs === 'title') return [];  // タイトルは専用ボタンを canvas 上に描画
+  if (gs === 'title') return base;
   if (gs === 'garden' || gs === 'ending') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Tab' || b.id === 'Escape');
-  if (gs === 'shop' || gs === 'blessing') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
-  if (gs === 'dead') return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'Escape');
-  return TOUCH_BUTTONS.filter(b => b.id === 'KeyZ' || b.id === 'KeyX' || b.id === 'Escape');
+  if (gs === 'shop' || gs === 'blessing') return base;
+  if (gs === 'dead') return base;
+  return base;
 }
 
 // --- Joystick keys injection ---
@@ -116,8 +121,9 @@ function hitTestUpgradeBtn(cx, cy) {
 // === Unified touch handlers ===
 function onTouchStart(e) {
   e.preventDefault();
-  if (!touchActive) {
-    touchActive = true;
+  touchActive = true;
+  if (!_touchInited) {
+    _touchInited = true;
     try {
       const el = document.documentElement;
       const rfs = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -203,8 +209,13 @@ function onTouchStart(e) {
     // --- blessing: カード直タップで選択（2段階: 選択→確認タップで決定） ---
     var gs = typeof gameState !== 'undefined' ? gameState : '';
     if (gs === 'blessing' && typeof blessingChoices !== 'undefined') {
+      var _bM = touchActive ? 2 : 1;
+      var _cbw = 180 * _bM, _cbh = 220 * _bM;
+      var _bTotal = blessingChoices.length * _cbw + (blessingChoices.length - 1) * 20 * _bM;
+      var _bSX = CW / 2 - _bTotal / 2;
+      var _cby = 50 + 70 * _bM;
       for (var ci = 0; ci < blessingChoices.length; ci++) {
-        var cbx = CW / 2 - 300 + ci * 220, cby = 120, cbw = 180, cbh = 220;
+        var cbx = _bSX + ci * (_cbw + 20 * _bM), cbw = _cbw, cbh = _cbh, cby = _cby;
         if (pos.x >= cbx - 10 && pos.x <= cbx + cbw + 10 && pos.y >= cby - 10 && pos.y <= cby + cbh + 10) {
           if (typeof selectCursor !== 'undefined') {
             if (selectCursor === ci) {
@@ -225,10 +236,10 @@ function onTouchStart(e) {
 
     // --- shop: アイテムカード直タップ ---
     if (gs === 'shop' && typeof shopItems !== 'undefined' && shopItems.length > 0) {
-      // drawShop の実際の座標計算に合わせる
-      // cardW=160, padX=14, startX=CW/2-totalW/2, startY=CH*0.48+14, cardH=200
-      var sCardW2 = 160, sPadX2 = 14, sCardH2 = 200;
+      var _sM = touchActive ? 2 : 1;
+      var sCardW2 = 160 * _sM, sPadX2 = 14 * _sM, sCardH2 = 200 * _sM;
       var sTotalW = shopItems.length * sCardW2 + (shopItems.length - 1) * sPadX2;
+      if (sTotalW > CW - 60) { sCardW2 = Math.floor((CW - 60 - (shopItems.length - 1) * sPadX2) / shopItems.length); sTotalW = shopItems.length * sCardW2 + (shopItems.length - 1) * sPadX2; }
       var sStartX2 = CW / 2 - sTotalW / 2;
       var sStartY2 = CH * 0.48 + 14;
       for (var si2 = 0; si2 < shopItems.length; si2++) {
@@ -332,6 +343,23 @@ cvs.addEventListener('touchmove', onTouchMove, { passive: false });
 cvs.addEventListener('touchend', onTouchEnd, { passive: false });
 cvs.addEventListener('touchcancel', onTouchEnd, { passive: false });
 
+// --- Mouse click support for PC (title screen) ---
+cvs.addEventListener('mousedown', function(e) {
+  var gs = typeof gameState !== 'undefined' ? gameState : 'title';
+  if (gs === 'title' && (typeof titleVolSel === 'undefined' || titleVolSel < 0) && (typeof titleGuard === 'undefined' || titleGuard <= 0)) {
+    var pos = screenToCanvas(e.clientX, e.clientY);
+    var _bwS=330, _bwG=220, _gap=24, _btnY=470, _btnH=72;
+    var _bxS=CW/2-(_bwS+_gap+_bwG)/2, _bxG=_bxS+_bwS+_gap;
+    if (pos.x>=_bxG && pos.x<=_bxG+_bwG && pos.y>=_btnY && pos.y<=_btnY+_btnH) {
+      keys['KeyX'] = true; pressed['KeyX'] = true;
+      setTimeout(function() { keys['KeyX'] = false; }, 80);
+    } else {
+      keys['KeyZ'] = true; pressed['KeyZ'] = true;
+      setTimeout(function() { keys['KeyZ'] = false; }, 80);
+    }
+  }
+});
+
 // --- Drawing ---
 function drawTouchUI() {
   if (!touchActive) return;
@@ -355,18 +383,44 @@ function drawTouchUI() {
 
   // Context-aware buttons
   var visible = getVisibleButtons();
+  var gs2 = typeof gameState !== 'undefined' ? gameState : '';
   for (var i = 0; i < visible.length; i++) {
     var btn = visible[i];
     var bp = getTouchBtnPos(btn);
-    ctx.globalAlpha = btn.pressed ? 0.55 : 0.28;
-    ctx.fillStyle = btn.color;
+    // Item buttons: look up consumable
+    var itemIcon = null;
+    var hasItem = false;
+    if (btn.id === 'Digit1' || btn.id === 'Digit2' || btn.id === 'Digit3') {
+      var itemIdx = btn.id === 'Digit1' ? 0 : btn.id === 'Digit2' ? 1 : 2;
+      if (typeof player !== 'undefined' && player.consumables && player.consumables[itemIdx]) {
+        itemIcon = player.consumables[itemIdx].icon;
+        hasItem = true;
+      }
+    }
+    // Draw only item buttons in playing state; skip in other states
+    if ((btn.id === 'Digit1' || btn.id === 'Digit2' || btn.id === 'Digit3') && gs2 !== 'playing') continue;
+    ctx.globalAlpha = btn.pressed ? 0.75 : (hasItem ? 0.55 : 0.25);
+    ctx.fillStyle = hasItem ? btn.color : 'rgba(100,100,100,0.5)';
     ctx.beginPath(); ctx.arc(bp.x, bp.y, btn.r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.globalAlpha = btn.pressed ? 0.9 : 0.6;
-    ctx.fillStyle = '#fff';
-    ctx.font = "bold " + Math.floor(btn.r * 0.75) + "px 'M PLUS Rounded 1c', sans-serif";
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(btn.label, bp.x, bp.y + 1);
+    ctx.strokeStyle = hasItem ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.globalAlpha = btn.pressed ? 1.0 : 0.85;
+    if (itemIcon) {
+      // Draw item icon large inside button
+      ctx.fillStyle = '#fff';
+      ctx.font = Math.floor(btn.r * 1.0) + "px 'M PLUS Rounded 1c', sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(itemIcon, bp.x, bp.y - 4);
+      // Slot number badge (small, bottom)
+      ctx.font = "bold " + Math.floor(btn.r * 0.4) + "px 'M PLUS Rounded 1c', sans-serif";
+      ctx.fillStyle = '#111';
+      ctx.globalAlpha = 0.8;
+      ctx.fillText(btn.label, bp.x, bp.y + btn.r * 0.58);
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.font = "bold " + Math.floor(btn.r * 0.75) + "px 'M PLUS Rounded 1c', sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(btn.label, bp.x, bp.y + 1);
+    }
   }
 
   ctx.restore();

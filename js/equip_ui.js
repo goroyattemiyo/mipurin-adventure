@@ -46,6 +46,7 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   updateEquipPetals(dt);
   equipBounce = Math.max(0, equipBounce - dt * 4);
   const F = "'M PLUS Rounded 1c', sans-serif";
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
 
   // --- Background ---
   const grad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
@@ -65,18 +66,23 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   }
 
   // --- Title + pollen ---
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 24px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF38 \u305D\u3046\u3073 \uD83C\uDF38', panelX + panelW/2, panelY + 30);
-  ctx.fillStyle = '#f8bbd0'; ctx.font = '14px ' + F;
-  ctx.fillText('\uD83C\uDF3C ' + pollen, panelX + panelW/2, panelY + 48);
+  const hdrH = 20 + 28*_M; // header section height
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold ' + (24*_M) + 'px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF38 \u305D\u3046\u3073 \uD83C\uDF38', panelX + panelW/2, panelY + 14*_M);
+  ctx.fillStyle = '#f8bbd0'; ctx.font = (14*_M) + 'px ' + F;
+  ctx.fillText('\uD83C\uDF3C ' + pollen, panelX + panelW/2, panelY + hdrH);
 
   // ========== LEFT PANE: Character + Equip Slots ==========
   const leftW = Math.floor(panelW * 0.45);
   const leftX = panelX + 10;
-  const leftY = panelY + 60;
+  const leftY = panelY + hdrH + 8;
 
-  // Character
-  const mipSize = Math.min(leftW * 0.55, 160);
+  // Character — cap size so slots still fit in panel
+  const maxMipSize = Math.min(leftW * 0.55, 140);
+  // Reserve space: 3 slots * (slotH + gap) + some margin
+  // Base slot height raised to 72 so 18px font fits on 2 lines comfortably
+  const slotH = Math.min(72 * _M, Math.floor((panelH - hdrH - 40 - maxMipSize - 3 * 10) / 3));
+  const mipSize = Math.min(maxMipSize, panelH - hdrH - 40 - 3 * (slotH + 10));
   const mipX = leftX + (leftW - mipSize) / 2;
   const mipY = leftY + 5;
   const bob = Math.sin(Date.now() / 600) * 3;
@@ -101,14 +107,20 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   // --- Equipment Slots (below character) ---
   const slotLabels = ['\u30E1\u30A4\u30F3', '\u30B5\u30D6', '\uD83D\uDD2E\u30C1\u30E3\u30FC\u30E0'];
   const slotColors = ['#ffd700', '#87ceeb', '#e056fd'];
-  const slotW = Math.min(leftW - 20, 280);
-  const slotH = 54;
-  const slotStartY = mipY + mipSize + 12;
+  const slotW = Math.min(leftW - 20, 320 * _M);
+  const slotStartY = mipY + mipSize + 10;
+  const slotGap = 6 * _M;
+  // Font sizes: start at 18/14/12px (PC) or 2× (mobile), capped to slot geometry
+  // Dynamic reduction via ctx.measureText is applied per-text at draw time
+  const slotNameFz = Math.min(18 * _M, Math.floor(slotH * 0.30));
+  const slotStatFz = Math.min(14 * _M, Math.floor(slotH * 0.22));
+  const slotLabelFz = Math.min(12 * _M, Math.floor(slotH * 0.18));
+  const iconSize = Math.min(44 * _M, slotH - 8);
   equipSlotRects = [];
 
   for (let i = 0; i < 3; i++) {
     const sx = leftX + (leftW - slotW) / 2;
-    const sy = slotStartY + i * (slotH + 8);
+    const sy = slotStartY + i * (slotH + slotGap);
     const selected = equipMode === 'slot' && equipCursor === i;
     equipSlotRects.push({ id: i === 0 ? 'main' : i === 1 ? 'sub' : 'charm', x: sx, y: sy, w: slotW, h: slotH });
 
@@ -126,79 +138,101 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
 
     // Selection arrow
     if (selected) {
-      ctx.fillStyle = slotColors[i]; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'left';
-      ctx.fillText('\u25B6', sx + 4, sy + slotH/2 + 6);
+      ctx.fillStyle = slotColors[i]; ctx.font = 'bold ' + (16*_M) + 'px ' + F; ctx.textAlign = 'left';
+      ctx.fillText('\u25B6', sx + 4, sy + slotH/2 + 6*_M);
     }
 
-    const w = getSlotWeapon(i);
+    // Label tag (top-right of slot) — measure label width to define reserved zone
+    ctx.fillStyle = slotColors[i]; ctx.font = slotLabelFz + 'px ' + F; ctx.textAlign = 'right';
+    ctx.fillText(slotLabels[i], sx + slotW - 6, sy + slotLabelFz + 4);
     ctx.textAlign = 'left';
+    // Reserved right margin = label width + 10px padding (prevents text overlap)
+    const labelReservedW = ctx.measureText(slotLabels[i]).width + 10;
+
+    const w = getSlotWeapon(i);
+    const iconX = sx + 18 + (selected ? 12*_M : 0);
+    const iconY = sy + (slotH - iconSize) / 2;
+    const textX = iconX + iconSize + 8;
+    // Available width for text: from textX to right edge minus label zone
+    const textAvailW = (sx + slotW - labelReservedW) - textX;
+    // Vertical positions: name at ~35%, stats at ~70% of slot height
+    const nameY = sy + Math.round(slotH * 0.38);
+    const statY = sy + Math.round(slotH * 0.72);
 
     if (i < 2 && w) {
-      // Weapon icon (sprite)
-      const iconSize = 40;
-      const iconX = sx + 22, iconY = sy + (slotH - iconSize) / 2;
+      // Weapon icon
       const spriteId = 'weapon_' + w.id;
       if (typeof hasSprite === 'function' && hasSprite(spriteId)) {
         ctx.save();
-          var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
-          if (_esf !== 'none') ctx.filter = _esf;
-          ctx.save();
-          var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
-          if (_esf !== 'none') ctx.filter = _esf;
-          drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
-          ctx.restore();
-          ctx.restore();
+        var _esf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+        if (_esf !== 'none') ctx.filter = _esf;
+        drawSpriteImg(spriteId, iconX, iconY, iconSize, iconSize);
+        ctx.restore();
       } else {
-        ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff'; ctx.font = Math.floor(iconSize * 0.65) + 'px ' + F; ctx.textAlign = 'center';
         const emoji = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
-        ctx.fillText(emoji ? emoji[0] : '\u2694', iconX + iconSize/2, iconY + iconSize/2 + 8);
+        ctx.fillText(emoji ? emoji[0] : '\u2694', iconX + iconSize/2, iconY + iconSize * 0.7);
         ctx.textAlign = 'left';
       }
-      // Name + level
-      ctx.fillStyle = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff'; ctx.font = 'bold 15px ' + F;
-      ctx.fillText(w.name, sx + 68, sy + 22);
-      ctx.fillStyle = '#ffd700'; ctx.font = '12px ' + F;
+      // Line 1: weapon name — dynamic font reduction via measureText
+      ctx.fillStyle = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff';
+      let nameFz = slotNameFz;
+      ctx.font = 'bold ' + nameFz + 'px ' + F;
+      while (nameFz > 10 && ctx.measureText(w.name).width > textAvailW) {
+        nameFz--;
+        ctx.font = 'bold ' + nameFz + 'px ' + F;
+      }
+      ctx.fillText(w.name, textX, nameY);
+      // Line 2: ★ level + ATK — dynamic reduction
       const lvl = w.level || 0;
-      ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + '  ATK ' + w.dmgMul.toFixed(1), sx + 68, sy + 40);
-      // Label
-      ctx.fillStyle = slotColors[i]; ctx.font = '10px ' + F; ctx.textAlign = 'right';
-      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
-      ctx.textAlign = 'left';
+      const statStr = '\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + '  ATK ' + w.dmgMul.toFixed(1);
+      ctx.fillStyle = '#ffd700';
+      let statFz = slotStatFz;
+      ctx.font = statFz + 'px ' + F;
+      while (statFz > 8 && ctx.measureText(statStr).width > textAvailW) {
+        statFz--;
+        ctx.font = statFz + 'px ' + F;
+      }
+      ctx.fillText(statStr, textX, statY);
     } else if (i === 2) {
-      // Charm slot (active)
       var ch = player.charm;
       if (ch) {
-        ctx.fillStyle = '#fff'; ctx.font = '26px ' + F; ctx.textAlign = 'center';
-        ctx.fillText(ch.icon || '\uD83D\uDD2E', sx + 42, sy + slotH/2 + 9);
+        ctx.fillStyle = '#fff'; ctx.font = Math.floor(iconSize * 0.65) + 'px ' + F; ctx.textAlign = 'center';
+        ctx.fillText(ch.icon || '\uD83D\uDD2E', iconX + iconSize/2, iconY + iconSize * 0.72);
         ctx.textAlign = 'left';
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + F;
-        ctx.fillText(ch.name, sx + 68, sy + 22);
-        ctx.fillStyle = '#e056fd'; ctx.font = '12px ' + F;
+        // Name
+        let cnameFz = slotNameFz;
+        ctx.fillStyle = '#fff'; ctx.font = 'bold ' + cnameFz + 'px ' + F;
+        while (cnameFz > 10 && ctx.measureText(ch.name).width > textAvailW) {
+          cnameFz--; ctx.font = 'bold ' + cnameFz + 'px ' + F;
+        }
+        ctx.fillText(ch.name, textX, nameY);
+        // Rarity — separate from desc to guarantee fit
+        ctx.fillStyle = '#e056fd';
         var rarTxt = ch.rarity === 'legend' ? '\u2605LEGEND' : ch.rarity === 'rare' ? '\u2605RARE' : 'COMMON';
-        ctx.fillText(rarTxt + '  ' + ch.desc, sx + 68, sy + 40);
+        let cstatFz = slotStatFz;
+        ctx.font = cstatFz + 'px ' + F;
+        while (cstatFz > 8 && ctx.measureText(rarTxt).width > textAvailW) {
+          cstatFz--; ctx.font = cstatFz + 'px ' + F;
+        }
+        ctx.fillText(rarTxt, textX, statY);
       } else {
         ctx.save(); ctx.globalAlpha = 0.5;
-        ctx.fillStyle = '#888'; ctx.font = '14px ' + F;
-        ctx.fillText('  \uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0 (\u672A\u88C5\u5099)', sx + 22, sy + slotH/2 + 5);
+        ctx.fillStyle = '#888'; ctx.font = slotNameFz + 'px ' + F;
+        ctx.fillText('\uD83D\uDD2E \u30C1\u30E3\u30FC\u30E0 (\u672A\u88C5\u5099)', sx + 22, sy + slotH/2 + slotNameFz/3);
         ctx.restore();
       }
-      ctx.fillStyle = '#e056fd'; ctx.font = '10px ' + F; ctx.textAlign = 'right';
-      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
-      ctx.textAlign = 'left';
     } else {
-      ctx.fillStyle = '#555'; ctx.font = '14px ' + F;
-      ctx.fillText('  \u2795 \u7A7A\u304D\u30B9\u30ED\u30C3\u30C8', sx + 22, sy + slotH/2 + 5);
-      ctx.fillStyle = slotColors[i]; ctx.font = '10px ' + F; ctx.textAlign = 'right';
-      ctx.fillText(slotLabels[i], sx + slotW - 8, sy + 14);
-      ctx.textAlign = 'left';
+      ctx.fillStyle = '#555'; ctx.font = slotNameFz + 'px ' + F;
+      ctx.fillText('\u2795 \u7A7A\u304D\u30B9\u30ED\u30C3\u30C8', sx + 22, sy + slotH/2 + slotNameFz/3);
     }
   }
 
   // ========== RIGHT PANE: Weapon List ==========
   const rightX = panelX + leftW + 20;
-  const rightY = panelY + 60;
+  const rightY = panelY + hdrH + 8;
   const rightW = panelW - leftW - 35;
-  const rightH = panelH - 90;
+  const rightH = panelH - hdrH - 18;
 
   // Right pane background
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -210,16 +244,24 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
   ctx.lineTo(rightX, rightY+rr); ctx.arcTo(rightX, rightY, rightX+rr, rightY, rr);
   ctx.closePath(); ctx.fill();
 
-  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold 16px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\uD83C\uDF92 \u3082\u3061\u3082\u306E\u30EA\u30B9\u30C8', rightX + rightW/2, rightY + 20);
+  const listTitleFz = 16 * _M;
+  ctx.fillStyle = '#f8bbd0'; ctx.font = 'bold ' + listTitleFz + 'px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('\uD83C\uDF92 \u3082\u3061\u3082\u306E\u30EA\u30B9\u30C8', rightX + rightW/2, rightY + listTitleFz + 2);
 
   const allWeapons = getAllOwnedWeapons();
-  const listStartY = rightY + 35;
-  const rowH = 52;
-  const maxVisible = Math.floor((rightH - 50) / rowH);
+  const listHeaderH = listTitleFz + 10;
+  const listStartY = rightY + listHeaderH;
+  // Row height: start at 64px (fits 18px name + 14px stats + padding), cap at 3 rows min
+  const rowH = Math.min(64 * _M, Math.floor((rightH - listHeaderH - 30) / 3));
+  const maxVisible = Math.floor((rightH - listHeaderH - 30) / rowH);
+  // Font sizes: 18/14/12 as starting points, geometry-capped
+  const rowNameFz = Math.min(18 * _M, Math.floor(rowH * 0.32));
+  const rowStatFz = Math.min(14 * _M, Math.floor(rowH * 0.24));
+  const rowBadgeFz = Math.min(12 * _M, Math.floor(rowH * 0.20));
+  const icoSzList = Math.min(40 * _M, rowH - 8);
 
   if (allWeapons.length === 0) {
-    ctx.fillStyle = '#666'; ctx.font = '14px ' + F;
+    ctx.fillStyle = '#666'; ctx.font = (14*_M) + 'px ' + F;
     ctx.fillText('\u3076\u304D\u304C\u306A\u3044\u3088', rightX + rightW/2, listStartY + 40);
   }
 
@@ -229,7 +271,6 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     const ry = listStartY + i * rowH;
     const listSel = equipMode === 'list' && equipListCursor === i;
 
-    // Row background
     ctx.fillStyle = listSel ? 'rgba(255,215,0,0.12)' : (i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)');
     ctx.fillRect(rightX + 4, ry, rightW - 8, rowH - 4);
     if (listSel) {
@@ -237,66 +278,88 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
       ctx.strokeRect(rightX + 4, ry, rightW - 8, rowH - 4);
     }
 
-    // Where is it equipped?
-    let badge = '';
-    if (entry.src === 'main') badge = '\u30E1\u30A4\u30F3';
-    else if (entry.src === 'sub') badge = '\u30B5\u30D6';
-    else badge = '\u30D0\u30C3\u30AF';
+    let badge = entry.src === 'main' ? '\u30E1\u30A4\u30F3' : entry.src === 'sub' ? '\u30B5\u30D6' : '\u30D0\u30C3\u30AF';
 
     // Icon
-    const icoSize = 36;
-    const icoX = rightX + 10, icoY = ry + (rowH - icoSize) / 2 - 2;
+    const icoX = rightX + 10, icoY = ry + (rowH - icoSzList) / 2;
     const sprId = 'weapon_' + w.id;
     if (typeof hasSprite === 'function' && hasSprite(sprId)) {
       ctx.save();
-          var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
-          if (_elf !== 'none') ctx.filter = _elf;
-          ctx.save();
-          var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
-          if (_elf !== 'none') ctx.filter = _elf;
-          drawSpriteImg(sprId, icoX, icoY, icoSize, icoSize);
-          ctx.restore();
-          ctx.restore();
+      var _elf = (w.rarity && typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity) : 'none';
+      if (_elf !== 'none') ctx.filter = _elf;
+      drawSpriteImg(sprId, icoX, icoY, icoSzList, icoSzList);
+      ctx.restore();
     } else {
-      ctx.fillStyle = '#fff'; ctx.font = '22px ' + F; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff'; ctx.font = Math.floor(icoSzList * 0.6) + 'px ' + F; ctx.textAlign = 'center';
       const em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
-      ctx.fillText(em ? em[0] : '\u2694', icoX + icoSize/2, icoY + icoSize/2 + 7);
+      ctx.fillText(em ? em[0] : '\u2694', icoX + icoSzList/2, icoY + icoSzList * 0.72);
     }
 
-    // Name
-    ctx.textAlign = 'left';
-    var _rCol = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff';
-    ctx.fillStyle = _rCol; ctx.font = 'bold 14px ' + F;
-    ctx.fillText(w.name + (w.rarity && w.rarity !== 'normal' && typeof getRarityDef === 'function' ? ' [' + getRarityDef(w.rarity).name + ']' : ''), rightX + 52, ry + 18);
+    const textStartX = rightX + icoSzList + 14;
+    // Measure badge width first to know the exact reserved right margin
+    ctx.font = rowBadgeFz + 'px ' + F;
+    const badgeColW = ctx.measureText(badge).width + 12;
+    // Text zone: from textStartX to (right edge - badge margin)
+    const rowTextEndX = rightX + rightW - badgeColW - 6;
+    const rowTextAvailW = rowTextEndX - textStartX;
+    // Vertical: name ~38%, stats ~72%
+    const rNameY = ry + Math.round(rowH * 0.38);
+    const rStatY = ry + Math.round(rowH * 0.72);
 
-    // Stats
-    ctx.fillStyle = '#ffe0b2'; ctx.font = '11px ' + F;
-    const lvl = w.level || 0;
-    ctx.fillText('\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + '  ATK ' + w.dmgMul.toFixed(1) + '  SPD ' + w.speed.toFixed(2), rightX + 52, ry + 35);
-
-    // Badge
+    // Badge drawn first (right-aligned, top of row)
     ctx.textAlign = 'right';
     const badgeCol = entry.src === 'main' ? '#ffd700' : entry.src === 'sub' ? '#87ceeb' : '#aaa';
-    ctx.fillStyle = badgeCol; ctx.font = '10px ' + F;
-    ctx.fillText(badge, rightX + rightW - 10, ry + 16);
+    ctx.fillStyle = badgeCol; ctx.font = rowBadgeFz + 'px ' + F;
+    ctx.fillText(badge, rightX + rightW - 6, ry + rowBadgeFz + 4);
 
-    // Upgrade cost if selected
-    if (listSel && lvl < WEAPON_UPGRADE_MAX) {
-      var ucost = (typeof getUpgradeCost === 'function') ? getUpgradeCost(w) : WEAPON_UPGRADE_COST[lvl];
-      var uok = pollen >= ucost;
-      ctx.fillStyle = uok ? '#2ecc71' : '#e74c3c'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('Z:\u5F37\u5316(' + ucost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
-    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX && typeof canEvolve === 'function' && canEvolve(w)) {
-      var ecost = getEvoCost(w);
-      ctx.fillStyle = '#e056fd'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('Z:\u2728\u3057\u3093\u304B(' + ecost + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
-    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX && typeof EVOLUTION_MAP !== 'undefined' && EVOLUTION_MAP[w.id]) {
-      var ecost2 = getEvoCost(w);
-      ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText('\u2728\u3057\u3093\u304B(' + ecost2 + '\uD83C\uDF3C)', rightX + rightW - 10, ry + rowH - 10);
-    } else if (listSel && lvl >= WEAPON_UPGRADE_MAX) {
-      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
-      ctx.fillText((w.tier === 2) ? '\u2728T2 MAX' : '\u2728MAX', rightX + rightW - 10, ry + rowH - 10);
+    // Name (left-aligned, dynamic font reduction)
+    ctx.textAlign = 'left';
+    var _rCol = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : '#fff';
+    ctx.fillStyle = _rCol;
+    const rarity_suffix = (w.rarity && w.rarity !== 'normal' && typeof getRarityDef === 'function') ? ' [' + getRarityDef(w.rarity).name + ']' : '';
+    let rNFz = rowNameFz;
+    ctx.font = 'bold ' + rNFz + 'px ' + F;
+    while (rNFz > 10 && ctx.measureText(w.name + rarity_suffix).width > rowTextAvailW) {
+      rNFz--; ctx.font = 'bold ' + rNFz + 'px ' + F;
+    }
+    ctx.fillText(w.name + rarity_suffix, textStartX, rNameY);
+
+    // Stats (dynamic reduction to stay within text zone)
+    const lvl = w.level || 0;
+    const rowStatStr = '\u2B50'.repeat(lvl) + '\u25CB'.repeat(WEAPON_UPGRADE_MAX - lvl) + ' ATK ' + w.dmgMul.toFixed(1) + ' SPD ' + w.speed.toFixed(2);
+    ctx.fillStyle = '#ffe0b2';
+    let rSFz = rowStatFz;
+    ctx.font = rSFz + 'px ' + F;
+    while (rSFz > 8 && ctx.measureText(rowStatStr).width > rowTextAvailW) {
+      rSFz--; ctx.font = rSFz + 'px ' + F;
+    }
+    ctx.fillText(rowStatStr, textStartX, rStatY);
+
+    // Upgrade/evolve label (bottom-right of selected row — below stats zone)
+    if (listSel) {
+      ctx.textAlign = 'right';
+      let upgradeStr = '';
+      let upgradeCol = '#2ecc71';
+      if (lvl < WEAPON_UPGRADE_MAX) {
+        var ucost = (typeof getUpgradeCost === 'function') ? getUpgradeCost(w) : WEAPON_UPGRADE_COST[lvl];
+        upgradeStr = 'Z:\u5F37\u5316(' + ucost + '\uD83C\uDF3C)';
+        upgradeCol = (pollen >= ucost) ? '#2ecc71' : '#e74c3c';
+      } else if (typeof canEvolve === 'function' && canEvolve(w)) {
+        upgradeStr = 'Z:\u2728(' + getEvoCost(w) + '\uD83C\uDF3C)';
+        upgradeCol = '#e056fd';
+      } else if (typeof EVOLUTION_MAP !== 'undefined' && EVOLUTION_MAP[w.id]) {
+        upgradeStr = '\u2728\u3057\u3093\u304B(' + getEvoCost(w) + '\uD83C\uDF3C)';
+        upgradeCol = '#e74c3c';
+      } else if (lvl >= WEAPON_UPGRADE_MAX) {
+        upgradeStr = (w.tier === 2) ? '\u2728T2 MAX' : '\u2728MAX';
+        upgradeCol = '#ffd700';
+      }
+      if (upgradeStr) {
+        ctx.fillStyle = upgradeCol;
+        let uFz = rowStatFz;
+        ctx.font = 'bold ' + uFz + 'px ' + F;
+        ctx.fillText(upgradeStr, rightX + rightW - 6, ry + rowH - 4);
+      }
     }
     ctx.textAlign = 'left';
   }
@@ -306,17 +369,20 @@ function drawEquipTab(panelX, panelY, panelW, panelH) {
     ? allWeapons[equipListCursor].w
     : getSlotWeapon(equipCursor);
 
+  const bottomY = panelY + panelH;
   if (selW && selW.desc) {
-    ctx.fillStyle = '#ccc'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
-    ctx.fillText(selW.desc, panelX + panelW/2, panelY + panelH - 28);
+    ctx.fillStyle = '#ccc'; ctx.font = (12*_M) + 'px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(selW.desc, panelX + panelW/2, bottomY - 28*_M);
   }
 
-  // Controls
-  ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
-  const hint = equipMode === 'slot'
-    ? equipCursor === 2 ? '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  Esc:\u3068\u3058\u308B' : '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  \u2192:\u30EA\u30B9\u30C8\u3078  Z:\u5F37\u5316  Esc:\u3068\u3058\u308B'
-    : '\u2191\u2193:\u3048\u3089\u3076  \u2190:\u30B9\u30ED\u30C3\u30C8\u3078  Z:\u5F37\u5316  X:\u305D\u3046\u3073  Esc:\u3068\u3058\u308B';
-  ctx.fillText(hint, panelX + panelW/2, panelY + panelH - 10);
+  // Controls (PC only — mobile uses touch buttons)
+  if (_M === 1) {
+    ctx.fillStyle = 'rgba(248,187,208,0.5)'; ctx.font = '12px ' + F; ctx.textAlign = 'center';
+    const hint = equipMode === 'slot'
+      ? equipCursor === 2 ? '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  Esc:\u3068\u3058\u308B' : '\u2191\u2193:\u30B9\u30ED\u30C3\u30C8  \u2192:\u30EA\u30B9\u30C8\u3078  Z:\u5F37\u5316  Esc:\u3068\u3058\u308B'
+      : '\u2191\u2193:\u3048\u3089\u3076  \u2190:\u30B9\u30ED\u30C3\u30C8\u3078  Z:\u5F37\u5316  X:\u305D\u3046\u3073  Esc:\u3068\u3058\u308B';
+    ctx.fillText(hint, panelX + panelW/2, bottomY - 10);
+  }
 
   ctx.restore();
 }

@@ -34,11 +34,21 @@ function drawInventory() {
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
   if (inventoryTab === 2) drawEquipTab(80, 110, CW - 160, CH - 160);
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.textAlign = 'center';
-  if (_M === 1) ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
-  ctx.textAlign = 'left';
+
+  // ヘルプアイコン（タブ共通・最前面）
+  var _helpLines;
+  if (inventoryTab === 0) {
+    _helpLines = ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', 'TAB キー: タブ切替', 'ESC キー: とじる'];
+  } else if (inventoryTab === 1) {
+    _helpLines = ['↑↓ キー: スクロール', '← → キー: サブタブ切替', 'TAB キー: タブ切替', 'ESC キー: とじる'];
+  } else {
+    _helpLines = ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
+  }
+  UIManager.drawHelpIcon(ctx, CW - 50, 55 + 10*_M, 34, 'inventory');
+  if (UIManager.isHelpOpen('inventory')) {
+    var _tabName = ['持ち物', '図鑑', '装備'][inventoryTab] || '';
+    UIManager.showModal(ctx, _tabName + ' — 操作ガイド', _helpLines);
+  }
 }
 
 function drawInventoryItems() {
@@ -231,8 +241,9 @@ function drawCollectionTab() {
     var thumbY = sbY + (sbH - thumbH) * (collectionScroll / Math.max(1, entries.length - maxRows));
     ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX, sbY, 8, sbH);
     ctx.fillStyle = 'rgba(255,215,0,0.5)'; ctx.fillRect(sbX, thumbY, 8, thumbH);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('↑↓: スクロール (' + (collectionScroll + 1) + '-' + Math.min(collectionScroll + maxRows, entries.length) + ' / ' + entries.length + ')', CW / 2, CH - 55);
+    // スクロール件数表示（ヒントはヘルプモーダルへ移動）
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '12px ' + F; ctx.textAlign = 'right';
+    ctx.fillText((collectionScroll + 1) + '-' + Math.min(collectionScroll + maxRows, entries.length) + ' / ' + entries.length, CW - 140, CH - 55);
     ctx.textAlign = 'left';
   }
 
@@ -324,8 +335,6 @@ function drawWorldLoreTab() {
     var thumbY2 = sbY2 + (sbH2 - thumbH2) * (worldLoreScroll / Math.max(1, allEntries.length - maxRows2));
     ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX2, sbY2, 8, sbH2);
     ctx.fillStyle = 'rgba(167,139,250,0.5)'; ctx.fillRect(sbX2, thumbY2, 8, thumbH2);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('↑↓: スクロール', CW / 2, CH - 55);
     ctx.textAlign = 'left';
   }
 }

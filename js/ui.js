@@ -476,45 +476,219 @@ function drawHUD() {
 
 function drawBlessing() {
   if (gameState !== 'blessing') return;
+  // Tween アニメーション更新
+  if (typeof TWEEN !== 'undefined') TWEEN.update(performance.now());
+
   const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.bless; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 50 + 20*_M);
-  ctx.fillStyle = COL.text; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 50 + 45*_M);
-  const bw = 180 * _M, bh = 220 * _M;
-  const totalW = blessingChoices.length * bw + (blessingChoices.length - 1) * 20 * _M;
-  const bStartX = CW / 2 - totalW / 2;
+  const F = "'M PLUS Rounded 1c', sans-serif";
+  const carX = typeof blessingCarouselX !== 'undefined' ? blessingCarouselX : selectCursor;
+
+  // ── 背景オーバーレイ ──
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(0, 0, CW, CH);
+  const bg = ctx.createLinearGradient(0, 0, 0, CH * 0.65);
+  bg.addColorStop(0, 'rgba(50,15,100,0.45)');
+  bg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, CW, CH);
+
+  // ── タイトル ──
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold ' + (30 * _M) + 'px ' + F;
+  ctx.textAlign = 'center';
+  ctx.fillText('\u273F \u795D\u798F\u3092\u9078\u3079 \u273F', CW / 2, 44 + 18 * _M);
+
+  // ── カルーセルカード ──
+  const CARD_W = 250, CARD_H = 310;
+  const CARD_GAP = 340;
+  const CENTER_Y = CH / 2 - 10;
+
   for (let i = 0; i < blessingChoices.length; i++) {
-    const sel = selectCursor === i;
     const b = blessingChoices[i];
-    const bxBase = bStartX + i * (bw + 20 * _M);
-    const by = 50 + 70*_M;
-    const cardDelay = i * 0.15;
-    const cardProg = Math.min(1, Math.max(0, (blessingAnimTimer - cardDelay) * 2));
-    const eased = 1 - Math.pow(1 - cardProg, 3);
-    const slideOff = (1 - eased) * 80;
-    const cardScale = 0.7 + eased * 0.3;
+    const dx = i - carX;
+    if (Math.abs(dx) > 1.55) continue;
+
+    const distClamped = Math.min(Math.abs(dx), 1);
+    const scale = 1.0 - distClamped * 0.32;
+    const alpha = 1.0 - distClamped * 0.52;
+    const isCenter = i === selectCursor;
+
+    // 入場アニメーション
+    const delay = i * 0.12;
+    const prog = Math.min(1, Math.max(0, ((typeof blessingAnimTimer !== 'undefined' ? blessingAnimTimer : 1) - delay) * 2.8));
+    const eased = 1 - Math.pow(1 - prog, 3);
+
+    const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#4da6ff' : '#aaa';
+    const bx = -CARD_W / 2, by = -CARD_H / 2;
+
     ctx.save();
-    ctx.translate(bxBase + bw/2, by + bh/2);
-    ctx.scale(cardScale, cardScale);
-    ctx.globalAlpha = eased;
-    const bx = -bw/2, byLocal = -bh/2 + slideOff;
-    ctx.fillStyle = sel ? 'rgba(70,60,120,0.98)' : 'rgba(35,30,55,0.92)'; ctx.fillRect(bx, byLocal, bw, bh);
-    const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
-    ctx.strokeStyle = sel ? '#ffd700' : rCol; ctx.lineWidth = sel ? 4 : 1.5; ctx.strokeRect(bx, byLocal, bw, bh);
-    if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, byLocal, bw, bh); }
-    ctx.fillStyle = COL.text; ctx.font = "bold " + (36*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55*_M);
-    ctx.fillStyle = rCol; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80*_M);
-    ctx.fillStyle = COL.bless; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 108*_M);
-    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135*_M;
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-      for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18*_M; dline = ''; } }
-      if (dline) ctx.fillText(dline, bx + bw/2, dly); }
-    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-    ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, byLocal + bh - 25);
+    ctx.globalAlpha = alpha * eased;
+    ctx.translate(CW / 2 + dx * CARD_GAP, CENTER_Y + (1 - eased) * 55);
+    ctx.scale(scale * (0.7 + eased * 0.3), scale * (0.7 + eased * 0.3));
+
+    // カード背景
+    ctx.fillStyle = isCenter ? 'rgba(65,35,125,0.97)' : 'rgba(28,18,50,0.90)';
+    ctx.beginPath(); ctx.roundRect(bx, by, CARD_W, CARD_H, 14); ctx.fill();
+
+    // ボーダー & グロー
+    if (isCenter) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 22; }
+    ctx.strokeStyle = isCenter ? '#ffd700' : rCol;
+    ctx.lineWidth = isCenter ? 3 : 1.5;
+    ctx.beginPath(); ctx.roundRect(bx, by, CARD_W, CARD_H, 14); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // アイコン
+    ctx.font = '54px ' + F; ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(b.icon || '\u2756', 0, by + 18);
+
+    // レアリティ
+    ctx.font = '12px ' + F; ctx.fillStyle = rCol;
+    ctx.fillText((b.rarity || 'COMMON').toUpperCase(), 0, by + 80);
+
+    // 名前
+    ctx.font = 'bold 20px ' + F; ctx.fillStyle = '#ffe4a0';
+    ctx.fillText(b.name || '', 0, by + 100);
+
+    // 説明（中央カードのみ）
+    if (isCenter) {
+      ctx.font = '14px ' + F; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      const maxLW = CARD_W - 30;
+      let dl = '', dY = by + 130;
+      for (const ch of (b.desc || '')) {
+        dl += ch;
+        if (ctx.measureText(dl).width > maxLW) {
+          if (dY + 18 > by + CARD_H - 48) { ctx.fillText(dl.slice(0, -1) + '\u2026', 0, dY); dl = ''; break; }
+          ctx.fillText(dl, 0, dY); dY += 18; dl = '';
+        }
+      }
+      if (dl) ctx.fillText(dl, 0, dY);
+    }
+
+    // 決定プロンプト（中央カードのみ）
+    if (isCenter) {
+      ctx.font = 'bold 14px ' + F; ctx.fillStyle = 'rgba(255,215,0,0.9)';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(touchActive ? '\u25B6 \u30BF\u30C3\u30D7\u3067\u8A73\u7D30' : '\u25B6 Z \u30AD\u30FC\u3067\u8A73\u7D30', 0, by + CARD_H - 8);
+    }
     ctx.restore();
   }
-  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
-  ctx.textAlign = 'left';
+
+  // 左右矢印ヒント
+  if (blessingChoices.length > 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = 'bold 38px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (selectCursor > 0)
+      ctx.fillText('\u2039', CW / 2 - CARD_GAP + CARD_W / 2 - 24, CENTER_Y);
+    if (selectCursor < blessingChoices.length - 1)
+      ctx.fillText('\u203A', CW / 2 + CARD_GAP - CARD_W / 2 + 24, CENTER_Y);
+  }
+
+  // ── 下部インフォバー ──
+  const selB = blessingChoices[selectCursor] || blessingChoices[0];
+  if (selB) {
+    ctx.fillStyle = 'rgba(0,0,0,0.68)';
+    ctx.fillRect(0, CH - 72, CW, 72);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold ' + (20 * _M) + 'px ' + F;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(selB.icon + '  ' + selB.name, CW / 2, CH - 50);
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = (15 * _M) + 'px ' + F;
+    UIManager.drawSmartText(ctx, selB.desc || '', CW / 2 - (CW - 80) / 2, CH - 22, CW - 80, (15 * _M) + 'px ' + F);
+  }
+
+  // リロールヒント
+  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#555';
+  ctx.font = '14px ' + F; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('X: \u30EA\u30ED\u30FC\u30EB (\u82B1\u7C89-15)  \u73FE\u5728:' + pollen, 20, CH - 6);
+
+  // ── ヘルプアイコン ──
+  UIManager.drawHelpIcon(ctx, CW - 46, 46, 32, 'blessing');
+  if (UIManager.isHelpOpen('blessing')) {
+    UIManager.showModal(ctx, '\u795D\u798F\u9078\u629E \u2014 \u64CD\u4F5C\u30AC\u30A4\u30C9', [
+      '\u2190 \u2192 (A/D): \u30AB\u30FC\u30C9\u3092\u5207\u308A\u66FF\u3048',
+      'Z / Enter: \u8A73\u7D30\u3092\u898B\u308B\uFF08\u3082\u3046\u4E00\u5EA6\u3067\u6C7A\u5B9A\uFF09',
+      'ESC: \u8A73\u7D30\u3092\u9589\u3058\u308B',
+      'X: \u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C89-15\uFF09',
+      '1 / 2 / 3: \u76F4\u63A5\u9078\u629E',
+    ]);
+  }
+
+  // ── 詳細ポップアップ ──
+  if (typeof blessingDetailOpen !== 'undefined' && blessingDetailOpen) {
+    _drawBlessingDetail(ctx, blessingChoices[selectCursor], F);
+  }
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+// 祝福詳細ポップアップ（カードをズームして浮き出る演出）
+function _drawBlessingDetail(ctx, b, F) {
+  if (!b) return;
+  const t = Math.min(1, typeof blessingDetailAnimT !== 'undefined' ? blessingDetailAnimT : 1);
+  const ease = 1 - Math.pow(1 - t, 3);
+
+  const PW = 520, PH = 380;
+  const px = (CW - PW) / 2, py = (CH - PH) / 2;
+  const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#4da6ff' : '#aaa';
+
+  ctx.save();
+  // 背景暗転
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.55 * ease) + ')';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // ズームイン
+  ctx.translate(CW / 2, CH / 2);
+  ctx.scale(0.55 + ease * 0.45, 0.55 + ease * 0.45);
+  ctx.translate(-CW / 2, -CH / 2);
+  ctx.globalAlpha = ease;
+
+  // ポップアップ背景
+  ctx.fillStyle = 'rgba(22,12,50,0.98)';
+  ctx.beginPath(); ctx.roundRect(px, py, PW, PH, 20); ctx.fill();
+  ctx.shadowColor = rCol; ctx.shadowBlur = 36;
+  ctx.strokeStyle = rCol; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(px, py, PW, PH, 20); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // アイコン
+  ctx.font = '68px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(b.icon || '\u2756', CW / 2, py + 22);
+
+  // レアリティ
+  ctx.font = 'bold 13px ' + F; ctx.fillStyle = rCol;
+  ctx.fillText((b.rarity || 'COMMON').toUpperCase(), CW / 2, py + 100);
+
+  // 名前
+  ctx.font = 'bold 30px ' + F; ctx.fillStyle = '#ffe4a0';
+  ctx.fillText(b.name || '', CW / 2, py + 122);
+
+  // 区切り線
+  ctx.strokeStyle = 'rgba(255,215,0,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px + 40, py + 163); ctx.lineTo(px + PW - 40, py + 163); ctx.stroke();
+
+  // フレーバーテキスト（大きめフォント・読みやすく）
+  ctx.font = '17px ' + F; ctx.fillStyle = '#e0d8ff';
+  ctx.textBaseline = 'top';
+  const maxLW = PW - 56;
+  let dl = '', dY = py + 174;
+  for (const ch of (b.desc || '')) {
+    dl += ch;
+    if (ctx.measureText(dl).width > maxLW) {
+      ctx.fillText(dl, CW / 2, dY); dY += 24; dl = '';
+    }
+  }
+  if (dl) ctx.fillText(dl, CW / 2, dY);
+
+  // ボタンヒント
+  ctx.font = 'bold 17px ' + F; ctx.textBaseline = 'bottom';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText('Z / Enter : \u3053\u308C\u306B\u3059\u308B', CW / 2 - 90, py + PH - 12);
+  ctx.fillStyle = 'rgba(200,200,200,0.6)';
+  ctx.fillText('ESC : \u623B\u308B', CW / 2 + 90, py + PH - 12);
+
+  ctx.restore();
 }
 
 // drawShop moved to shop_ui.js

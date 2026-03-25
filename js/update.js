@@ -223,14 +223,54 @@ function update(dt) {
     return;
   }
   if (gameState === 'blessing') {
-    if (wasPressed('KeyX') && pollen >= 15) { pollen -= 15; blessingChoices = pickBlessings(); selectCursor = -1; blessingAnimTimer = 0; Audio.menu_select(); showFloat('\uD83C\uDF3C \u82B1\u7C89-15 \u30EA\u30ED\u30FC\u30EB\uFF01', 1.5, '#f1c40f'); return; }
-    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = selectCursor < 0 ? blessingChoices.length - 1 : (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
-    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = selectCursor < 0 ? 0 : (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
-    if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; }
-    if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; }
-    if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; }
+    // 詳細ポップアップアニメーション進行
+    if (blessingDetailOpen && blessingDetailAnimT < 1) blessingDetailAnimT = Math.min(1, blessingDetailAnimT + dt * 7);
+
+    // 詳細ポップアップ中の入力
+    if (blessingDetailOpen) {
+      if (wasPressed('Escape')) { blessingDetailOpen = false; Audio.dialog_close(); }
+      else if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
+        blessingDetailOpen = false;
+        const chosenB = blessingChoices[selectCursor];
+        chosenB.apply(); activeBlessings.push(chosenB); checkDuos();
+        emitParticles(CW/2, CH/2, chosenB.icon ? '#ffd700' : '#fff', 25, 120, 0.6);
+        Audio.level_up();
+        showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info);
+        if (typeof tryCharmDrop === 'function' && tryCharmDrop(floor)) { gameState = 'charmDrop'; } else { nextFloor(); }
+      }
+      return;
+    }
+
+    // リロール
+    if (wasPressed('KeyX') && pollen >= 15) {
+      pollen -= 15; blessingChoices = pickBlessings(); selectCursor = 0;
+      blessingCarouselX = 0; blessingAnimTimer = 0;
+      Audio.menu_select(); showFloat('\uD83C\uDF3C \u82B1\u7C89-15 \u30EA\u30ED\u30FC\u30EB\uFF01', 1.5, '#f1c40f'); return;
+    }
+
+    // カード切り替え（Tween スライド）
+    const _prevCursor = selectCursor;
+    if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { selectCursor = (selectCursor - 1 + blessingChoices.length) % blessingChoices.length; Audio.menu_move(); }
+    if (wasPressed('ArrowRight') || wasPressed('KeyD')) { selectCursor = (selectCursor + 1) % blessingChoices.length; Audio.menu_move(); }
+    if (selectCursor !== _prevCursor) {
+      if (typeof TWEEN !== 'undefined') {
+        TWEEN.removeAll();
+        new TWEEN.Tween({ x: blessingCarouselX })
+          .to({ x: selectCursor }, 220)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .onUpdate(function(o) { blessingCarouselX = o.x; })
+          .start();
+      } else { blessingCarouselX = selectCursor; }
+    }
+
+    if (wasPressed('Digit1') && blessingChoices[0]) { selectCursor = 0; blessingCarouselX = 0; }
+    if (wasPressed('Digit2') && blessingChoices[1]) { selectCursor = 1; blessingCarouselX = 1; }
+    if (wasPressed('Digit3') && blessingChoices[2]) { selectCursor = 2; blessingCarouselX = 2; }
+
+    // Z → 詳細ポップアップを開く（二段階確認）
     if ((wasPressed('KeyZ') || wasPressed('Enter')) && blessingChoices[selectCursor]) {
-   const chosenB = blessingChoices[selectCursor]; chosenB.apply(); activeBlessings.push(chosenB); checkDuos(); emitParticles(CW/2, CH/2, chosenB.icon ? '#ffd700' : '#fff', 25, 120, 0.6); Audio.level_up(); showFloat(chosenB.icon + ' ' + chosenB.name + ' はつどう！', 2.5, MSG_COLORS.info); if (typeof tryCharmDrop === 'function' && tryCharmDrop(floor)) { gameState = 'charmDrop'; } else { nextFloor(); } }
+      blessingDetailOpen = true; blessingDetailAnimT = 0; Audio.dialog_open();
+    }
     return;
   }
   if (gameState === 'shop') {

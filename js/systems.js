@@ -205,7 +205,7 @@ const SPRITE_MAP = {
   // Aliases (shape name -> sprite)
   blob: 'assets/sprites/enemy_slime.webp',
   // Bosses
-  dark_root: 'assets/sprites/boss_shadow_moth.webp', // placeholder sprite
+  dark_root: 'assets/sprites/boss_dark_root.webp',
   queen_hornet: 'assets/sprites/boss_queen_hornet.webp',
   fungus_king: 'assets/sprites/boss_fungus_king.webp',
   crystal_golem: 'assets/sprites/boss_crystal_golem.webp',
@@ -425,7 +425,8 @@ const BOSS_SIL_MAP = {
   queen_hornet: 'assets/sprites/boss_silhouette_hornet.webp',
   fungus_king: 'assets/sprites/boss_silhouette_fungus.webp',
   crystal_golem: 'assets/sprites/boss_silhouette_golem.webp',
-  shadow_moth: 'assets/sprites/boss_silhouette_moth.webp'
+  shadow_moth: 'assets/sprites/boss_silhouette_moth.webp',
+  dark_root: 'assets/sprites/boss_silhouette_dark_root.webp'
 };
 Object.keys(BOSS_SIL_MAP).forEach(id => {
   const img = new Image();

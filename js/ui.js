@@ -153,7 +153,7 @@ function drawCollectionTab() {
   ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
-  var cardH = 62 * _M, padY = 4 * _M, startY = 228, startX = 120;
+  var cardH = 70 * _M, padY = 4 * _M, startY = 228, startX = 120;
   var maxRows = Math.floor((CH - 80 - startY) / (cardH + padY));
   // Scroll clamp
   if (typeof collectionScroll === 'undefined') collectionScroll = 0;
@@ -212,25 +212,34 @@ function drawCollectionTab() {
     }
 
     var txX = startX + 60 * _M;
+    var _nameSize = 16 * _M, _statsSize = 12 * _M, _loreSize = 11 * _M;
+    var _curY = ey + 4 * _M + _nameSize;  // 上パディング + ベースライン
     if (known) {
       var dispColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-      ctx.fillStyle = dispColor; ctx.font = 'bold ' + (16*_M) + 'px ' + F;
+      ctx.fillStyle = dispColor; ctx.font = 'bold ' + _nameSize + 'px ' + F;
       var displayName = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : (ek.name + (lp > 0 ? ' [Loop ' + lp + ']' : ''));
-      ctx.fillText(displayName, txX, ey + 20*_M);
-      ctx.fillStyle = '#ccc'; ctx.font = (12*_M) + 'px ' + F;
-      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, ey + 36*_M);
+      ctx.fillText(displayName, txX, _curY);
+      _curY += Math.ceil(_nameSize * 1.4);
+      ctx.fillStyle = '#ccc'; ctx.font = _statsSize + 'px ' + F;
+      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, _curY);
       if (ek.lore) {
-        ctx.fillStyle = '#aaa'; ctx.font = (11*_M) + 'px ' + F;
-        var maxLore = _M === 2 ? 30 : 55;
-        var ls = ek.lore.length > maxLore ? ek.lore.slice(0, maxLore) + '\u2026' : ek.lore;
-        ctx.fillText(ls, txX, ey + 52*_M);
+        var _loreY = _curY + Math.ceil(_statsSize * 1.4);
+        if (_loreY + _loreSize < ey + cardH - 2) {
+          ctx.fillStyle = '#aaa'; ctx.font = _loreSize + 'px ' + F;
+          var _loreMaxW = (CW - 160) - (txX - startX) - 20;
+          var ls = ek.lore;
+          while (ls.length > 0 && ctx.measureText(ls).width > _loreMaxW) ls = ls.slice(0, -1);
+          if (ls.length < ek.lore.length) ls += '\u2026';
+          ctx.fillText(ls, txX, _loreY);
+        }
       }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = 'bold ' + (16*_M) + 'px ' + F;
+      ctx.fillStyle = '#555'; ctx.font = 'bold ' + _nameSize + 'px ' + F;
       var unknownName = (lp > 0) ? '??? [Loop ' + lp + ']' : '???';
-      ctx.fillText(unknownName, txX, ey + 20*_M);
-      ctx.fillStyle = '#444'; ctx.font = (12*_M) + 'px ' + F;
-      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, ey + 36*_M);
+      ctx.fillText(unknownName, txX, _curY);
+      _curY += Math.ceil(_nameSize * 1.4);
+      ctx.fillStyle = '#444'; ctx.font = _statsSize + 'px ' + F;
+      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, _curY);
     }
   }
 

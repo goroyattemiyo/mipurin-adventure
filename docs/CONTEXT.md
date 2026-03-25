@@ -175,6 +175,8 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 
 ## 7. ルール変更履歴
 
+- 2026-03-25: テキスト描画を「縮小のみ」から「自動改行＋動的行間」へ移行し、視認性を確保
+- 2026-03-25: UIManager v2 導入（drawSmartText / drawHelpIcon / showModal）、祝福選択画面をカルーセル形式にリニューアル（Tween.js 導入）
 - 2026-03-25: Section 8「外部ライブラリ導入ロードマップ」追加
 - 2026-03-24: CONTEXT/REFERENCE/ARCHIVE の3ファイル体制へ再編
 - 2026-03-22: セクション15追加（Claude使用効率化）

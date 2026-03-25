@@ -17,26 +17,27 @@ const UI_TEXT_STYLE = {
 
 function drawInventory() {
   if (!inventoryOpen) return;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, CW, CH);
   const tabs = ['持ち物', '図鑑', '装備'];
   for (let i = 0; i < tabs.length; i++) {
-    const tx = CW / 2 - 120 + i * 240, ty = 60;
+    const tx = CW / 2 - 120 + i * 240, ty = 50 + 10*_M;
     ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(tx - 80, ty - 20, 160, 40);
+    ctx.fillRect(tx - 80, ty - 20*_M, 160, 40*_M);
     ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
-    ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif";
+    ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillText(tabs[i], tx, ty + 7);
+    ctx.fillText(tabs[i], tx, ty + 7*_M);
   }
   ctx.textAlign = 'left';
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
   if (inventoryTab === 2) drawEquipTab(80, 110, CW - 160, CH - 160);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
+  if (_M === 1) ctx.fillText('TAB: タブ切替  ESC: とじる', CW / 2, CH - 30);
   ctx.textAlign = 'left';
 }
 
@@ -402,21 +403,27 @@ function drawDialogWindow() {
 }
 
 function drawHUD() {
-  const hs = 22, hSpacing = hs + 6, hPerRow = 15;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
+  const hs = 22 * _M, hSpacing = hs + 6, hPerRow = _M === 2 ? 10 : 15;
   for (let i = 0; i < player.maxHp; i++) { const col = i % hPerRow, row = Math.floor(i / hPerRow); const hBounce = (hpBounceTimer > 0 && i < player.hp) ? Math.sin((hpBounceTimer * 20) + i * 0.5) * 4 : 0; ctx.fillStyle = i < player.hp ? COL.hpLost : '#444'; ctx.font = hs + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(i < player.hp ? '\u2665' : '\u2661', 12 + col * hSpacing, 12 + hs + row * (hs + 8) + hBounce); }
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
-  ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 56);
+  // On mobile, skip score/pollen (overlaps with touch item buttons area) and show compact at center-right
+  if (_M === 1) {
+    ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'right'; ctx.fillText('スコア: ' + score, CW - 190, 32); ctx.textAlign = 'left';
+    ctx.fillStyle = COL.pollen; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\uD83C\uDF3C ' + pollen, CW - 190, 56);
+  }
   ctx.textAlign = 'center';
   if (!isBossFloor() || !boss) {
-    ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 40);
+    ctx.fillStyle = COL.bless; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  W' + (Math.min(wave + 1, WAVES.length)) + '/' + WAVES.length, CW / 2, 40*_M);
   } else {
-    ctx.fillStyle = '#e74c3c'; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40);
+    ctx.fillStyle = '#e74c3c'; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40*_M);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = player.weapon.color; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
-  ctx.fillStyle = COL.text; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
-  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillStyle = player.weapon.color; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
+  ctx.fillStyle = COL.text; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
+  if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
+  // Item box: only draw on PC (mobile uses touch buttons in top-right)
+  if (_M === 1) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW - 185, 50, 170, 55);
     ctx.fillStyle = '#ffd700'; ctx.font = "bold 19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('アイテム', CW - 178, 62);
     for (let i = 0; i < 3; i++) {
@@ -432,32 +439,41 @@ function drawHUD() {
       ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
       ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText((i + 1), sx - 16, sy + 20);
     }
+  }
     if (player.weapons[1] !== null) {
       const subW = player.weapons[1 - player.weaponIdx];
       if (subW) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160, 30);
-        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160, 30);
-        ctx.fillStyle = '#aaa'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('もうひとつ', 14, CH - 52);
-        ctx.fillStyle = subW.color || '#fff'; ctx.font = "bold 19px 'M PLUS Rounded 1c', sans-serif";
-        ctx.fillText('Q: ' + subW.name, 14, CH - 38);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(8, CH - 65, 160 * _M, 30 * _M);
+        ctx.strokeStyle = subW.color || '#aaa'; ctx.lineWidth = 2; ctx.strokeRect(8, CH - 65, 160 * _M, 30 * _M);
+        ctx.fillStyle = '#aaa'; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('もうひとつ', 14, CH - 52);
+        ctx.fillStyle = subW.color || '#fff'; ctx.font = "bold " + (19*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+        ctx.fillText((_M === 2 ? '' : 'Q: ') + subW.name, 14, CH - 38);
       }
     }
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
-    if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
-    if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
-    ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';
+    if (_M === 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+      let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+      if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
+      if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
+      ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';
+    }
 }
 
 function drawBlessing() {
   if (gameState !== 'blessing') return;
+  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, CW, CH);
-  ctx.fillStyle = COL.bless; ctx.font = "bold 28px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 70);
-  ctx.fillStyle = COL.text; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 95);
+  ctx.fillStyle = COL.bless; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('祝福を選べ！', CW / 2, 50 + 20*_M);
+  ctx.fillStyle = COL.text; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(touchActive ? 'タップで選択→もう一度タップで決定' : '← → で選んで Z で決定', CW / 2, 50 + 45*_M);
+  const bw = 180 * _M, bh = 220 * _M;
+  const totalW = blessingChoices.length * bw + (blessingChoices.length - 1) * 20 * _M;
+  const bStartX = CW / 2 - totalW / 2;
   for (let i = 0; i < blessingChoices.length; i++) {
     const sel = selectCursor === i;
-    const b = blessingChoices[i], bxBase = CW / 2 - 300 + i * 220, by = 120, bw = 180, bh = 220;
+    const b = blessingChoices[i];
+    const bxBase = bStartX + i * (bw + 20 * _M);
+    const by = 50 + 70*_M;
     const cardDelay = i * 0.15;
     const cardProg = Math.min(1, Math.max(0, (blessingAnimTimer - cardDelay) * 2));
     const eased = 1 - Math.pow(1 - cardProg, 3);
@@ -472,18 +488,18 @@ function drawBlessing() {
     const rCol = b.rarity === 'epic' ? '#ffd700' : b.rarity === 'rare' ? '#3498db' : '#aaa';
     ctx.strokeStyle = sel ? '#ffd700' : rCol; ctx.lineWidth = sel ? 4 : 1.5; ctx.strokeRect(bx, byLocal, bw, bh);
     if (sel) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(bx, byLocal, bw, bh); }
-    ctx.fillStyle = COL.text; ctx.font = "bold 36px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55);
-    ctx.fillStyle = rCol; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80);
-    ctx.fillStyle = COL.bless; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 105);
-    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135;
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif";
-      for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18; dline = ''; } }
+    ctx.fillStyle = COL.text; ctx.font = "bold " + (36*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon, bx + bw / 2, byLocal + 55*_M);
+    ctx.fillStyle = rCol; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.rarity ? b.rarity.toUpperCase() : 'COMMON', bx + bw / 2, byLocal + 80*_M);
+    ctx.fillStyle = COL.bless; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.name, bx + bw / 2, byLocal + 108*_M);
+    { const dchars = (b.desc||'').split(''); let dline = '', dly = byLocal + 135*_M;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = (19*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+      for (const dc of dchars) { dline += dc; if (ctx.measureText(dline).width > bw - 20) { ctx.fillText(dline, bx + bw/2, dly); dly += 18*_M; dline = ''; } }
       if (dline) ctx.fillText(dline, bx + bw/2, dly); }
-    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,0.4)'; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.fillText(sel ? '> Z <' : '[' + (i + 1) + ']', bx + bw / 2, byLocal + bh - 25);
     ctx.restore();
   }
-  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
+  ctx.fillStyle = pollen >= 15 ? '#f1c40f' : '#666'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText('X\u30AD\u30FC\u3067\u30EA\u30ED\u30FC\u30EB\uFF08\u82B1\u7C8915\uFF09 \u73FE\u5728:' + pollen, CW/2, CH - 40); ctx.textAlign = 'left';
   ctx.textAlign = 'left';
 }
 

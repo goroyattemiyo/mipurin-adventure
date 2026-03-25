@@ -113,6 +113,13 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 4. 承認された判断を REFERENCE.md の DECISIONS に追記
 ```
 
+**発言テンプレート**
+
+各専門家はこの形式で発言する:
+```
+[emoji]: 私は[role]の専門家です。[context]を踏まえ[goal]達成のために[techniques]で支援します。
+```
+
 **省略条件**
 1〜2ファイルに閉じるバグ修正はSynapse Councilをスキップしてよい。
 

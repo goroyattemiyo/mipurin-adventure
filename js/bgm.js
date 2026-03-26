@@ -1,5 +1,5 @@
 // ===== HYBRID BGM MODULE =====
-// MP3 priority with WebAudio chiptune fallback
+// Howler.js (MP3) + WebAudio chiptune fallback
 // Public domain: Satie(1888), Vivaldi(1725), Beethoven(1808)
 "use strict";
 const ChipBGM = (() => {
@@ -7,7 +7,6 @@ const ChipBGM = (() => {
   let currentName = '', playing = false, useChip = false;
   let melIdx = 0, bassIdx = 0, melTime = 0, bassTime = 0, schedId = null;
   const AHEAD = 2.0;
-  let mp3Audio = null, mp3Fading = null, mp3Source = null;
   let _vol = 0.7;
   try { const v = localStorage.getItem('mipurin_bgmvol'); if (v !== null) _vol = parseFloat(v); } catch(e) {}
   const NF = {
@@ -35,7 +34,6 @@ const ChipBGM = (() => {
     ending:{mel:T_MEL,bas:T_BAS,bpm:56,mT:'sine',bT:'triangle',mV:.12,bV:.08},
     nest_boss:{mel:B_MEL,bas:B_BAS,bpm:120,mT:'sawtooth',bT:'square',mV:.11,bV:.09}
   };
-  // MP3 per-track volume normalization (1.0 = no change)
   const MP3_VOL = {
     title: 0.7, village: 0.75, shop: 0.8, ending: 0.75,
     forest_south: 1.0, cave: 1.0, flower_field: 1.0,
@@ -43,6 +41,8 @@ const ChipBGM = (() => {
     boss: 0.85, nest_boss: 0.85
   };
   function getMp3Vol(name) { return MP3_VOL[name] || 1.0; }
+
+  // ---- Chip mode (WebAudio oscillators) ----
   function initCtx() {
     if (actx) return true;
     try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return false; }
@@ -87,44 +87,65 @@ const ChipBGM = (() => {
     schedId = setInterval(scheduler, 200); scheduler();
   }
   function stopChip() { playing = false; if (schedId) { clearInterval(schedId); schedId = null; } }
+
+  // ---- Howler MP3 path ----
+  var _howls = {};          // name → Howl instance cache
+  var _currentHowl = null;  // currently playing Howl
+  var _howlerFilter = null; // BiquadFilter inserted in Howler's signal path
+
+  function _initHowlerFilter() {
+    if (_howlerFilter || !window.Howler || !Howler.ctx) return;
+    try {
+      _howlerFilter = Howler.ctx.createBiquadFilter();
+      _howlerFilter.type = 'lowpass';
+      _howlerFilter.frequency.value = 20000;
+      Howler.masterGain.disconnect();
+      Howler.masterGain.connect(_howlerFilter);
+      _howlerFilter.connect(Howler.ctx.destination);
+    } catch(e) { _howlerFilter = null; }
+  }
+
+  function _getHowl(name) {
+    if (!_howls[name]) {
+      _howls[name] = new Howl({
+        src: ['assets/music/' + name + '.mp3'],
+        loop: true,
+        volume: _vol * getMp3Vol(name)
+      });
+    }
+    return _howls[name];
+  }
+
   function startMp3(name, fadeIn) {
-    if (mp3Source) { try { mp3Source.disconnect(); } catch(e) {} mp3Source = null; }
-    mp3Audio = new window.Audio('assets/music/' + name + '.mp3');
-    mp3Audio.loop = true;
-    var target = _vol * 0.3 * getMp3Vol(name);
+    var h = _getHowl(name);
+    var target = _vol * getMp3Vol(name);
+    _initHowlerFilter();
     if (fadeIn) {
-      mp3Audio.volume = 0; mp3Audio.play().catch(function(){});
-      var step = 0.05, inc = target / Math.max(1, fadeIn / step);
-      var iv = setInterval(function() {
-        if (!mp3Audio) { clearInterval(iv); return; }
-        mp3Audio.volume = Math.min(target, mp3Audio.volume + inc);
-        if (mp3Audio.volume >= target - 0.001) { mp3Audio.volume = target; clearInterval(iv); }
-      }, step * 1000);
-    } else { mp3Audio.volume = target; mp3Audio.play().catch(function(){}); }
-    // Route through AudioContext for low-pass filter
-    if (initCtx() && lpFilter) {
-      try {
-        mp3Source = actx.createMediaElementSource(mp3Audio);
-        mp3Source.connect(lpFilter);
-        mp3Audio.volume = 1.0; // Volume controlled by masterGain
-        if (masterGain) masterGain.gain.value = _vol * 0.3 * getMp3Vol(name);
-      } catch(e) { /* fallback: direct playback without filter */ }
+      h.volume(0);
+      h.play();
+      h.fade(0, target, fadeIn * 1000);
+    } else {
+      h.volume(target);
+      h.play();
+    }
+    _currentHowl = h;
+  }
+
+  function stopMp3(fadeDur, cb) {
+    if (!_currentHowl) { if (cb) cb(); return; }
+    var h = _currentHowl;
+    _currentHowl = null;
+    if (!fadeDur) {
+      h.stop();
+      if (cb) cb();
+    } else {
+      var cur = h.volume();
+      h.fade(cur, 0, fadeDur * 1000);
+      setTimeout(function() { h.stop(); if (cb) cb(); }, fadeDur * 1000 + 50);
     }
   }
-  function stopMp3(fadeDur, cb) {
-    if (!mp3Audio) { if (cb) cb(); return; }
-    if (!fadeDur) { mp3Audio.pause(); mp3Audio.currentTime = 0; mp3Audio = null; if (cb) cb(); return; }
-    var step = 0.05, steps = Math.max(1, fadeDur / step), dec = mp3Audio.volume / steps;
-    if (mp3Fading) clearInterval(mp3Fading);
-    mp3Fading = setInterval(function() {
-      if (!mp3Audio) { clearInterval(mp3Fading); mp3Fading = null; if (cb) cb(); return; }
-      mp3Audio.volume = Math.max(0, mp3Audio.volume - dec);
-      if (mp3Audio.volume <= 0.001) {
-        clearInterval(mp3Fading); mp3Fading = null;
-        mp3Audio.pause(); mp3Audio.currentTime = 0; mp3Audio = null; if (cb) cb();
-      }
-    }, step * 1000);
-  }
+
+  // ---- Public interface ----
   function play(name, fadeIn) {
     if (currentName === name) return;
     var doStart = function() {
@@ -139,7 +160,7 @@ const ChipBGM = (() => {
     _vol = Math.max(0, Math.min(1, v));
     try { localStorage.setItem('mipurin_bgmvol', _vol); } catch(e) {}
     if (masterGain) masterGain.gain.value = _vol * 0.3;
-    if (mp3Audio) mp3Audio.volume = _vol * 0.3;
+    if (_currentHowl) _currentHowl.volume(_vol * getMp3Vol(currentName));
   }
   function getVolume() { return _vol; }
   function setChipMode(on) {
@@ -148,16 +169,23 @@ const ChipBGM = (() => {
     if (was !== useChip && currentName) { var name = currentName; stop(0.5, function() { play(name); }); }
   }
   function isChipMode() { return useChip; }
+  function setLowPass(on) {
+    if (useChip) {
+      if (lpFilter && actx) lpFilter.frequency.setTargetAtTime(on ? 400 : 20000, actx.currentTime, 0.3);
+    } else {
+      _initHowlerFilter();
+      if (_howlerFilter && Howler.ctx) _howlerFilter.frequency.setTargetAtTime(on ? 400 : 20000, Howler.ctx.currentTime, 0.3);
+    }
+  }
+  function isLowPass() {
+    if (useChip) return lpFilter && lpFilter.frequency.value < 1000;
+    return _howlerFilter && _howlerFilter.frequency.value < 1000;
+  }
   try { useChip = localStorage.getItem('mipurin_chipbgm') === '1'; } catch(e) {}
   document.addEventListener('visibilitychange', function() {
     if (document.hidden) { if (playing) { clearInterval(schedId); schedId = null; } }
     else { if (playing && !schedId) { schedId = setInterval(scheduler, 200); scheduler(); } }
   });
-  function setLowPass(on) {
-    if (!lpFilter) return;
-    lpFilter.frequency.setTargetAtTime(on ? 400 : 20000, actx.currentTime, 0.3);
-  }
-  function isLowPass() { return lpFilter && lpFilter.frequency.value < 1000; }
   return { play:play, stop:stop, fadeOut:fadeOut, setVolume:setVolume, getVolume:getVolume, setChipMode:setChipMode, isChipMode:isChipMode, resume:resume, setLowPass:setLowPass, isLowPass:isLowPass };
 })();
 let currentBGM = '';

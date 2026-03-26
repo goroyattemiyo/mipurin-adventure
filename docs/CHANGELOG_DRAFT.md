@@ -1,6 +1,17 @@
 # CHANGELOG Draft (auto-generated)
 # Review and merge into docs/CHANGELOG.md
 
+## v6.35
+### Features
+- Phase A: Howler.js 2.2.4 導入（CDN）— BGMをHowlerに移行、フェードイン/アウト・ループ改善
+- sw.js: CDNプリキャッシュ対応（Tween.js + Howler.js）
+
+## v6.34
+### Features
+- CLAUDE.md 追加（コンテキスト+430超えで作業停止・push・新セッション促進）
+- assets/sprites/raw/ をgit履歴ごと削除（215MB → 83MB）
+- UIManager v2 + 祝福カルーセル（Tween.js）+ テキスト折り返し修正
+
 ## v6.24
 ### Features
 - mobile-first UI toggle, PWA manifest, gray text fix v6.24

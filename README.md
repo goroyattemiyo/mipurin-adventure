@@ -6,7 +6,7 @@
 https://goroyattemiyo.github.io/mipurin-adventure
 
 ## Version
-v6.34 | Score: 74.7/100
+v6.35 | Score: 74.7/100
 
 ## Docs
 - [CONTEXT](docs/CONTEXT.md) — セッション開始時に渡すスナップショット（必須）

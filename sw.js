@@ -1,6 +1,7 @@
 // Service Worker for ミプリンの冒険 PWA
 const CACHE = 'mipurin-v2';
 const CDN_PRECACHE = [
+  'https://cdnjs.cloudflare.com/ajax/libs/rot.js/2.2.0/rot.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js',
   'https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js'
 ];

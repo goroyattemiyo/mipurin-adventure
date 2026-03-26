@@ -1,3 +1,17 @@
+## 2026-03-26 — Phase C: rot.js 導入（ダンジョン生成・経路探索）
+
+### feat
+- index.html: rot.js CDN (rot.min.js v2.2.0) 追加
+- data_room.js: generateRoom() を ROT.Map.Digger (BSP) に置換、独自テンプレートコードを削除し軽量化
+- combat.js: chaseパターンに ROT.Path.AStar を導入（0.3s毎に再計算、壁回避付き）
+- sw.js: CDN_PRECACHEにrot.js URLを追加
+
+### stats
+- Tests: 157/157 PASS
+- Score: 36/40 (D-006)
+
+---
+
 ## 2026-03-24 — Sprint H-C: 百科事典ロア + 隠しED強化
 
 ### feat

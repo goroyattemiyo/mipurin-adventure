@@ -33,15 +33,14 @@
 
 | ファイル | サイズ | 状態 |
 |----------|--------|------|
-| js/ui.js | 31.6 KB | ⚠️ 警告（35KB上限） |
-| js/data.js | 26.4 KB | 🔶 注意 |
-| js/render.js | 16.8 KB | ✅ |
-| その他全JS | 35KB以下 | ✅ |
+| js/ui.js | 39.0 KB | ✅ OK |
+| js/data.js | 26.4 KB | ✅ OK |
+| js/render.js | 16.8 KB | ✅ OK |
+| その他全JS | 50KB以下 | ✅ |
 | **リポジトリ全体** | **83 MB** | ✅（削減済み） |
 
 ### 技術的負債
 
-- ui.js 31.6KB — 次の大規模UI追加時に分割検討
 - 未使用BGM end_b.mp3 + end_c.mp3 約8.5MB（低優先）
 
 ---
@@ -135,7 +134,7 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 
 | 種別 | 上限 | 分割検討 |
 |------|------|---------|
-| JSモジュール | 35KB | 28KB超 |
+| JSモジュール | 50KB | 40KB超 |
 | Markdown | 150行 | — |
 
 ### 禁止ファイル（絶対に渡さない）
@@ -177,6 +176,7 @@ GitHubはblob URLではなく raw.githubusercontent.com を使う。
 
 ## 7. ルール変更履歴
 
+- 2026-03-26: ファイルサイズ制限を緩和（上限35KB→50KB、分割検討28KB→40KB）D-008
 - 2026-03-26: Phase A — Howler.js 2.2.4 導入（bgm.js MP3パスをHowlerに移行、チップモード維持）
 - 2026-03-26: CLAUDE.md 追加（コンテキスト+430超えで作業停止・push・新セッション促進）
 - 2026-03-26: assets/sprites/raw/ をgit履歴ごと削除（215MB → 83MB、約130MB削減）

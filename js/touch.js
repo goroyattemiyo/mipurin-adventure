@@ -30,9 +30,9 @@ const joystick = {
 const TOUCH_BUTTONS = [
   { id: 'KeyZ',   label: 'Z',  baseX: 0.910, baseY: 0.775, r: 76, color: '#ffd700', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'KeyX',   label: 'X',  baseX: 0.795, baseY: 0.865, r: 66, color: '#87ceeb', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit1', label: '1',  baseX: 0.820, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit2', label: '2',  baseX: 0.895, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
-  { id: 'Digit3', label: '3',  baseX: 0.970, baseY: 0.115, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit1', label: '1',  baseX: 0.820, baseY: 0.190, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit2', label: '2',  baseX: 0.895, baseY: 0.190, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
+  { id: 'Digit3', label: '3',  baseX: 0.970, baseY: 0.190, r: 52, color: '#2ecc71', alwaysShow: true,  pressed: false, touchId: null },
   { id: 'KeyQ',   label: 'Q',  baseX: 0.700, baseY: 0.790, r: 36, color: '#e056fd', alwaysShow: false, pressed: false, touchId: null },
   { id: 'Tab',    label: '\u2630', baseX: 0.955, baseY: 0.060, r: 32, color: '#aaa', alwaysShow: true, pressed: false, touchId: null },
   { id: 'Escape', label: '◀', baseX: 0.055, baseY: 0.060, r: 52, color: '#f66', alwaysShow: true, pressed: false, touchId: null }

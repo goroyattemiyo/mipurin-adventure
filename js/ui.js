@@ -22,7 +22,7 @@ function drawInventory() {
   ctx.fillRect(0, 0, CW, CH);
   const tabs = ['持ち物', '図鑑', '装備'];
   for (let i = 0; i < tabs.length; i++) {
-    const tx = CW / 2 - 120 + i * 240, ty = 50 + 10*_M;
+    const tx = CW / 2 - 120 + i * 240, ty = 70 + 15*_M;
     ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
     ctx.fillRect(tx - 80, ty - 20*_M, 160, 40*_M);
     ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
@@ -33,7 +33,7 @@ function drawInventory() {
   ctx.textAlign = 'left';
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
-  if (inventoryTab === 2) drawEquipTab(80, 110, CW - 160, CH - 160);
+  if (inventoryTab === 2) drawEquipTab(80, 130, CW - 160, CH - 180);
 
   // ヘルプアイコン（タブ共通・最前面）
   var _helpLines;
@@ -44,7 +44,7 @@ function drawInventory() {
   } else {
     _helpLines = ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
   }
-  UIManager.drawHelpIcon(ctx, CW - 50, 55 + 10*_M, 34, 'inventory');
+  UIManager.drawHelpIcon(ctx, CW - 110, 55 + 10*_M, 34, 'inventory');
   if (UIManager.isHelpOpen('inventory')) {
     var _tabName = ['持ち物', '図鑑', '装備'][inventoryTab] || '';
     UIManager.showModal(ctx, _tabName + ' — 操作ガイド', _helpLines);
@@ -169,12 +169,12 @@ function drawCollectionTab() {
     var known = defeatedC > 0;
 
     ctx.fillStyle = known ? 'rgba(40,35,60,0.85)' : 'rgba(25,25,25,0.7)';
-    ctx.fillRect(startX, ey, CW - 160, cardH);
+    ctx.beginPath(); ctx.roundRect(startX, ey, CW - 160, cardH, 12); ctx.fill();
     var borderCol = known ? (ek.color || '#888') : '#333';
     if (known && lp > 0 && typeof loopHueShift === 'function') borderCol = loopHueShift(ek.color || '#888', lp);
     ctx.strokeStyle = borderCol;
     ctx.lineWidth = known ? 2 : 1;
-    ctx.strokeRect(startX, ey, CW - 160, cardH);
+    ctx.beginPath(); ctx.roundRect(startX, ey, CW - 160, cardH, 12); ctx.stroke();
 
     if (lp > 0) {
       ctx.fillStyle = 'rgba(255,215,0,0.2)'; ctx.fillRect(startX + CW - 242 - 48*_M, ey + 2, 46*_M, 18*_M);
@@ -302,9 +302,9 @@ function drawWorldLoreTab() {
     var isLocked = we._locked;
 
     ctx.fillStyle = isLocked ? 'rgba(20,20,30,0.7)' : 'rgba(30,20,55,0.88)';
-    ctx.fillRect(startX2, wy, cardW2, cardH2);
+    ctx.beginPath(); ctx.roundRect(startX2, wy, cardW2, cardH2, 12); ctx.fill();
     ctx.strokeStyle = isLocked ? '#333' : '#a78bfa'; ctx.lineWidth = isLocked ? 1 : 2;
-    ctx.strokeRect(startX2, wy, cardW2, cardH2);
+    ctx.beginPath(); ctx.roundRect(startX2, wy, cardW2, cardH2, 12); ctx.stroke();
 
     // アイコン
     ctx.fillStyle = isLocked ? '#444' : '#fff'; ctx.font = '32px ' + F;
@@ -738,11 +738,11 @@ function drawWeaponCollection() {
 
     // Card bg
     ctx.fillStyle = has ? 'rgba(40,30,60,0.9)' : 'rgba(30,30,30,0.7)';
-    ctx.fillRect(wx, wy, cardW, cardH);
+    ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.fill();
     // Border (copper=tier1, gold=tier2)
     ctx.strokeStyle = has ? (isTier2 ? '#ffd700' : '#cd7f32') : '#333';
     ctx.lineWidth = has ? 2 : 1;
-    ctx.strokeRect(wx, wy, cardW, cardH);
+    ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.stroke();
 
     if (has) {
       // Icon

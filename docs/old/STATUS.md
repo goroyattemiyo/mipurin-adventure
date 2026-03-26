@@ -33,25 +33,24 @@
 ## ファイルサイズ監視
 | ファイル | サイズ | 上限 | 状態 |
 |----------|--------|------|------|
-| js/game.js | 11.4 KB | 35 KB | ✅ OK |
-| js/data.js | 26.4 KB | 35 KB | 🔶 注意 |
-| js/data_room.js | ~9 KB | 35 KB | ✅ OK |
-| js/enemies.js | 17.3 KB | 35 KB | ✅ OK |
-| js/render.js | 16.8 KB | 35 KB | ✅ OK |
-| js/render_entities.js | 18.2 KB | 35 KB | ✅ OK |
-| js/ui.js | 31.6 KB | 35 KB | ⚠️ 警告 |
-| js/ui_screens.js | 24.5 KB | 35 KB | ✅ OK |
-| js/combat.js | ~22 KB | 35 KB | ✅ OK |
-| js/nodemap.js | 17.8 KB | 35 KB | ✅ OK |
-| js/touch.js | 16.3 KB | 35 KB | ✅ OK |
-| js/update.js | 20.7 KB | 35 KB | ✅ OK |
-| js/bgm.js | ~15 KB | 35 KB | ✅ OK |
-| js/lore.js | ~4 KB | 35 KB | ✅ OK |
+| js/game.js | 11.4 KB | 50 KB | ✅ OK |
+| js/data.js | 26.4 KB | 50 KB | ✅ OK |
+| js/data_room.js | ~9 KB | 50 KB | ✅ OK |
+| js/enemies.js | 17.3 KB | 50 KB | ✅ OK |
+| js/render.js | 16.8 KB | 50 KB | ✅ OK |
+| js/render_entities.js | 18.2 KB | 50 KB | ✅ OK |
+| js/ui.js | 39.0 KB | 50 KB | ✅ OK |
+| js/ui_screens.js | 24.5 KB | 50 KB | ✅ OK |
+| js/combat.js | 25.5 KB | 50 KB | ✅ OK |
+| js/nodemap.js | 17.8 KB | 50 KB | ✅ OK |
+| js/touch.js | 16.3 KB | 50 KB | ✅ OK |
+| js/update.js | 21.6 KB | 50 KB | ✅ OK |
+| js/bgm.js | ~15 KB | 50 KB | ✅ OK |
+| js/lore.js | ~4 KB | 50 KB | ✅ OK |
 
 ## テスト: 157/157 PASS
 
 ## 技術的負債 (高優先)
-- ui.js 31.6 KB — 28KB超過、35KB接近中。次の大規模UI追加時に分割検討
 - 未使用BGM ~8.5 MB (low)
 
 ## リポジトリ

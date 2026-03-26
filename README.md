@@ -6,17 +6,15 @@
 https://goroyattemiyo.github.io/mipurin-adventure
 
 ## Version
-v6.27 | Score: 66.3/100
+v6.34 | Score: 74.7/100
 
 ## Docs
-- [STATUS](docs/STATUS.md) — 現在のスナップショット
-- [ROADMAP](docs/ROADMAP.md) — 開発計画
-- [RULES](docs/RULES.md) — 開発ルール
-- [MODULE_INDEX](docs/MODULE_INDEX.md) — 関数・定義の所在
-- [HISTORY](docs/HISTORY.md) — Sprint履歴
-- [DECISIONS](docs/DECISIONS.md) — 設計判断
-- [CHANGELOG](docs/CHANGELOG.md) — 変更履歴
-- [GDD](docs/GDD.md) — ゲームデザイン設計書 (凍結)
+- [CONTEXT](docs/CONTEXT.md) — セッション開始時に渡すスナップショット（必須）
+- [REFERENCE](docs/REFERENCE.md) — 関数・定義の所在
+- [BACKLOG](docs/BACKLOG.md) — 未着手タスク
+- [ARCHIVE](docs/ARCHIVE.md) — Sprint履歴・設計判断
+- [CHANGELOG_DRAFT](docs/CHANGELOG_DRAFT.md) — 変更履歴（自動生成）
+- [旧ドキュメント](docs/old/) — GDD・RULES・STATUS 等（凍結）
 
 ## License
 MIT

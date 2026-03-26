@@ -213,7 +213,24 @@ function updateCombat(dt) {
     en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1 + Math.random() * 2; }
    moveWithCollision(en, en.wanderDir.x * en.speed * dt, en.wanderDir.y * en.speed * dt);
     }
-    if (en.pattern === 'chase' && d > 0) { const _sl = 1 - (en._honeySlowActive || 0); moveWithCollision(en, (dx / d) * en.speed * _sl * dt, (dy / d) * en.speed * _sl * dt); }
+    if (en.pattern === 'chase' && d > 0) {
+      const _sl = 1 - (en._honeySlowActive || 0);
+      // rot.js A* 経路探索（0.3s毎に再計算、壁回避）
+      en._astarTimer = (en._astarTimer || 0) - dt;
+      if (en._astarTimer <= 0) {
+        en._astarTimer = 0.3;
+        const _ec = Math.floor((en.x + en.w/2) / TILE), _er = Math.floor((en.y + en.h/2) / TILE);
+        const _pc = Math.floor((player.x + player.w/2) / TILE), _pr = Math.floor((player.y + player.h/2) / TILE);
+        en._astarDir = null;
+        try {
+          var _ast = new ROT.Path.AStar(_pc, _pr, function(x, y) { return tileAt(roomMap, x, y) !== 1; }, { topology: 4 });
+          var _steps = []; _ast.compute(_ec, _er, function(x, y) { _steps.push({x:x, y:y}); });
+          if (_steps.length >= 2) { var _ns = _steps[1]; var _ddx = _ns.x*TILE+TILE/2-(en.x+en.w/2), _ddy = _ns.y*TILE+TILE/2-(en.y+en.h/2), _ddd = Math.hypot(_ddx,_ddy)||1; en._astarDir = {x:_ddx/_ddd, y:_ddy/_ddd}; }
+        } catch(e) {}
+      }
+      var _dir = en._astarDir || {x:dx/d, y:dy/d};
+      moveWithCollision(en, _dir.x * en.speed * _sl * dt, _dir.y * en.speed * _sl * dt);
+    }
     if (en.pattern === 'charge') {
    if (en.state === 'idle') { en.wanderTimer -= dt;
     if (en.wanderTimer <= 0) { const a = Math.random() * Math.PI * 2; en.wanderDir = { x: Math.cos(a), y: Math.sin(a) }; en.wanderTimer = 1.5 + Math.random(); }

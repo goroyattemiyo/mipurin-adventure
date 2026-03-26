@@ -112,15 +112,26 @@ function applyTemplate(map, name, fl) {
 
 function generateRoom(fl) {
   var themeName = getTheme(fl).name;
-  var templates = THEME_TEMPLATES[themeName] || ['pillars'];
-  var pick = isBossFloor() ? 'arena' : templates[Math.floor(rng() * templates.length)];
+  var _fb = getFloorBounds(fl);
   for (var attempt = 0; attempt < 5; attempt++) {
-    var map = [];
-    var _fb = getFloorBounds(fl);
-    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
-      if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || r < _fb.r0 || r > _fb.r1 || c < _fb.c0 || c > _fb.c1) { map.push(1); continue; } map.push(0);
+    var map = new Array(COLS * ROWS).fill(1);
+    if (isBossFloor()) {
+      // ボスフロアはarenaテンプレートを維持
+      for (var r = _fb.r0; r <= _fb.r1; r++) for (var c = _fb.c0; c <= _fb.c1; c++) map[r * COLS + c] = 0;
+      applyTemplate(map, 'arena', fl);
+    } else {
+      // rot.js ROT.Map.Digger によるBSPダンジョン生成
+      var digger = new ROT.Map.Digger(COLS, ROWS, { roomWidth: [3,6], roomHeight: [3,5], corridorLength: [1,4], dugPercentage: 0.3 });
+      digger.create(function(x, y, value) {
+        if (x <= 0 || x >= COLS-1 || y <= 0 || y >= ROWS-1 || x < _fb.c0 || x > _fb.c1 || y < _fb.r0 || y > _fb.r1) map[y * COLS + x] = 1;
+        else map[y * COLS + x] = value;
+      });
     }
-    applyTemplate(map, pick, fl);
+    // プレイヤースポーン周辺（safeZone）を必ず床に
+    for (var _dr = -2; _dr <= 2; _dr++) for (var _dc = -2; _dc <= 2; _dc++) {
+      var _sc = PC + _dc, _sr = PR + _dr;
+      if (_sc > 0 && _sc < COLS-1 && _sr > 0 && _sr < ROWS-1) map[_sr * COLS + _sc] = 0;
+    }
     roomSpikes = [];
     roomBarrels = [];
     if (fl >= 4 && !isBossFloor()) {
@@ -139,7 +150,6 @@ function generateRoom(fl) {
       if (_gim.water && fl >= 2) {
         var waterCount = 1 + Math.floor(rng() * 2);
         for (var wi = 0; wi < waterCount; wi++) {
-          // 2×2 の水場パッチ
           var wc0, wr0, wt = 0;
           do { wc0 = _fb.c0 + 2 + Math.floor(rng() * Math.max(1, _fb.c1 - _fb.c0 - 5)); wr0 = _fb.r0 + 2 + Math.floor(rng() * Math.max(1, _fb.r1 - _fb.r0 - 5)); wt++; }
           while (wt < 20 && (map[wr0 * COLS + wc0] !== 0 || safeZone(wc0, wr0)));
@@ -175,11 +185,9 @@ function generateRoom(fl) {
     }
     if (floodFill(map)) return map;
   }
-  var map = [];
-  var _fb2 = getFloorBounds(fl);
-  for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
-    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || r < _fb2.r0 || r > _fb2.r1 || c < _fb2.c0 || c > _fb2.c1) map.push(1); else map.push(0);
-  }
-  roomSpikes = []; roomBarrels = []; return map;
+  // フォールバック（最小限のオープンフロア）
+  var fallback = new Array(COLS * ROWS).fill(1);
+  for (var r = _fb.r0; r <= _fb.r1; r++) for (var c = _fb.c0; c <= _fb.c1; c++) fallback[r * COLS + c] = 0;
+  roomSpikes = []; roomBarrels = []; return fallback;
 }
 function tileAt(map, c, r) { if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 1; return map[r * COLS + c]; }

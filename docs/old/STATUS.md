@@ -1,5 +1,5 @@
 # STATUS.md — ミプリンの冒険 開発状況
-> 最終更新: 2026-03-24 (v6.34 / Sprint H-C 完了)
+> 最終更新: 2026-03-26 (v6.35 / Phase C rot.js 導入完了)
 
 ## スコア概要
 | 項目 | 現在 | 目標(Ph2) | 状態 |
@@ -22,7 +22,8 @@
 - H-A2: 水場・草むら・爆発樽
 - G-C2: 花壇UI刷新
 - H-B: 武器アクションUI再設計 + 武器固有アクション
-- **H-C: 百科事典ロア拡充 + 隠しエンディング強化** ← NEW
+- H-C: 百科事典ロア拡充 + 隠しエンディング強化
+- **Phase C: rot.js導入（BSPダンジョン生成 + A*経路探索）** ← NEW
 
 ## 残スプリント
 | Sprint | 内容 | スコア影響 |
@@ -34,7 +35,7 @@
 |----------|--------|------|------|
 | js/game.js | 11.4 KB | 35 KB | ✅ OK |
 | js/data.js | 26.4 KB | 35 KB | 🔶 注意 |
-| js/data_room.js | 8.9 KB | 35 KB | ✅ OK |
+| js/data_room.js | ~9 KB | 35 KB | ✅ OK |
 | js/enemies.js | 17.3 KB | 35 KB | ✅ OK |
 | js/render.js | 16.8 KB | 35 KB | ✅ OK |
 | js/render_entities.js | 18.2 KB | 35 KB | ✅ OK |

@@ -1,4 +1,4 @@
-
+        if (_loreY + _loreSize <= _loreBottom) {
 let collectionSubTab = 0; // 0=enemies, 1=weapons
 let collectionScroll = 0; // enemy collection scroll offset
 
@@ -802,4 +802,3 @@ git add js/ui.js && git commit -m "fix: 図鑑loreテキストはみ出し修正
       }
     }
   }
-          ctx.fillText(ls, txX, Math.min(_loreY, _loreBottom - _loreSize));

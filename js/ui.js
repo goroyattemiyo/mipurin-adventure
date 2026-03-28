@@ -1,6 +1,4 @@
 
-let collectionSubTab = 0; // 0=enemies, 1=weapons
-let collectionScroll = 0; // enemy collection scroll offset
 
 const UI_TEXT_STYLE = {
   heading:  { font: "bold 28px 'M PLUS Rounded 1c', sans-serif", color: '#ffd700', align: 'left' },
@@ -98,132 +96,322 @@ function drawInventoryItems() {
   }
 }
 
+function getFilteredItems(subTab, filter) {
+  if (subTab === 0) {
+    var allEnemies = (typeof ENEMY_DEFS === 'object' && !Array.isArray(ENEMY_DEFS))
+      ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
+    var maxLoop = 0;
+    if (typeof collection !== 'undefined') {
+      Object.keys(collection).forEach(function(k) {
+        var m = k.match(/_L(\d+)$/);
+        if (m && parseInt(m[1]) > maxLoop) maxLoop = parseInt(m[1]);
+      });
+    }
+    var items = [];
+    allEnemies.forEach(function(eDef) {
+      for (var lp = 0; lp <= maxLoop; lp++) {
+        var lk = eDef.name + '_L' + lp;
+        var rec = (typeof collection !== 'undefined' && collection[lk]) ? collection[lk] : null;
+        items.push({ type: 'enemy', def: eDef, loop: lp, rec: rec });
+      }
+    });
+    if (filter === 'all') return items;
+    var themeMap = { forest: ['mushroom','worm','vine'], cave: ['golem','bat','ghost'],
+      flower: ['flower','blob','spider'], volcano: ['wasp','beetle','darkbee'] };
+    if (filter === 'boss') return items.filter(function(it) { return it.def.isBoss; });
+    var shapes = themeMap[filter] || [];
+    return items.filter(function(it) { return shapes.indexOf(it.def.shape) >= 0; });
+  }
+  if (subTab === 1) {
+    var items = WEAPON_DEFS.map(function(w) {
+      var has = typeof weaponCollection !== 'undefined' && weaponCollection.has(w.id);
+      return { type: 'weapon', def: w, known: has };
+    });
+    if (filter === 'all') return items;
+    if (filter === 'tier1') return items.filter(function(it) { return !it.def.tier || it.def.tier === 1; });
+    if (filter === 'tier2') return items.filter(function(it) { return it.def.tier === 2; });
+    return items;
+  }
+  return [];
+}
+
+function drawCollectionCarousel(ctx, items, cursorKey, subTab) {
+  if (!items || items.length === 0) return;
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  var CX = CW / 2, CY = CH / 2 + 20;
+  var CARD_W = 180, CARD_H = 230, GAP = 220;
+  var target = collectionCursor[cursorKey];
+  collectionAnimX[cursorKey] += (target - collectionAnimX[cursorKey]) * 0.22;
+  var animX = collectionAnimX[cursorKey];
+  for (var i = 0; i < items.length; i++) {
+    var dx = i - animX;
+    if (Math.abs(dx) > 2.2) continue;
+    var absD = Math.min(Math.abs(dx), 1);
+    var scale = Math.abs(dx) < 0.01 ? 1.3 : (Math.abs(dx) < 1 ? 1.3 - absD * 0.5 : 0.8);
+    var alpha = Math.abs(dx) < 0.01 ? 1.0 : (Math.abs(dx) < 1 ? 1.0 - absD * 0.5 : 0.5);
+    if (Math.abs(dx) > 1.55) { scale = 0.5; alpha = 0.3; }
+    var item = items[i];
+    var known = item.type === 'enemy' ? (item.rec && item.rec.defeated > 0) : item.known;
+    var rarCol = '#888';
+    if (item.type === 'weapon' && item.def.tier === 2) rarCol = '#ffd700';
+    else if (item.type === 'weapon') rarCol = '#cd7f32';
+    else if (item.type === 'enemy' && item.def.color) rarCol = item.def.color;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(CX + dx * GAP, CY);
+    ctx.scale(scale, scale);
+    var bx = -CARD_W / 2, by = -CARD_H / 2;
+    var isCenter = Math.abs(dx) < 0.1;
+    ctx.fillStyle = isCenter ? 'rgba(40,25,80,0.97)' : 'rgba(20,15,40,0.85)';
+    ctx.beginPath(); ctx.roundRect(bx, by, CARD_W, CARD_H, 12); ctx.fill();
+    if (isCenter) { ctx.shadowColor = rarCol; ctx.shadowBlur = 18; }
+    ctx.strokeStyle = known ? rarCol : '#333';
+    ctx.lineWidth = isCenter ? 2.5 : 1;
+    ctx.beginPath(); ctx.roundRect(bx, by, CARD_W, CARD_H, 12); ctx.stroke();
+    ctx.shadowBlur = 0;
+    var sprY = by + 18, sprSize = 72;
+    if (known) {
+      if (item.type === 'enemy') {
+        ctx.save();
+        if (item.loop > 0 && typeof loopHueShift === 'function')
+          ctx.filter = 'hue-rotate(' + (item.loop * 30) + 'deg)';
+        if (typeof hasSprite === 'function' && hasSprite(item.def.shape)) {
+          drawSpriteImg(item.def.shape, -sprSize/2, sprY, sprSize, sprSize);
+        } else if (typeof drawEnemyShape === 'function') {
+          var col = (item.loop > 0 && typeof loopHueShift === 'function')
+            ? loopHueShift(item.def.color, item.loop) : item.def.color;
+          drawEnemyShape({ x:-sprSize/2, y:sprY, w:sprSize, h:sprSize, shape:item.def.shape, hitFlash:0 }, col);
+        }
+        ctx.restore();
+      } else {
+        var wSprId = 'weapon_' + item.def.id;
+        if (typeof hasSprite === 'function' && hasSprite(wSprId)) {
+          drawSpriteImg(wSprId, -sprSize/2, sprY, sprSize, sprSize);
+        } else {
+          ctx.fillStyle = item.def.color || '#fff';
+          ctx.font = '48px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          var em = (item.def.name||'').match(/^[\uD800-\uDBFF][\uDC00-\uDFFF]|^./);
+          ctx.fillText(em ? em[0] : '\u2694', 0, sprY + 10);
+        }
+      }
+    } else {
+      ctx.save(); ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.3;
+      if (item.type === 'enemy' && typeof drawEnemyShape === 'function') {
+        drawEnemyShape({ x:-sprSize/2, y:sprY, w:sprSize, h:sprSize, shape:item.def.shape, hitFlash:99 }, '#222');
+      } else {
+        ctx.fillStyle = '#444'; ctx.font = '48px ' + F;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText('?', 0, sprY + 10);
+      }
+      ctx.restore();
+      ctx.fillStyle = '#555'; ctx.font = 'bold 28px ' + F;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('?', 0, sprY + sprSize / 2);
+    }
+    ctx.textBaseline = 'alphabetic';
+    var nameY = by + 110;
+    if (known) {
+      var dispName = item.type === 'enemy'
+        ? ((typeof getVariantName === 'function' && getVariantName(item.def.shape, item.loop)) || item.def.name)
+        : item.def.name.replace(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?\s*/, '');
+      ctx.fillStyle = rarCol; ctx.font = 'bold 15px ' + F; ctx.textAlign = 'center';
+      if (ctx.measureText(dispName).width > CARD_W - 16) ctx.font = 'bold 12px ' + F;
+      ctx.fillText(dispName, 0, nameY);
+    } else {
+      ctx.fillStyle = '#555'; ctx.font = 'bold 14px ' + F;
+      ctx.textAlign = 'center'; ctx.fillText('???', 0, nameY);
+    }
+    var badgeY = by + CARD_H - 18;
+    if (item.type === 'weapon' && item.def.tier === 2) {
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
+      ctx.textAlign = 'center'; ctx.fillText('Tier 2', 0, badgeY);
+    } else if (item.type === 'weapon') {
+      ctx.fillStyle = '#cd7f32'; ctx.font = '11px ' + F;
+      ctx.textAlign = 'center'; ctx.fillText('Tier 1', 0, badgeY);
+    } else if (item.type === 'enemy' && item.loop > 0) {
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px ' + F;
+      ctx.textAlign = 'center'; ctx.fillText('Loop ' + item.loop, 0, badgeY);
+    }
+    if (isCenter && known) {
+      ctx.fillStyle = 'rgba(255,215,0,0.7)'; ctx.font = 'bold 11px ' + F; ctx.textAlign = 'center';
+      ctx.fillText((typeof touchActive !== 'undefined' && touchActive) ? 'tap:detail' : 'Z:detail', 0, by + CARD_H - 4);
+    }
+    ctx.restore();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = 'bold 36px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  var cur = collectionCursor[cursorKey];
+  if (cur > 0) ctx.fillText('<', CX - GAP + CARD_W / 2 - 20, CY);
+  if (cur < items.length - 1) ctx.fillText('>', CX + GAP - CARD_W / 2 + 20, CY);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
+  ctx.fillText((cur + 1) + ' / ' + items.length, CX, CY + 145);
+  ctx.textAlign = 'left';
+}
+
+function drawCollectionDetail(ctx, item) {
+  var F = "'M PLUS Rounded 1c', sans-serif";
+  var PW = Math.min(520, CW - 60), PH = Math.floor(CH * 0.6);
+  var px = (CW - PW) / 2, py = (CH - PH) / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = 'rgba(18,10,40,0.98)';
+  ctx.beginPath(); ctx.roundRect(px, py, PW, PH, 16); ctx.fill();
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(px, py, PW, PH, 16); ctx.stroke();
+  if (item.type === 'enemy') {
+    var eDef = item.def, lp = item.loop, rec = item.rec;
+    var known = rec && rec.defeated > 0;
+    var col = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(eDef.color, lp) : eDef.color;
+    var sprSize = 96, sprX = px + PW/2 - 48, sprY = py + 18;
+    ctx.save();
+    if (lp > 0) ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
+    if (known) {
+      if (typeof hasSprite === 'function' && hasSprite(eDef.shape)) {
+        drawSpriteImg(eDef.shape, sprX, sprY, sprSize, sprSize);
+      } else if (typeof drawEnemyShape === 'function') {
+        drawEnemyShape({ x:sprX, y:sprY, w:sprSize, h:sprSize, shape:eDef.shape, hitFlash:0 }, col);
+      }
+    } else {
+      ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.25;
+      if (typeof hasSprite === 'function' && hasSprite(eDef.shape))
+        drawSpriteImg(eDef.shape, sprX, sprY, sprSize, sprSize);
+    }
+    ctx.restore();
+    var dispName = known
+      ? ((typeof getVariantName === 'function' && getVariantName(eDef.shape, lp)) || eDef.name)
+      : '???';
+    ctx.fillStyle = known ? col : '#555'; ctx.font = 'bold 22px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(dispName, px + PW/2, py + 126);
+    ctx.textAlign = 'left';
+    if (!known) {
+      ctx.fillStyle = '#666'; ctx.font = '15px ' + F; ctx.textAlign = 'center';
+      ctx.fillText('not found yet', px + PW/2, py + 155);
+      ctx.textAlign = 'left';
+    } else {
+      var sX = px + 30, sY = py + 152;
+      ctx.fillStyle = '#ccc'; ctx.font = '14px ' + F;
+      ctx.fillText('seen:' + (rec?rec.seen:0) + '  defeated:' + (rec?rec.defeated:0), sX, sY);
+      if (eDef.lore) {
+        ctx.fillStyle = '#aaa'; ctx.font = 'italic 13px ' + F;
+        var maxW = PW - 60, ls = eDef.lore;
+        while (ls.length > 0 && ctx.measureText(ls).width > maxW) ls = ls.slice(0,-1);
+        if (ls.length < eDef.lore.length) ls += '...';
+        ctx.fillText(ls, sX, sY + 22);
+      }
+      var vnY = py + 210;
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px ' + F; ctx.fillText('variant:', px+30, vnY);
+      var vnames = (typeof ENEMY_VARIANT_NAMES !== 'undefined' && ENEMY_VARIANT_NAMES[eDef.shape]) || [];
+      for (var vi = 0; vi < Math.min(vnames.length,4); vi++) {
+        ctx.fillStyle = vi===lp ? col : '#666';
+        ctx.font = (vi===lp?'bold ':'') + '12px ' + F;
+        ctx.fillText('L'+vi+':'+vnames[vi], px+100+vi*95, vnY);
+      }
+    }
+  } else if (item.type === 'weapon') {
+    var w = item.def, known = item.known, col = w.color || '#fff';
+    var sprSize = 96, sprX = px + PW/2 - 48, sprY = py + 18;
+    var wSprId = 'weapon_' + w.id;
+    if (known && typeof hasSprite === 'function' && hasSprite(wSprId)) {
+      drawSpriteImg(wSprId, sprX, sprY, sprSize, sprSize);
+    } else {
+      ctx.fillStyle = known ? col : '#444';
+      ctx.font = '64px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      var em = known ? (w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF]|^./)||['\u2694'])[0] : '?';
+      ctx.fillText(em, px+PW/2, sprY+8);
+      ctx.textBaseline = 'alphabetic';
+    }
+    ctx.fillStyle = known ? col : '#555'; ctx.font = 'bold 22px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(known ? w.name : '???', px+PW/2, py+128);
+    ctx.textAlign = 'left';
+    if (!known) {
+      ctx.fillStyle = '#666'; ctx.font = '15px ' + F; ctx.textAlign = 'center';
+      ctx.fillText('not obtained yet', px+PW/2, py+156);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.fillStyle = w.tier===2 ? '#ffd700' : '#cd7f32'; ctx.font = 'bold 12px ' + F; ctx.textAlign = 'center';
+      ctx.fillText(w.tier===2 ? 'Tier 2' : 'Tier 1', px+PW/2, py+146);
+      ctx.textAlign = 'left';
+      var sX = px+30, sY = py+168;
+      ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px ' + F; ctx.fillText('stats', sX, sY);
+      ctx.fillStyle = '#ccc'; ctx.font = '13px ' + F;
+      ctx.fillText('ATK x'+w.dmgMul.toFixed(1), sX, sY+18);
+      ctx.fillText('SPD '+w.speed.toFixed(2)+'s', sX+110, sY+18);
+      ctx.fillText('RNG '+w.range, sX+220, sY+18);
+      ctx.fillStyle = '#aaa'; ctx.font = '13px ' + F; ctx.fillText(w.desc||'', sX, sY+38);
+      if (typeof EVOLUTION_MAP !== 'undefined') {
+        var evo = EVOLUTION_MAP[w.id], evoY = sY+62;
+        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 13px ' + F; ctx.fillText('evo', sX, evoY);
+        if (evo) {
+          var t2d = WEAPON_DEFS.find(function(d){return d.id===evo.to;});
+          ctx.fillStyle = '#e040fb'; ctx.font = '13px ' + F;
+          ctx.fillText('->'+(t2d?t2d.name:evo.to)+' (pollen '+evo.cost+')', sX+40, evoY);
+        } else {
+          ctx.fillStyle = '#555'; ctx.font = '13px ' + F;
+          ctx.fillText(w.tier===2?'max':'none', sX+40, evoY);
+        }
+      }
+    }
+  }
+  ctx.fillStyle = 'rgba(200,200,200,0.5)'; ctx.font = '13px ' + F; ctx.textAlign = 'center';
+  ctx.fillText('X/ESC: close', CW/2, py+PH-8);
+  ctx.textAlign = 'left';
+}
+
 function drawCollectionTab() {
   var F = "'M PLUS Rounded 1c', sans-serif";
   var _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
-  // 3 sub-tabs: 0=いきもの, 1=ぶき, 2=せかい
-  var subTabs = ['\u3044\u304d\u3082\u306e', '\u3076\u304d', '\u305b\u304b\u3044'];
+  var subTabs = ['\u3044\u304d\u3082\u306e','\u3076\u304d','\u305b\u304b\u3044'];
   for (var si = 0; si < subTabs.length; si++) {
     var stx = 180 + si * 160, sty = 120;
-    ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(stx - 56, sty - 16, 112, 32*_M);
-    ctx.fillStyle = (typeof collectionSubTab !== 'undefined' ? collectionSubTab : 0) === si ? '#000' : '#ccc';
+    ctx.fillStyle = collectionSubTab === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
+    ctx.fillRect(stx - 56, sty - 16, 112, 32 * _M);
+    ctx.fillStyle = collectionSubTab === si ? '#000' : '#ccc';
     ctx.font = 'bold ' + (18*_M) + 'px ' + F; ctx.textAlign = 'center';
     ctx.fillText(subTabs[si], stx, sty + 6*_M);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = (14*_M) + 'px ' + F; ctx.textAlign = 'center';
-  ctx.fillText('\u2190\u2192: \u30b5\u30d6\u30bf\u30d6\u5207\u66ff', 340, 155);
+  if (collectionSubTab === 2) { drawWorldLoreTab(); return; }
+  var subKey = collectionSubTab === 0 ? 'enemy' : 'weapon';
+  var filter = collectionFilter[subKey];
+  var items = getFilteredItems(collectionSubTab, filter);
+  var filterKeys = collectionSubTab === 0
+    ? ['all','forest','cave','flower','boss'] : ['all','tier1','tier2'];
+  var filterLabels = collectionSubTab === 0
+    ? ['ALL','forest','cave','flower','boss'] : ['ALL','Tier1','Tier2'];
+  var fY = 155, fStart = 120;
+  for (var fi = 0; fi < filterKeys.length; fi++) {
+    var fW = 70, fX = fStart + fi * (fW + 8);
+    var isActive = filter === filterKeys[fi];
+    ctx.fillStyle = isActive ? '#ffd700' : 'rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.roundRect(fX, fY-14, fW, 26, 6); ctx.fill();
+    ctx.fillStyle = isActive ? '#000' : '#aaa';
+    ctx.font = 'bold 12px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(filterLabels[fi], fX + fW/2, fY+4);
+  }
   ctx.textAlign = 'left';
-  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 1) { drawWeaponCollection(); return; }
-  if (typeof collectionSubTab !== 'undefined' && collectionSubTab === 2) { drawWorldLoreTab(); return; }
-
-  ctx.fillStyle = '#ffd700'; ctx.font = 'bold ' + (22*_M) + 'px ' + F;
-  ctx.fillText('\u82b1\u306e\u56fd\u306e\u3044\u304d\u3082\u306e\u56f3\u9451', 120, 190);
-
-  var allEnemies = (typeof ENEMY_DEFS === "object" && !Array.isArray(ENEMY_DEFS)) ? Object.values(ENEMY_DEFS) : (Array.isArray(ENEMY_DEFS) ? ENEMY_DEFS : []);
-  var maxLoopFound = 0;
-  if (typeof collection !== 'undefined') {
-    var ckeys = Object.keys(collection);
-    for (var ci = 0; ci < ckeys.length; ci++) {
-      var lm = ckeys[ci].match(/_L(\d+)$/);
-      if (lm && parseInt(lm[1]) > maxLoopFound) maxLoopFound = parseInt(lm[1]);
-    }
-  }
-
-  var entries = [];
-  for (var ei = 0; ei < allEnemies.length; ei++) {
-    var eDef = allEnemies[ei];
-    for (var lp = 0; lp <= maxLoopFound; lp++) {
-      var lk = eDef.name + '_L' + lp;
-      var rec = (typeof collection !== 'undefined' && collection[lk]) ? collection[lk] : null;
-      entries.push({ def: eDef, loop: lp, rec: rec });
-    }
-  }
-
-  var totalE = entries.length || 1;
-  var ownedE = 0;
-  for (var oi = 0; oi < entries.length; oi++) {
-    if (entries[oi].rec && entries[oi].rec.defeated > 0) ownedE++;
-  }
-  var pctE = Math.floor(ownedE / totalE * 100);
-  ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
-  ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 200, 400 * (ownedE / totalE), 16);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (12*_M) + 'px ' + F; ctx.textAlign = 'center';
-  ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
+  var ownedC = items.filter(function(it) {
+    return it.type === 'enemy' ? (it.rec && it.rec.defeated > 0) : it.known;
+  }).length;
+  var pct = items.length > 0 ? Math.floor(ownedC / items.length * 100) : 0;
+  ctx.fillStyle = '#333'; ctx.fillRect(120, 175, 400, 10);
+  ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 175, 400*(ownedC/Math.max(1,items.length)), 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px ' + F; ctx.textAlign = 'center';
+  ctx.fillText(ownedC+' / '+items.length+' ('+pct+'%)', 320, 184);
   ctx.textAlign = 'left';
-
-  // トレカ型グリッドレイアウト
-  var cardW = 110, cardH = 150, padX = 10, padY = 10;
-  var startX = 120, startY = 228;
-  var cols = Math.max(3, Math.floor((CW - startX - 60) / (cardW + padX)));
-  var maxRows = Math.floor((CH - startY - 60) / (cardH + padY));
-  var maxVisible = cols * maxRows;
-  if (typeof collectionScroll === 'undefined') collectionScroll = 0;
-  collectionScroll = Math.max(0, Math.min(collectionScroll, Math.max(0, entries.length - maxVisible)));
-  for (var i = 0; i < Math.min(entries.length - collectionScroll, maxVisible); i++) {
-    var ent = entries[i + collectionScroll];
-    var ek = ent.def; var lp = ent.loop;
-    var rec = ent.rec; var seenC = rec ? rec.seen : 0; var defeatedC = rec ? rec.defeated : 0;
-    var known = defeatedC > 0;
-    var col = i % cols, row = Math.floor(i / cols);
-    var ex = startX + col * (cardW + padX), ey = startY + row * (cardH + padY);
-    ctx.fillStyle = known ? 'rgba(40,35,60,0.92)' : 'rgba(25,25,25,0.7)';
-    ctx.beginPath(); ctx.roundRect(ex, ey, cardW, cardH, 10); ctx.fill();
-    var borderCol = known ? (ek.color || '#888') : '#333';
-    if (known && lp > 0 && typeof loopHueShift === 'function') borderCol = loopHueShift(ek.color || '#888', lp);
-    ctx.strokeStyle = borderCol; ctx.lineWidth = known ? 2 : 1;
-    ctx.beginPath(); ctx.roundRect(ex, ey, cardW, cardH, 10); ctx.stroke();
-    var sprW = 56, sprH = 56, sprX = ex + (cardW - 56) / 2, sprY = ey + 10, sprId = ek.shape;
-    if (known) {
-      ctx.save(); if (lp > 0) ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) { drawSpriteImg(sprId, sprX, sprY, sprW, sprH); }
-      else { var sc = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color; var fE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 }; if (typeof drawEnemyShape === 'function') drawEnemyShape(fE, sc); }
-      ctx.filter = 'none'; ctx.restore();
-    } else {
-      ctx.save(); ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.25;
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) { drawSpriteImg(sprId, sprX, sprY, sprW, sprH); }
-      else { var fE2 = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 99 }; if (typeof drawEnemyShape === 'function') drawEnemyShape(fE2, '#222'); }
-      ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.restore();
-    }
-    var cx = ex + cardW / 2; ctx.textAlign = 'center';
-    if (known) {
-      var dc = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-      ctx.fillStyle = dc; ctx.font = 'bold 11px ' + F;
-      var dn = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : ek.name;
-      dn = dn.length > 8 ? dn.slice(0,8) + '..' : dn;
-      ctx.fillText(dn, cx, ey + 78);
-      if (lp > 0) { ctx.fillStyle = '#ffd700'; ctx.font = 'bold 9px ' + F; ctx.fillText('Loop ' + lp, cx, ey + 90); }
-      ctx.fillStyle = '#aaa'; ctx.font = '10px ' + F; ctx.fillText('撃破: ' + defeatedC, cx, ey + 104);
-      if (ek.lore) { ctx.fillStyle = '#777'; ctx.font = '9px ' + F; var ls = ek.lore.length > 14 ? ek.lore.slice(0,14) + '..' : ek.lore; ctx.fillText(ls, cx, ey + 118); }
-    } else {
-      ctx.fillStyle = '#555'; ctx.font = 'bold 12px ' + F; ctx.fillText('???', cx, ey + 78);
-      ctx.fillStyle = '#444'; ctx.font = '10px ' + F; ctx.fillText(seenC > 0 ? '遷遇あり' : '未発見', cx, ey + 94);
-    }
-    ctx.textAlign = 'left';
+  drawCollectionCarousel(ctx, items, subKey, collectionSubTab);
+  if (collectionDetailOpen) {
+    var cur2 = collectionCursor[subKey];
+    var item2 = items[cur2];
+    if (item2) drawCollectionDetail(ctx, item2);
   }
-  // --- Scroll bar & hint ---
-  if (entries.length > maxRows) {
-    var sbX = CW - 130, sbY = startY, sbH = maxRows * (cardH + padY);
-    var thumbH = Math.max(20, sbH * (maxRows / entries.length));
-    var thumbY = sbY + (sbH - thumbH) * (collectionScroll / Math.max(1, entries.length - maxRows));
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX, sbY, 8, sbH);
-    ctx.fillStyle = 'rgba(255,215,0,0.5)'; ctx.fillRect(sbX, thumbY, 8, thumbH);
-    // スクロール件数表示（ヒントはヘルプモーダルへ移動）
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '12px ' + F; ctx.textAlign = 'right';
-    ctx.fillText((collectionScroll + 1) + '-' + Math.min(collectionScroll + maxRows, entries.length) + ' / ' + entries.length, CW - 140, CH - 55);
-    ctx.textAlign = 'left';
-  }
-
-  // 図鑑コンプリートバッジ
   if (typeof isEncyclopediaComplete === 'function' && isEncyclopediaComplete()) {
-    ctx.fillStyle = 'rgba(255,215,0,0.15)';
-    ctx.fillRect(CW - 230, 185, 210, 30);
+    ctx.fillStyle = 'rgba(255,215,0,0.15)'; ctx.fillRect(CW-230, 185, 210, 30);
     ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('🌟 図鑑コンプリート！', CW - 125, 205);
+    ctx.fillText('complete!', CW-125, 205);
     ctx.textAlign = 'left';
   }
 }
+
 
 // ===== 世界ロアタブ (H-C) =====
 // let worldLoreScroll は update.js から参照するため宣言はここに
@@ -668,97 +856,3 @@ function drawDmgNumbers() {
 
 
 
-function drawWeaponCollection() {
-  var F = "'M PLUS Rounded 1c', sans-serif";
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold 22px " + F;
-  ctx.fillText('\u2694 \u3076\u304D\u305A\u304B\u3093', 120, 190);
-
-  // Completion bar
-  var total = typeof WEAPON_DEFS !== 'undefined' ? WEAPON_DEFS.length : 12;
-  var owned = typeof weaponCollection !== 'undefined' ? weaponCollection.size : 0;
-  var pct = Math.floor(owned / total * 100);
-  ctx.fillStyle = '#555'; ctx.fillRect(120, 200, 400, 16);
-  ctx.fillStyle = '#ffd700'; ctx.fillRect(120, 200, 400 * (owned / total), 16);
-  ctx.fillStyle = '#fff'; ctx.font = "bold 12px " + F; ctx.textAlign = 'center';
-  ctx.fillText(owned + ' / ' + total + ' (' + pct + '%)', 320, 212);
-  ctx.textAlign = 'left';
-
-  // Weapon cards
-  var cardW = 200, cardH = 80, cols = 5, padX = 12, padY = 8;
-  var startX = 120, startY = 230;
-  for (var i = 0; i < WEAPON_DEFS.length; i++) {
-    var w = WEAPON_DEFS[i];
-    var col = i % cols, row = Math.floor(i / cols);
-    var wx = startX + col * (cardW + padX);
-    var wy = startY + row * (cardH + padY);
-    if (wy > CH - 100) break;
-    var has = typeof weaponCollection !== 'undefined' && weaponCollection.has(w.id);
-    var isTier2 = w.tier === 2;
-
-    // Card bg
-    ctx.fillStyle = has ? 'rgba(40,30,60,0.9)' : 'rgba(30,30,30,0.7)';
-    ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.fill();
-    // Border (copper=tier1, gold=tier2)
-    ctx.strokeStyle = has ? (isTier2 ? '#ffd700' : '#cd7f32') : '#333';
-    ctx.lineWidth = has ? 2 : 1;
-    ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.stroke();
-
-    if (has) {
-      // Icon
-      var sprId = 'weapon_' + w.id;
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-        ctx.save();
-        var _wrf = (typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity || 'normal') : 'none';
-        if (_wrf !== 'none') ctx.filter = _wrf;
-        ctx.save();
-        var _wrf = (typeof getRarityFilter === 'function') ? getRarityFilter(w.rarity || 'normal') : 'none';
-        if (_wrf !== 'none') ctx.filter = _wrf;
-        drawSpriteImg(sprId, wx + 4, wy + 8, 48, 48);
-        ctx.restore();
-        ctx.restore();
-      } else {
-        ctx.fillStyle = '#fff'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
-        var em = w.name.match(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u20E3]?|^./);
-        ctx.fillText(em ? em[0] : '\u2694', wx + 28, wy + 42);
-        ctx.textAlign = 'left';
-      }
-      // Name
-      ctx.fillStyle = (w.rarity && typeof getRarityDef === 'function') ? getRarityDef(w.rarity).color : (w.color || '#fff'); ctx.font = 'bold 13px ' + F;
-      var shortName = w.name.length > 10 ? w.name.slice(0, 10) + '..' : w.name;
-      ctx.fillText(shortName, wx + 56, wy + 25);
-      // Stats
-      ctx.fillStyle = '#ccc'; ctx.font = '11px ' + F;
-      ctx.fillText('ATK ' + w.dmgMul.toFixed(1) + '  SPD ' + w.speed.toFixed(2), wx + 56, wy + 42);
-      // Tier badge
-      if (isTier2) {
-        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 10px ' + F;
-        ctx.fillText('T2', wx + cardW - 20, wy + 14);
-      }
-      if (w.rarity && w.rarity !== 'normal' && typeof getRarityDef === 'function') {
-        var _rd = getRarityDef(w.rarity);
-        ctx.fillStyle = _rd.color; ctx.font = 'bold 10px ' + F;
-        ctx.fillText(_rd.name, wx + cardW - 22, wy + cardH - 6);
-      }
-      // Desc
-      ctx.fillStyle = '#999'; ctx.font = '10px ' + F;
-      var shortDesc = w.desc.length > 18 ? w.desc.slice(0, 18) + '..' : w.desc;
-      ctx.fillText(shortDesc, wx + 56, wy + 58);
-    } else {
-      // Silhouette
-      ctx.fillStyle = '#444'; ctx.font = '28px ' + F; ctx.textAlign = 'center';
-      ctx.fillText('?', wx + 28, wy + 42);
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#555'; ctx.font = 'bold 13px ' + F;
-      ctx.fillText('???', wx + 56, wy + 25);
-      ctx.fillStyle = '#444'; ctx.font = '11px ' + F;
-      ctx.fillText('みつけてない…', wx + 56, wy + 42);
-      ctx.textAlign = 'left';
-      ctx.fillStyle = '#555'; ctx.font = '13px ' + F;
-      ctx.fillText('??? \u307E\u3060\u3067\u3042\u3063\u3066\u3044\u306A\u3044', wx + 56, wy + 35);
-      if (isTier2) {
-        ctx.fillStyle = '#665500'; ctx.font = 'bold 10px ' + F;
-        ctx.fillText('T2', wx + cardW - 20, wy + 14);
-      }
-    }
-  }
-}

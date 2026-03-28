@@ -143,16 +143,35 @@ function update(dt) {
    
     
     if (inventoryTab === 1) {
-      // 3サブタブ: 0=いきもの, 1=ぶき, 2=せかい
-      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) { collectionSubTab = Math.max(0, collectionSubTab - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
-      if (wasPressed('ArrowRight') || wasPressed('KeyD')) { collectionSubTab = Math.min(2, collectionSubTab + 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
-    
-      // Enemy collection scroll
-      if (collectionSubTab === 0) {
-        if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof collectionScroll !== 'undefined') collectionScroll = Math.max(0, collectionScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
-        if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof collectionScroll !== 'undefined') collectionScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      if (wasPressed('ArrowLeft') || wasPressed('KeyA')) {
+        if (collectionDetailOpen) { collectionDetailOpen = false; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+        else { collectionSubTab = Math.max(0, collectionSubTab - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
       }
-      // World lore scroll
+      if (wasPressed('ArrowRight') || wasPressed('KeyD')) {
+        if (collectionDetailOpen) { collectionDetailOpen = false; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+        else { collectionSubTab = Math.min(2, collectionSubTab + 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      }
+      if (!collectionDetailOpen && collectionSubTab !== 2) {
+        var _cKey = collectionSubTab === 0 ? 'enemy' : 'weapon';
+        var _citems = (typeof getFilteredItems === 'function') ? getFilteredItems(collectionSubTab, collectionFilter[_cKey]) : [];
+        if (wasPressed('ArrowUp') || wasPressed('KeyW')) {
+          collectionCursor[_cKey] = Math.max(0, collectionCursor[_cKey] - 1);
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        }
+        if (wasPressed('ArrowDown') || wasPressed('KeyS')) {
+          collectionCursor[_cKey] = Math.min(_citems.length - 1, collectionCursor[_cKey] + 1);
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        }
+        if (wasPressed('KeyZ')) {
+          var _ci = collectionCursor[_cKey];
+          var _cit = _citems[_ci];
+          var _cknown = _cit && (_cit.type === 'enemy' ? (_cit.rec && _cit.rec.defeated > 0) : _cit.known);
+          if (_cknown) { collectionDetailOpen = true; if (typeof Audio !== 'undefined' && Audio.dialog_open) Audio.dialog_open(); }
+        }
+      }
+      if (collectionDetailOpen && (wasPressed('KeyX') || wasPressed('Escape'))) {
+        collectionDetailOpen = false; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+      }
       if (collectionSubTab === 2) {
         if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll = Math.max(0, worldLoreScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
         if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }

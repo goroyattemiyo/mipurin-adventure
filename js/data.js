@@ -537,6 +537,13 @@ let blessingAnimTimer = 0;    // blessing card slide-in timer
 let hpBounceTimer = 0;        // HP heart bounce on damage
 let floorClearAnimTimer = 0;  // floor clear text animation
 
+
+// ===== COLLECTION UI STATE =====
+let collectionSubTab = 0;
+let collectionCursor  = { blessing: 0, enemy: 0, weapon: 0 };
+let collectionFilter  = { blessing: 'all', enemy: 'all', weapon: 'all' };
+let collectionDetailOpen = false;
+let collectionAnimX   = { blessing: 0.0, enemy: 0.0, weapon: 0.0 };
 // ===== TITLE PARTICLES =====
 const titleParticles = [];
 

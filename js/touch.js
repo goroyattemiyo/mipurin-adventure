@@ -141,12 +141,46 @@ function onTouchStart(e) {
     } catch(ex) {}
   }
 
+  if (e.changedTouches.length > 0) {
+    var _st = e.changedTouches[0];
+    var _sp = screenToCanvas(_st.clientX, _st.clientY);
+    window._swipeStartX = _sp.x; window._swipeTouchId = _st.identifier;
+  }
   for (var ti = 0; ti < e.changedTouches.length; ti++) {
     var t = e.changedTouches[ti];
     var pos = screenToCanvas(t.clientX, t.clientY);
 
     // --- Inventory mode ---
     if (typeof inventoryOpen !== 'undefined' && inventoryOpen) {
+      if (typeof collectionDetailOpen !== 'undefined' && collectionDetailOpen && inventoryTab === 1) {
+        collectionDetailOpen = false;
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        return;
+      }
+      if (inventoryTab === 1 && typeof collectionSubTab !== 'undefined' && collectionSubTab !== 2) {
+        if (pos.y >= 141 && pos.y <= 169) {
+          var fk2 = collectionSubTab === 0 ? ['all','forest','cave','flower','boss'] : ['all','tier1','tier2'];
+          var fW2 = 70, fSX2 = 120;
+          for (var ffi = 0; ffi < fk2.length; ffi++) {
+            var ffX = fSX2 + ffi * (fW2 + 8);
+            if (pos.x >= ffX && pos.x <= ffX + fW2) {
+              var fkey = collectionSubTab === 0 ? 'enemy' : 'weapon';
+              collectionFilter[fkey] = fk2[ffi];
+              collectionCursor[fkey] = 0; collectionAnimX[fkey] = 0;
+              if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+              return;
+            }
+          }
+        }
+        var ck2 = collectionSubTab === 0 ? 'enemy' : 'weapon';
+        var ci2 = collectionCursor[ck2];
+        var citems2 = (typeof getFilteredItems === 'function') ? getFilteredItems(collectionSubTab, collectionFilter[ck2]) : [];
+        var cit2 = citems2[ci2];
+        var cknown2 = cit2 && (cit2.type === 'enemy' ? (cit2.rec && cit2.rec.defeated > 0) : cit2.known);
+        if (pos.x >= CW/2-100 && pos.x <= CW/2+100 && pos.y >= CH/2-130 && pos.y <= CH/2+130) {
+          if (cknown2) { collectionDetailOpen = true; if (typeof Audio !== 'undefined' && Audio.dialog_open) Audio.dialog_open(); return; }
+        }
+      }
       var tabHit = hitTestInvTab(pos.x, pos.y);
       if (tabHit >= 0) {
         inventoryTab = tabHit;
@@ -320,6 +354,20 @@ function onTouchEnd(e) {
 
     // Equipment touch end (no D&D)
 
+    if (typeof inventoryOpen !== 'undefined' && inventoryOpen && inventoryTab === 1
+        && typeof collectionSubTab !== 'undefined' && collectionSubTab !== 2
+        && t.identifier === window._swipeTouchId) {
+      var ex = screenToCanvas(t.clientX, t.clientY).x;
+      var swDx = ex - (window._swipeStartX || ex);
+      if (Math.abs(swDx) > 30) {
+        var swKey = collectionSubTab === 0 ? 'enemy' : 'weapon';
+        var swItems = (typeof getFilteredItems === 'function') ? getFilteredItems(collectionSubTab, collectionFilter[swKey]) : [];
+        if (swDx < 0) collectionCursor[swKey] = Math.min(swItems.length-1, collectionCursor[swKey]+1);
+        else           collectionCursor[swKey] = Math.max(0, collectionCursor[swKey]-1);
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+      }
+      window._swipeStartX = null;
+    }
     // Joystick release
     if (t.identifier === joystick.touchId) {
       joystick.active = false; joystick.touchId = null;

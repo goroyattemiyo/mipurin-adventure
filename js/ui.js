@@ -224,13 +224,13 @@ function drawCollectionTab() {
       ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, _curY);
       if (ek.lore) {
         var _loreY = _curY + Math.ceil(_statsSize * 1.4);
-        if (_loreY + _loreSize < ey + cardH - 2) {
+        if (_loreY + _loreSize <= _loreBottom) {
           ctx.fillStyle = '#aaa'; ctx.font = _loreSize + 'px ' + F;
           var _loreMaxW = (CW - 160) - (txX - startX) - 20;
           var ls = ek.lore;
           while (ls.length > 0 && ctx.measureText(ls).width > _loreMaxW) ls = ls.slice(0, -1);
           if (ls.length < ek.lore.length) ls += '\u2026';
-          ctx.fillText(ls, txX, _loreY);
+          ctx.fillText(ls, txX, Math.min(_loreY, _loreBottom - _loreSize));
         }
       }
     } else {

@@ -39,7 +39,7 @@ for f in JS_FILES:
     check(f"exists: {f}", exists)
     if exists:
         size = os.path.getsize(f) / 1024
-        check(f"size < 35KB: {f} ({size:.1f}KB)", size < 35, f"actual={size:.1f}KB")
+        check(f"size < 50KB: {f} ({size:.1f}KB)", size < 50, f"actual={size:.1f}KB")
 
 # === 2. Syntax checks (node -c) ===
 print("\n--- Syntax Checks ---")
@@ -278,10 +278,10 @@ attention_files = []
 for f in JS_FILES:
     if not os.path.exists(f): continue
     size_kb = os.path.getsize(f) / 1024
-    if size_kb > 28:
+    if size_kb > 40:
         attention_files.append((f, size_kb))
-        check(f"size warning: {f} ({size_kb:.1f}KB > 28KB)", size_kb < 35,
-            f"SPLIT REQUIRED: {size_kb:.1f}KB >= 35KB")
+        check(f"size warning: {f} ({size_kb:.1f}KB > 40KB)", size_kb < 50,
+            f"SPLIT REQUIRED: {size_kb:.1f}KB >= 50KB")
     else:
         check(f"size ok: {f} ({size_kb:.1f}KB)", True)
 

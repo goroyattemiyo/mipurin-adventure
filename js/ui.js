@@ -1,4 +1,4 @@
-        if (_loreY + _loreSize <= _loreBottom) {
+
 let collectionSubTab = 0; // 0=enemies, 1=weapons
 let collectionScroll = 0; // enemy collection scroll offset
 
@@ -224,6 +224,7 @@ function drawCollectionTab() {
       ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, _curY);
       if (ek.lore) {
         var _loreY = _curY + Math.ceil(_statsSize * 1.4);
+        var _loreBottom = ey + cardH - 4 * _M;
         if (_loreY + _loreSize <= _loreBottom) {
           ctx.fillStyle = '#aaa'; ctx.font = _loreSize + 'px ' + F;
           var _loreMaxW = (CW - 160) - (txX - startX) - 20;
@@ -743,7 +744,7 @@ function drawWeaponCollection() {
     ctx.strokeStyle = has ? (isTier2 ? '#ffd700' : '#cd7f32') : '#333';
     ctx.lineWidth = has ? 2 : 1;
     ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.stroke();
-git add js/ui.js && git commit -m "fix: 図鑑loreテキストはみ出し修正（再適用）" && git push
+
     if (has) {
       // Icon
       var sprId = 'weapon_' + w.id;
@@ -802,3 +803,4 @@ git add js/ui.js && git commit -m "fix: 図鑑loreテキストはみ出し修正
       }
     }
   }
+}

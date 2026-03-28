@@ -1,2 +1,6 @@
-__pycache__/
+# temp scripts
+_*.py
+step*.py
+update_context.py
 node_modules/
+*.lock

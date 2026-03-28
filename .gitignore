@@ -4,3 +4,6 @@ step*.py
 update_context.py
 node_modules/
 *.lock
+
+# work scripts
+_work/

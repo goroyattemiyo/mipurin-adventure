@@ -153,97 +153,55 @@ function drawCollectionTab() {
   ctx.fillText(ownedE + ' / ' + totalE + ' (' + pctE + '%)', 320, 212);
   ctx.textAlign = 'left';
 
-  var cardH = 70 * _M, padY = 4 * _M, startY = 228, startX = 120;
-  var maxRows = Math.floor((CH - 80 - startY) / (cardH + padY));
-  // Scroll clamp
+  // トレカ型グリッドレイアウト
+  var cardW = 110, cardH = 150, padX = 10, padY = 10;
+  var startX = 120, startY = 228;
+  var cols = Math.max(3, Math.floor((CW - startX - 60) / (cardW + padX)));
+  var maxRows = Math.floor((CH - startY - 60) / (cardH + padY));
+  var maxVisible = cols * maxRows;
   if (typeof collectionScroll === 'undefined') collectionScroll = 0;
-  collectionScroll = Math.max(0, Math.min(collectionScroll, Math.max(0, entries.length - maxRows)));
-  for (var i = 0; i < Math.min(entries.length - collectionScroll, maxRows); i++) {
+  collectionScroll = Math.max(0, Math.min(collectionScroll, Math.max(0, entries.length - maxVisible)));
+  for (var i = 0; i < Math.min(entries.length - collectionScroll, maxVisible); i++) {
     var ent = entries[i + collectionScroll];
-    var ek = ent.def;
-    var lp = ent.loop;
-    var ey = startY + i * (cardH + padY);
-    var rec = ent.rec;
-    var seenC = rec ? rec.seen : 0;
-    var defeatedC = rec ? rec.defeated : 0;
+    var ek = ent.def; var lp = ent.loop;
+    var rec = ent.rec; var seenC = rec ? rec.seen : 0; var defeatedC = rec ? rec.defeated : 0;
     var known = defeatedC > 0;
-
-    ctx.fillStyle = known ? 'rgba(40,35,60,0.85)' : 'rgba(25,25,25,0.7)';
-    ctx.beginPath(); ctx.roundRect(startX, ey, CW - 160, cardH, 12); ctx.fill();
+    var col = i % cols, row = Math.floor(i / cols);
+    var ex = startX + col * (cardW + padX), ey = startY + row * (cardH + padY);
+    ctx.fillStyle = known ? 'rgba(40,35,60,0.92)' : 'rgba(25,25,25,0.7)';
+    ctx.beginPath(); ctx.roundRect(ex, ey, cardW, cardH, 10); ctx.fill();
     var borderCol = known ? (ek.color || '#888') : '#333';
     if (known && lp > 0 && typeof loopHueShift === 'function') borderCol = loopHueShift(ek.color || '#888', lp);
-    ctx.strokeStyle = borderCol;
-    ctx.lineWidth = known ? 2 : 1;
-    ctx.beginPath(); ctx.roundRect(startX, ey, CW - 160, cardH, 12); ctx.stroke();
-
-    if (lp > 0) {
-      ctx.fillStyle = 'rgba(255,215,0,0.2)'; ctx.fillRect(startX + CW - 242 - 48*_M, ey + 2, 46*_M, 18*_M);
-      ctx.fillStyle = '#ffd700'; ctx.font = 'bold ' + (11*_M) + 'px ' + F;
-      ctx.fillText('Loop ' + lp, startX + CW - 242 - 44*_M, ey + 14*_M);
-    }
-
-    var sprX = startX + 6, sprY = ey + 7;
-    var sprW = 48 * _M, sprH = 48 * _M;
-    var sprId = ek.shape;
+    ctx.strokeStyle = borderCol; ctx.lineWidth = known ? 2 : 1;
+    ctx.beginPath(); ctx.roundRect(ex, ey, cardW, cardH, 10); ctx.stroke();
+    var sprW = 56, sprH = 56, sprX = ex + (cardW - 56) / 2, sprY = ey + 10, sprId = ek.shape;
     if (known) {
-      ctx.save();
-      if (lp > 0) ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-        drawSpriteImg(sprId, sprX, sprY, sprW, sprH);
-      } else {
-        var shiftedColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-        var fakeE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 };
-        if (typeof drawEnemyShape === 'function') drawEnemyShape(fakeE, shiftedColor);
-      }
-      ctx.filter = 'none';
-      ctx.restore();
+      ctx.save(); if (lp > 0) ctx.filter = 'hue-rotate(' + (lp * 30) + 'deg)';
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) { drawSpriteImg(sprId, sprX, sprY, sprW, sprH); }
+      else { var sc = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color; var fE = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 0 }; if (typeof drawEnemyShape === 'function') drawEnemyShape(fE, sc); }
+      ctx.filter = 'none'; ctx.restore();
     } else {
-      ctx.save();
-      ctx.filter = 'brightness(0)';
-      ctx.globalAlpha = 0.3;
-      if (typeof hasSprite === 'function' && hasSprite(sprId)) {
-        drawSpriteImg(sprId, sprX, sprY, sprW, sprH);
-      } else {
-        var fakeE2 = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 99 };
-        if (typeof drawEnemyShape === 'function') drawEnemyShape(fakeE2, '#222');
-      }
-      ctx.filter = 'none'; ctx.globalAlpha = 1;
-      ctx.restore();
+      ctx.save(); ctx.filter = 'brightness(0)'; ctx.globalAlpha = 0.25;
+      if (typeof hasSprite === 'function' && hasSprite(sprId)) { drawSpriteImg(sprId, sprX, sprY, sprW, sprH); }
+      else { var fE2 = { x: sprX, y: sprY, w: sprW, h: sprH, shape: ek.shape, hitFlash: 99 }; if (typeof drawEnemyShape === 'function') drawEnemyShape(fE2, '#222'); }
+      ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.restore();
     }
-
-    var txX = startX + 60 * _M;
-    var _nameSize = 16 * _M, _statsSize = 12 * _M, _loreSize = 11 * _M;
-    var _curY = ey + 4 * _M + _nameSize;  // 上パディング + ベースライン
+    var cx = ex + cardW / 2; ctx.textAlign = 'center';
     if (known) {
-      var dispColor = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
-      ctx.fillStyle = dispColor; ctx.font = 'bold ' + _nameSize + 'px ' + F;
-      var displayName = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : (ek.name + (lp > 0 ? ' [Loop ' + lp + ']' : ''));
-      ctx.fillText(displayName, txX, _curY);
-      _curY += Math.ceil(_nameSize * 1.4);
-      ctx.fillStyle = '#ccc'; ctx.font = _statsSize + 'px ' + F;
-      ctx.fillText('\u906d\u904e: ' + seenC + '  \u6483\u7834: ' + defeatedC, txX, _curY);
-      if (ek.lore) {
-        var _loreY = _curY + Math.ceil(_statsSize * 1.4);
-        var _loreBottom = ey + cardH - 4 * _M;
-        if (_loreY + _loreSize <= _loreBottom) {
-          ctx.fillStyle = '#aaa'; ctx.font = _loreSize + 'px ' + F;
-          var _loreMaxW = (CW - 160) - (txX - startX) - 20;
-          var ls = ek.lore;
-          while (ls.length > 0 && ctx.measureText(ls).width > _loreMaxW) ls = ls.slice(0, -1);
-          if (ls.length < ek.lore.length) ls += '\u2026';
-          ctx.fillText(ls, txX, Math.min(_loreY, _loreBottom - _loreSize));
-        }
-      }
+      var dc = (lp > 0 && typeof loopHueShift === 'function') ? loopHueShift(ek.color, lp) : ek.color;
+      ctx.fillStyle = dc; ctx.font = 'bold 11px ' + F;
+      var dn = (typeof getVariantName === 'function' && getVariantName(ek.shape, lp)) ? getVariantName(ek.shape, lp) : ek.name;
+      dn = dn.length > 8 ? dn.slice(0,8) + '..' : dn;
+      ctx.fillText(dn, cx, ey + 78);
+      if (lp > 0) { ctx.fillStyle = '#ffd700'; ctx.font = 'bold 9px ' + F; ctx.fillText('Loop ' + lp, cx, ey + 90); }
+      ctx.fillStyle = '#aaa'; ctx.font = '10px ' + F; ctx.fillText('撃破: ' + defeatedC, cx, ey + 104);
+      if (ek.lore) { ctx.fillStyle = '#777'; ctx.font = '9px ' + F; var ls = ek.lore.length > 14 ? ek.lore.slice(0,14) + '..' : ek.lore; ctx.fillText(ls, cx, ey + 118); }
     } else {
-      ctx.fillStyle = '#555'; ctx.font = 'bold ' + _nameSize + 'px ' + F;
-      var unknownName = (lp > 0) ? '??? [Loop ' + lp + ']' : '???';
-      ctx.fillText(unknownName, txX, _curY);
-      _curY += Math.ceil(_nameSize * 1.4);
-      ctx.fillStyle = '#444'; ctx.font = _statsSize + 'px ' + F;
-      ctx.fillText(seenC > 0 ? '\u906d\u904e\u3042\u308a\u3002\u305f\u304a\u3059\u3068\u89e3\u653e\uff01' : '\u307e\u3060\u767a\u898b\u3055\u308c\u3066\u3044\u306a\u3044\u2026', txX, _curY);
+      ctx.fillStyle = '#555'; ctx.font = 'bold 12px ' + F; ctx.fillText('???', cx, ey + 78);
+      ctx.fillStyle = '#444'; ctx.font = '10px ' + F; ctx.fillText(seenC > 0 ? '遷遇あり' : '未発見', cx, ey + 94);
     }
+    ctx.textAlign = 'left';
   }
-
   // --- Scroll bar & hint ---
   if (entries.length > maxRows) {
     var sbX = CW - 130, sbY = startY, sbH = maxRows * (cardH + padY);

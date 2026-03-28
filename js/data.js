@@ -1,3 +1,4 @@
+const GAME_VERSION = 'v6.38'; // version managed here
 // ===== HIT STOP SYSTEM =====
 let hitStopTimer = 0;
 // ===== COLLECTION (図鑑) =====

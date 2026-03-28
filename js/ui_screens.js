@@ -381,7 +381,7 @@ function drawTitle() {
   ctx.fillText('ミプリンの冒険', CW/2, 390);
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = "18px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText(VERSION, CW/2, 420);
+  ctx.fillText(GAME_VERSION, CW/2, 420); // -> data.js
 
   // === Start prompt ===
   if (typeof touchActive !== 'undefined' && touchActive) {

@@ -29,6 +29,10 @@ function drawInventory() {
     ctx.fillText(tabs[i], tx, ty + 7*_M);
   }
   ctx.textAlign = 'left';
+  if(!(typeof touchActive!=='undefined'&&touchActive)){
+    drawKeyHint(ctx,CW/2-214,70+15*_M,'Q');
+    drawKeyHint(ctx,CW/2+454,70+15*_M,'E');
+  }
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
   if (inventoryTab === 2) drawEquipTab(80, 130, CW - 160, CH - 180);
@@ -370,6 +374,10 @@ function drawCollectionTab() {
     ctx.fillText(subTabs[si], stx, sty + 6*_M);
   }
   ctx.textAlign = 'left';
+  if(!(typeof touchActive!=='undefined'&&touchActive)){
+    drawKeyHint(ctx,340,106,'W');
+    drawKeyHint(ctx,340,120+32*_M+14,'S');
+  }
   if (collectionSubTab === 2) { drawWorldLoreTab(); return; }
   var subKey = collectionSubTab === 0 ? 'enemy' : 'weapon';
   var filter = collectionFilter[subKey];
@@ -848,6 +856,17 @@ function _drawBlessingDetail(ctx, b, F) {
 }
 
 // drawShop moved to shop_ui.js
+
+function drawKeyHint(ctx,x,y,key){
+  var w=key.length>1?22:16,h=16;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.strokeStyle='rgba(255,255,200,0.6)';ctx.lineWidth=1;
+  if(typeof ctx.roundRect==='function'){ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,3);}
+  else roundRect(ctx,x-w/2,y-h/2,w,h,3);
+  ctx.fill();ctx.stroke();
+  ctx.fillStyle='rgba(255,255,200,0.9)';ctx.font='bold 9px monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(key,x,y);ctx.restore();
+}
 
 function drawDmgNumbers() {
   for (const d of dmgNumbers) { ctx.globalAlpha = clamp(d.life / 0.3, 0, 1); ctx.fillStyle = d.color; ctx.font = "bold 40px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center'; ctx.fillText(d.val, d.x, d.y); ctx.textAlign = 'left'; ctx.globalAlpha = 1; }

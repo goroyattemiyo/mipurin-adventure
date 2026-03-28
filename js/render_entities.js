@@ -67,6 +67,27 @@ function drawEnemyShape(e, color) {
     ctx.fillStyle = 'rgba(150,150,200,0.4)';
     ctx.beginPath(); ctx.ellipse(cx - hw*0.5, cy - hh*0.4, hw*0.5, hh*0.2, -0.3, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(cx + hw*0.5, cy - hh*0.4, hw*0.5, hh*0.2, 0.3, 0, Math.PI*2); ctx.fill();
+  } else if (s === 'dark_root') {
+    const _t2 = Date.now() / 600;
+    ctx.strokeStyle = e.hitFlash > 0 ? '#fff' : '#1a0030';
+    ctx.lineWidth = 5;
+    for (let _ri = 0; _ri < 4; _ri++) {
+      const _ba = _ri * Math.PI / 2 + _t2 * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.quadraticCurveTo(cx + Math.cos(_ba+0.4)*hw*0.9, cy + Math.sin(_ba+0.4)*hh*0.9, cx + Math.cos(_ba)*hw*1.3, cy + Math.sin(_ba)*hh*1.3);
+      ctx.stroke();
+    }
+    const _gr = ctx.createRadialGradient(cx-hw*0.2, cy-hh*0.2, hw*0.1, cx, cy, hw*0.85);
+    _gr.addColorStop(0, e.hitFlash > 0 ? '#fff' : '#5a0080');
+    _gr.addColorStop(1, e.hitFlash > 0 ? '#eee' : '#0d0020');
+    ctx.fillStyle = _gr;
+    ctx.beginPath(); ctx.arc(cx, cy, hw*0.85, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = e.hitFlash > 0 ? '#ff0' : '#ff00cc';
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw*0.22, hh*0.3, _t2*0.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(cx, cy, hw*0.1, hh*0.18, _t2*0.5, 0, Math.PI*2); ctx.fill();
+  
   } else {
     const rr = 6; ctx.beginPath(); ctx.moveTo(e.x+rr,e.y); ctx.lineTo(e.x+e.w-rr,e.y);
     ctx.quadraticCurveTo(e.x+e.w,e.y,e.x+e.w,e.y+rr); ctx.lineTo(e.x+e.w,e.y+e.h-rr);
@@ -336,3 +357,4 @@ function drawBoss() {
   ctx.fillStyle = COL.text; ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
   ctx.fillText(boss.name + ' P' + boss.phase, CW / 2, by + bh + 12); ctx.textAlign = 'left';
 }
+

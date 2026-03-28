@@ -743,7 +743,7 @@ function drawWeaponCollection() {
     ctx.strokeStyle = has ? (isTier2 ? '#ffd700' : '#cd7f32') : '#333';
     ctx.lineWidth = has ? 2 : 1;
     ctx.beginPath(); ctx.roundRect(wx, wy, cardW, cardH, 8); ctx.stroke();
-
+git add js/ui.js && git commit -m "fix: 図鑑loreテキストはみ出し修正（再適用）" && git push
     if (has) {
       // Icon
       var sprId = 'weapon_' + w.id;
@@ -802,4 +802,4 @@ function drawWeaponCollection() {
       }
     }
   }
-}
+          ctx.fillText(ls, txX, Math.min(_loreY, _loreBottom - _loreSize));

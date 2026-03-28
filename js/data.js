@@ -544,6 +544,22 @@ let collectionCursor  = { blessing: 0, enemy: 0, weapon: 0 };
 let collectionFilter  = { blessing: 'all', enemy: 'all', weapon: 'all' };
 let collectionDetailOpen = false;
 let collectionAnimX   = { blessing: 0.0, enemy: 0.0, weapon: 0.0 };
+
+// ===== COLLECTION UI STATE =====
+let collectionCursor = { blessing: 0, enemy: 0, weapon: 0 };
+let collectionFilter = { blessing: 'all', enemy: 'all', weapon: 'all' };
+let collectionAnimX = 0;
+let collectionDetailOpen = false;
+let collectionSubTab = 'enemy';
+
+
+// ===== COLLECTION UI STATE =====
+let collectionCursor = { blessing: 0, enemy: 0, weapon: 0 };
+let collectionFilter = { blessing: 'all', enemy: 'all', weapon: 'all' };
+let collectionAnimX = 0;
+let collectionDetailOpen = false;
+let collectionSubTab = 'enemy';
+
 // ===== TITLE PARTICLES =====
 const titleParticles = [];
 

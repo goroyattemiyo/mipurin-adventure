@@ -195,7 +195,7 @@ function drawGameState() {
         const DEATH_LINES = ['まだ…負けないもん…','お花…守らなきゃ…','うぅ…くやしい…','フローラさん…ごめんね…','つぎは…がんばる…'];
         ctx.font = "italic " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
         ctx.fillStyle = '#ffb7c5';
-        ctx.fillText('\u300C' + DEATH_LINES[Math.floor((deadTimer - 1.0) * 1.7) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 240*_M);
+        ctx.fillText('\u300C' + DEATH_LINES[Math.floor((deadTimer - 1.0) * 0.6) % DEATH_LINES.length] + '\u300D', CW/2, panelY + 240*_M);
       }
 
       ctx.font = (22*_M) + "px 'M PLUS Rounded 1c', sans-serif";
@@ -314,5 +314,6 @@ function loop(time) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(loop); });
+
 
 

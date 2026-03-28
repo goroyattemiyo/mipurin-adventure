@@ -4,7 +4,7 @@
 
 // --- Mobile detection ---
 // Capability-based: true if device has touch support (doesn't require first touch event)
-let touchActive = (typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+let touchActive = false; // 実タッチ発生時のみtrue (PCタッチパネル誤判定を防ぐ)
 let _touchInited = false; // one-time init flag for fullscreen/audio unlock
 
 // --- Canvas coordinate conversion ---
@@ -432,6 +432,7 @@ function updateTouch() {
   if (!touchActive) return;
   updateJoystickKeys();
 }
+
 
 
 

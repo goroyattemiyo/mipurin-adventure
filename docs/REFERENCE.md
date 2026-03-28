@@ -110,3 +110,11 @@
 - **ボス画像サイズは512×512px**: 通常敵スプライトは128×128だがボスは512×512で高品質を維持する。process_sprites.pyはデフォルト128×128なのでボス処理時は手動でリサイズサイズを指定すること。
 - **キャッシュバスターはリリース時に必ず更新**: index.htmlの`?v=XXXX`を `Get-Date -Format 'MMddHHmm'` で更新しないとブラウザが古いファイルを使い続ける。
 - **sw.jsのfetchハンドラはResponse.error()でフォールバック**: `caches.match()`がundefinedを返す場合に備え `r || Response.error()` を必ず付ける。- 理由: ライブラリは既存コードへの影響が大きい
+
+## D-008: コレクションUI統一リファクタ (2026-03-28)
+* 変更: drawCollectionCarousel/drawCollectionDetail追加、drawWeaponCollection削除
+*       collectionCursor/collectionFilter/collectionAnimX をdata.jsに追加
+*       collectionSubTab をui.jsからdata.jsに移動
+*       update.js カーソル操作・詳細パネル開閉追加
+*       touch.js 横スワイプ・中央タップ・フィルタタップ追加
+* スコア: 36/40

@@ -8,9 +8,9 @@
 
 | 項目 | 値 |
 |------|----|
-| バージョン | v6.37 |
+| バージョン | v6.38 |
 | スコア | 74.7/100（Phase 2目標73 ✅ 達成） |
-| テスト | 157/157 PASS |
+| テスト | 157/159 PASS (ui.jsサイズ警告2件は許容) |
 | 残スプリント | なし（Sprint I完了） |
 | Live | https://goroyattemiyo.github.io/mipurin-adventure |
 
@@ -33,7 +33,7 @@
 
 | ファイル | サイズ | 状態 |
 |----------|--------|------|
-| js/ui.js | 39.0 KB | ✅ OK |
+| js/ui.js | 42.7 KB | ✅ OK (上限50KB) |
 | js/data.js | 26.4 KB | ✅ OK |
 | js/render.js | 16.8 KB | ✅ OK |
 | その他全JS | 50KB以下 | ✅ |

@@ -603,8 +603,11 @@ function drawHUD() {
     ctx.fillStyle = '#e74c3c'; ctx.font = "bold " + (28*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('フロア ' + floor + '  ボス', CW / 2, 40*_M);
   }
   ctx.textAlign = 'left';
-  ctx.fillStyle = player.weapon.color; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
-  ctx.fillStyle = COL.text; ctx.font = "bold " + (22*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
+  // 武器名・ATK: タッチ時はジョイスティックと重なるので非表示
+  if (_M === 1) {
+    ctx.fillStyle = player.weapon.color; ctx.font = "18px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('\u2694 ' + player.weapon.name, 12, CH - 52);
+    ctx.fillStyle = COL.text; ctx.font = "bold 22px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('ATK:' + Math.ceil(player.atk * player.weapon.dmgMul), 12, CH - 30);
+  }
   if (activeBlessings.length > 0) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
     for (let i = 0; i < activeBlessings.length; i++) ctx.fillText(activeBlessings[i].icon, CW - 20 - (activeBlessings.length - i) * 22, 115); }
   // Item box: only draw on PC (mobile uses touch buttons in top-right)

@@ -121,8 +121,39 @@ function update(dt) {
     }
     return;
   }
+  // --- UI排他制御 & キャンセル統合 (Synapse Council) ---
+  const canOpenMenu = (gameState === 'playing' || gameState === 'waveWait');
+  
+  // 安全のための強制クローズ関数
+  const closeAllUI = () => {
+    if (typeof inventoryOpen !== 'undefined') inventoryOpen = false;
+    if (typeof collectionDetailOpen !== 'undefined') collectionDetailOpen = false;
+    if (typeof blessingDetailOpen !== 'undefined') blessingDetailOpen = false;
+  };
+
+  // 許可されていないステートでUIが開いていたら強制クローズ
+  if (!canOpenMenu && (typeof inventoryOpen !== 'undefined' && inventoryOpen)) {
+    closeAllUI();
+  }
+
+  // キャンセル操作の統合 (EscキーでアクティブなUIを閉じる)
+  if (wasPressed('Escape')) {
+    if (typeof inventoryOpen !== 'undefined' && inventoryOpen) {
+      if (typeof collectionDetailOpen !== 'undefined' && collectionDetailOpen) {
+        collectionDetailOpen = false;
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+      } else {
+        closeAllUI();
+        if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+      }
+    } else if (gameState === 'blessing' && typeof blessingDetailOpen !== 'undefined' && blessingDetailOpen) {
+      blessingDetailOpen = false;
+      if (typeof Audio !== 'undefined' && Audio.dialog_close) Audio.dialog_close();
+    }
+  }
+
   // I/O/P: タブ直接起動 (PC専用)
-  if (typeof touchActive === 'undefined' || !touchActive) {
+  if (canOpenMenu && (typeof touchActive === 'undefined' || !touchActive)) {
     if (wasPressed('KeyI')) { inventoryOpen=true; inventoryTab=0; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
     if (wasPressed('KeyO')) { inventoryOpen=true; inventoryTab=1; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
     if (wasPressed('KeyP')) { inventoryOpen=true; inventoryTab=2; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
@@ -133,7 +164,7 @@ function update(dt) {
       if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move();
     }
   }
-  if (wasPressed('Tab')) {
+  if (canOpenMenu && wasPressed('Tab')) {
     if (!inventoryOpen) {
       inventoryOpen = true;
       if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
@@ -147,10 +178,7 @@ function update(dt) {
     if (inventoryTab === 2) { equipMode = 'slot'; equipCursor = 0; equipListCursor = 0; }
     }
   }
-  if (inventoryOpen && wasPressed('Escape')) {
-    inventoryOpen = false;
-    if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
-  }
+
   if (inventoryOpen) {
    
     

@@ -150,6 +150,12 @@ function onTouchStart(e) {
     var t = e.changedTouches[ti];
     var pos = screenToCanvas(t.clientX, t.clientY);
 
+    // --- ヘルプモーダル表示中はタッチをモーダル処理に委譲 ---
+    if (typeof UIManager !== 'undefined' && UIManager._helpKey) {
+      UIManager.handleTouchClose(pos.x, pos.y);
+      return;
+    }
+
     // --- Inventory mode ---
     if (typeof inventoryOpen !== 'undefined' && inventoryOpen) {
       if (typeof collectionDetailOpen !== 'undefined' && collectionDetailOpen && inventoryTab === 1) {

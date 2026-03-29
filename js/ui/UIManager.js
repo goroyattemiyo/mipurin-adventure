@@ -97,11 +97,17 @@ class UIManagerClass {
   showModal(ctx, title, contentLines) {
     const W = CW, H = CH;
     const F = "'M PLUS Rounded 1c', sans-serif";
-    const PAD_X = 80, PAD_Y = 52;
-    const LINE_H = 38, TITLE_SIZE = 26, BODY_SIZE = 19;
+    const isTch = typeof touchActive !== 'undefined' && touchActive;
+    const PAD_X = isTch ? 40 : 80;
+    const PAD_Y = isTch ? 36 : 52;
+    const LINE_H = isTch ? 32 : 38;
+    const TITLE_SIZE = isTch ? 22 : 26;
+    const BODY_SIZE = isTch ? 16 : 19;
 
     const boxW = W - PAD_X * 2;
-    const boxH = PAD_Y * 2 + (TITLE_SIZE + 20) + contentLines.length * LINE_H;
+    const maxBoxH = H - 80;
+    const calcH = PAD_Y * 2 + (TITLE_SIZE + 20) + contentLines.length * LINE_H;
+    const boxH = Math.min(calcH, maxBoxH);
     const boxX = PAD_X;
     const boxY = (H - boxH) / 2;
 
@@ -144,27 +150,53 @@ class UIManagerClass {
       lineY += LINE_H;
     }
 
-    // ✕ ボタン
-    const cx = boxX + boxW - 24, cy = boxY + 20, cr = 14;
+    // ✕ ボタン（タッチ対応: 大きめ）
+    const isTch2 = typeof touchActive !== 'undefined' && touchActive;
+    const cr = isTch2 ? 28 : 14;
+    const cx = boxX + boxW - cr - 8, cy = boxY + cr + 8;
     ctx.beginPath();
     ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillStyle = 'rgba(255,80,80,0.35)';
     ctx.fill();
-    ctx.fillStyle = '#ccc';
-    ctx.font = 'bold 16px ' + F;
+    ctx.strokeStyle = 'rgba(255,120,120,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.round(cr * 1.1) + 'px ' + F;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('✕', cx, cy);
 
     ctx.restore();
 
-    // モーダル外クリック or ✕ クリックで閉じる
+    // モーダル外クリック or ✕ で閉じる（マウス + タッチ両対応）
     if (typeof mouse !== 'undefined' && mouse.clicked) {
       const outside = !(mouse.x >= boxX && mouse.x <= boxX + boxW &&
                         mouse.y >= boxY && mouse.y <= boxY + boxH);
       const onClose = Math.hypot(mouse.x - cx, mouse.y - cy) <= cr;
       if (outside || onClose) this._helpKey = null;
     }
+  }
+
+  /** タッチからヘルプを開閉する */
+  toggleHelp(key) { this._helpKey = (this._helpKey === key) ? null : key; }
+
+  /** タッチからヘルプモーダル外タップで閉じる（onTouchStartから呼ぶ） */
+  handleTouchClose(tx, ty) {
+    if (!this._helpKey) return false;
+    // モーダルの boxX/boxY/boxW/boxH を再計算
+    const isTch = true;
+    const PAD_X = 40, PAD_Y = 36;
+    const boxW = CW - PAD_X * 2, boxX = PAD_X;
+    // ×ボタン判定
+    const cr = 28, cx = boxX + boxW - cr - 8, cy = PAD_Y + cr + 8 + (CH - 80) / 2 - (CH - 80) / 2;
+    // 簡易: ×ボタン or モーダル外
+    const bx = PAD_X, bw = CW - PAD_X * 2;
+    const bh = Math.min(640, CH - 80), bxy = (CH - bh) / 2;
+    const outside = !(tx >= bx && tx <= bx + bw && ty >= bxy && ty <= bxy + bh);
+    const onX = Math.hypot(tx - (bx + bw - cr - 8), ty - (bxy + cr + 8)) <= cr;
+    if (outside || onX) { this._helpKey = null; return true; }
+    return true; // モーダル内タップも他に通さない
   }
 
   // ─────────────────────────────────────────────

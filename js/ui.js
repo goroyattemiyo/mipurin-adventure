@@ -38,13 +38,20 @@ function drawInventory() {
   if (inventoryTab === 2) drawEquipTab(80, 130, CW - 160, CH - 180);
 
   // ヘルプアイコン（タブ共通・最前面）
+  var _isTch = (typeof touchActive !== 'undefined' && touchActive);
   var _helpLines;
   if (inventoryTab === 0) {
-    _helpLines = ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', 'TAB キー: タブ切替', 'ESC キー: とじる'];
+    _helpLines = _isTch
+      ? ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', '☰ボタン: タブ切替', '◄ボタン: とじる']
+      : ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', 'TAB キー: タブ切替', 'ESC キー: とじる'];
   } else if (inventoryTab === 1) {
-    _helpLines = ['↑↓ キー: スクロール', '← → キー: サブタブ切替', 'TAB キー: タブ切替', 'ESC キー: とじる'];
+    _helpLines = _isTch
+      ? ['上下スワイプ: スクロール', '左右のタブをタップ: サブタブ切替', '☰ボタン: タブ切替', '◄ボタン: とじる']
+      : ['↑↓ キー: スクロール', '← → キー: サブタブ切替', 'TAB キー: タブ切替', 'ESC キー: とじる'];
   } else {
-    _helpLines = ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
+    _helpLines = _isTch
+      ? ['スロットをタップ: 選択', 'リスト項目をタップ: 武器選択', 'Zボタン: 強化 / そうび', 'Xボタン: そうびを切り替え', '◄ボタン: とじる']
+      : ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
   }
   UIManager.drawHelpIcon(ctx, CW - 160, 55 + 10*_M, 34, 'inventory');
   if (UIManager.isHelpOpen('inventory')) {

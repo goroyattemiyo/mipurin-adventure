@@ -14,6 +14,7 @@ v6.35 | Score: 74.7/100
 - [BACKLOG](docs/BACKLOG.md) — 未着手タスク
 - [ARCHIVE](docs/ARCHIVE.md) — Sprint履歴・設計判断
 - [CHANGELOG_DRAFT](docs/CHANGELOG_DRAFT.md) — 変更履歴（自動生成）
+- [TAB_UI_REQUIREMENTS](docs/TAB_UI_REQUIREMENTS.md) — TABメニューUI改修の要件定義
 - [旧ドキュメント](docs/old/) — GDD・RULES・STATUS 等（凍結）
 
 ## License

@@ -304,3 +304,47 @@ Phase A（Howler）→ Phase B（Tween）→ Phase C（rot.js）
 * 決定: B (毒沼)
 * 理由: 8方向移動アクションRPGに弾幕は不適合。毒沼は既存環境ギミック(H-A2)を流用でき実装コスト低。エリア圧縮との相乗効果で「逃げ場がなくなる恐怖」を演出
 * スコア: 38/40
+## 9. ファイル一覧 & Raw URL
+
+> **Claudeへ**: 作業前にタスク別fetchの該当ファイルをfetchして把握してから始めること。
+
+### タスク別fetch
+
+| タスク | fetchするファイル |
+|--------|-----------------|
+| UI変更・画面追加 | js/ui.js, js/ui_screens.js, js/ui/UIManager.js |
+| 敵追加・バランス調整 | js/enemies.js, js/combat.js, js/data.js |
+| タッチ・操作系 | js/touch.js, js/update.js |
+| コレクション・装備 | js/equip_ui.js, js/shop_ui.js |
+| BGM・SE | js/bgm.js |
+| ダンジョン・部屋生成 | js/data_room.js, js/data.js |
+| 祝福・チャーム | js/blessings.js, js/charms.js |
+| メタ進行・花壇 | js/systems.js |
+| レンダリング | js/render.js, js/render_entities.js |
+| Lore・図鑑 | js/lore.js, js/rarity.js |
+| ゲーム設定 | js/game.js |
+
+### 全jsファイル Raw URL
+
+- js/data.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/data.js
+- js/ui.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/ui.js
+- js/render.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/render.js
+- js/systems.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/systems.js
+- js/update.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/update.js
+- js/combat.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/combat.js
+- js/enemies.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/enemies.js
+- js/blessings.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/blessings.js
+- js/ui_screens.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/ui_screens.js
+- js/touch.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/touch.js
+- js/bgm.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/bgm.js
+- js/game.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/game.js
+- js/nodemap.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/nodemap.js
+- js/data_room.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/data_room.js
+- js/charms.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/charms.js
+- js/lore.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/lore.js
+- js/rarity.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/rarity.js
+- js/render_entities.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/render_entities.js
+- js/equip_ui.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/equip_ui.js
+- js/shop_ui.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/shop_ui.js
+- js/gimmicks.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/gimmicks.js
+- js/ui/UIManager.js https://raw.githubusercontent.com/goroyattemiyo/mipurin-adventure/main/js/ui/UIManager.js

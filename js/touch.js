@@ -158,7 +158,26 @@ function onTouchStart(e) {
         return;
       }
       if (inventoryTab === 1 && typeof collectionSubTab !== 'undefined' && collectionSubTab !== 2) {
-        if (pos.y >= 141 && pos.y <= 169) {
+        // --- 議題1-B: ヘルプアイコン判定 ---
+      var _hx = CW - 160, _hy = 55 + 10 * (touchActive ? 2 : 1), _hr = 34;
+      if (Math.hypot(pos.x - _hx, pos.y - _hy) < _hr) {
+        if (typeof UIManager !== 'undefined') UIManager.toggleHelp('inventory');
+        return;
+      }
+      // --- 議題1-A: サブタブ判定 ---
+      if (inventoryTab === 1) {
+        var _stM = touchActive ? 2 : 1;
+        for (var sti = 0; sti < 3; sti++) {
+          var _stx = 180 + sti * 160;
+          if (pos.x >= _stx - 56 && pos.x <= _stx + 56
+              && pos.y >= 104 && pos.y <= 104 + 32 * _stM) {
+            collectionSubTab = sti;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+            return;
+          }
+        }
+      }
+      if (pos.y >= 141 && pos.y <= 169) {
           var fk2 = collectionSubTab === 0 ? ['all','forest','cave','flower','boss'] : ['all','tier1','tier2'];
           var fW2 = 70, fSX2 = 120;
           for (var ffi = 0; ffi < fk2.length; ffi++) {
@@ -177,7 +196,7 @@ function onTouchStart(e) {
         var citems2 = (typeof getFilteredItems === 'function') ? getFilteredItems(collectionSubTab, collectionFilter[ck2]) : [];
         var cit2 = citems2[ci2];
         var cknown2 = cit2 && (cit2.type === 'enemy' ? (cit2.rec && cit2.rec.defeated > 0) : cit2.known);
-        if (pos.x >= CW/2-100 && pos.x <= CW/2+100 && pos.y >= CH/2-130 && pos.y <= CH/2+130) {
+        if (pos.x >= CW/2-117 && pos.x <= CW/2+117 && pos.y >= CH/2-130 && pos.y <= CH/2+170) {
           if (cknown2) { collectionDetailOpen = true; if (typeof Audio !== 'undefined' && Audio.dialog_open) Audio.dialog_open(); return; }
         }
       }

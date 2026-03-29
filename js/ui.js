@@ -30,8 +30,8 @@ function drawInventory() {
   }
   ctx.textAlign = 'left';
   if(!(typeof touchActive!=='undefined'&&touchActive)){
-    drawKeyHint(ctx,CW/2-214,70+15*_M,'Q');
-    drawKeyHint(ctx,CW/2+454,70+15*_M,'E');
+    drawKeyHint(ctx,CW/2-250,70+15*_M,'Q');
+    drawKeyHint(ctx,CW/2+490,70+15*_M,'E');
   }
   if (inventoryTab === 0) drawInventoryItems();
   else if (inventoryTab === 1) drawCollectionTab();
@@ -46,7 +46,7 @@ function drawInventory() {
   } else {
     _helpLines = ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
   }
-  UIManager.drawHelpIcon(ctx, CW - 110, 55 + 10*_M, 34, 'inventory');
+  UIManager.drawHelpIcon(ctx, CW - 160, 55 + 10*_M, 34, 'inventory');
   if (UIManager.isHelpOpen('inventory')) {
     var _tabName = ['持ち物', '図鑑', '装備'][inventoryTab] || '';
     UIManager.showModal(ctx, _tabName + ' — 操作ガイド', _helpLines);

@@ -30,11 +30,9 @@ function drawInventory() {
   }
   ctx.textAlign = 'left';
   if(typeof touchActive==='undefined'||!touchActive){
-    drawKeyHint(ctx,CW/2-250,70+15*_M,'Q');
-    drawKeyHint(ctx,CW/2+490,70+15*_M,'E');
     // PC key hint bar
     var _kF="'M PLUS Rounded 1c', sans-serif";
-    var _kY=108,_kW=176,_kGap=6;
+    var _kY=128,_kW=176,_kGap=6;
     var _kTabs=[['持ち物',0],['図鑑',1],['装備',2]];
     var _kSX=CW/2-(_kW*3+_kGap*2)/2;
     for(var _ki=0;_ki<_kTabs.length;_ki++){
@@ -45,15 +43,15 @@ function drawInventory() {
       ctx.strokeStyle=_kAct?'#ffd700':'rgba(255,255,255,0.12)';
       ctx.lineWidth=_kAct?1.5:1;
       ctx.beginPath();ctx.roundRect(_kX,_kY-13,_kW,24,5);ctx.stroke();
-      ctx.fillStyle='rgba(0,0,0,0.45)';ctx.beginPath();
-      ctx.roundRect(_kX+6,_kY-9,34,16,3);ctx.fill();
-      ctx.strokeStyle=_kAct?'rgba(255,215,0,0.5)':'rgba(255,255,255,0.18)';
+      ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();
+      ctx.roundRect(_kX+6,_kY-9,22,16,3);ctx.fill();
+      ctx.strokeStyle=_kAct?'rgba(255,215,0,0.6)':'rgba(255,255,255,0.2)';
       ctx.lineWidth=1;ctx.stroke();
-      ctx.fillStyle=_kAct?'#ffd700':'#999';ctx.font='bold 10px '+_kF;ctx.textAlign='center';
-      ctx.fillText('TAB',_kX+23,_kY+2);
+      ctx.fillStyle=_kAct?'#ffd700':'#aaa';ctx.font='bold 11px '+_kF;ctx.textAlign='center';
+      ctx.fillText(['I','O','P'][_ki],_kX+17,_kY+2);
       ctx.fillStyle=_kAct?'#fff':'#888';
       ctx.font=(_kAct?'bold ':'')+_M*13+'px '+_kF;
-      ctx.fillText(_kTabs[_ki][0],_kX+_kW/2+14,_kY+2);
+      ctx.fillText(_kTabs[_ki][0],_kX+_kW/2+6,_kY+2);
       ctx.textAlign='left';
       if(_kAct){ctx.fillStyle='#ffd700';ctx.fillRect(_kX+3,_kY+9,_kW-6,2);}
     }
@@ -79,6 +77,13 @@ function drawInventory() {
     _helpLines = _isTch
       ? ['スロットをタップ: 選択', 'リスト項目をタップ: 武器選択', 'Zボタン: 強化 / そうび', 'Xボタン: そうびを切り替え', '◄ボタン: とじる']
       : ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
+  }
+  if (typeof touchActive === 'undefined' || !touchActive) {
+    var _ihF = "'M PLUS Rounded 1c', sans-serif";
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, CH-26, CW, 26);
+    var _ihT = inventoryTab===0 ? '[I]持ち物  [O]図鑑  [P]装備  [ESC]とじる' : inventoryTab===1 ? '[I]持ち物  [O]図鑑  [P]装備  [←→]サブタブ  [↑↓]スクロール  [F]フィルタ  [ESC]とじる' : '[I]持ち物  [O]図鑑  [P]装備  [↑↓]スクロール  [Z]強化/そうび  [ESC]とじる';
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='13px '+_ihF; ctx.textAlign='center';
+    ctx.fillText(_ihT, CW/2, CH-8); ctx.textAlign='left';
   }
   UIManager.drawHelpIcon(ctx, CW - 160, 55 + 10*_M, 34, 'inventory');
   if (UIManager.isHelpOpen('inventory')) {
@@ -746,7 +751,7 @@ function drawHUD() {
     if (_M === 1) {
       ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, CH - 22, CW, 22);
       ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = "19px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-      let helpText = 'WASD/矢印:いどう  Z:こうげき  X:ダッシュ  TAB:もちもの';
+      let helpText = 'WASD/いどう  Z:こうげき  X:ダッシュ  [I]持ち物  [O]図鑑  [P]装備';
       if (player.weapons[1] !== null) helpText += '  Q:ぶきもちかえ';
       if (player.consumables.some(c => c !== null)) helpText += '  1/2/3:アイテムつかう';
       ctx.fillText(helpText, CW / 2, CH - 12); ctx.textAlign = 'left';

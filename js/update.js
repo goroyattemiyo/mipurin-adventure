@@ -121,6 +121,18 @@ function update(dt) {
     }
     return;
   }
+  // I/O/P: タブ直接起動 (PC専用)
+  if (typeof touchActive === 'undefined' || !touchActive) {
+    if (wasPressed('KeyI')) { inventoryOpen=true; inventoryTab=0; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
+    if (wasPressed('KeyO')) { inventoryOpen=true; inventoryTab=1; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
+    if (wasPressed('KeyP')) { inventoryOpen=true; inventoryTab=2; if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move(); }
+    if (inventoryOpen && inventoryTab===1 && collectionSubTab===0 && wasPressed('KeyF')) {
+      var _fOpts=['ALL','forest','cave','flower','abyss','ruins','boss'];
+      if(typeof window._colFilter==='undefined') window._colFilter=0;
+      window._colFilter=(window._colFilter+1)%_fOpts.length;
+      if(typeof Audio!=='undefined'&&Audio.menu_move)Audio.menu_move();
+    }
+  }
   if (wasPressed('Tab')) {
     if (!inventoryOpen) {
       inventoryOpen = true;

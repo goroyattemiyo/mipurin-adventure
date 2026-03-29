@@ -16,8 +16,7 @@ const UI_TEXT_STYLE = {
 function drawInventory() {
   if (!inventoryOpen) return;
   const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.85)';
-  ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, CW, CH); if(typeof drawNotebookBase==='function') drawNotebookBase(ctx, (CW-1000)/2, (CH-700)/2+20, 1000, 700, '🌸 みぷりんの冒険手帳');
   const tabs = ['持ち物', '図鑑', '装備'];
   for (let i = 0; i < tabs.length; i++) {
     const tx = CW / 2 - 120 + i * 240, ty = 70 + 15*_M;
@@ -96,9 +95,8 @@ function drawInventoryItems() {
   const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   const lx = 80, ly = 100 + 40*_M;
   const sp = 30 * _M; // line spacing
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('ステータス', lx, ly);
-  ctx.fillStyle = '#fff'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillStyle = '#3e2723'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('【 ステータス 】', lx, ly);
+  ctx.fillStyle = '#5d4037'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
   for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + sp + i * sp);
   const wx = CW / 2 + 40, wy = ly;
@@ -122,7 +120,7 @@ function drawInventoryItems() {
   ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('祝福', wx, wy + sp*9 + 10);
   if (activeBlessings.length === 0) { ctx.fillStyle = '#bbb'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('なし', wx + 20, wy + sp*10 + 10); }
-  else { for (let i = 0; i < Math.min(activeBlessings.length, 5); i++) { const b = activeBlessings[i]; ctx.fillStyle = '#fff'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + sp*10 + 10 + i * sp); ctx.fillStyle = '#aaa'; ctx.font = (16*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.desc, wx + 50, wy + sp*10 + 10 + i * sp + 18*_M); } }
+  else { for (let i = 0; i < Math.min(activeBlessings.length, 5); i++) { const b = activeBlessings[i]; ctx.fillStyle = '#5d4037'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + sp*10 + 10 + i * sp); ctx.fillStyle = '#aaa'; ctx.font = (16*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.desc, wx + 50, wy + sp*10 + 10 + i * sp + 18*_M); } }
   if (activeBlessings.length > 5) { ctx.fillStyle = '#aaa'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('...他 ' + (activeBlessings.length - 5) + ' 個', wx + 20, wy + sp*10 + 10 + 5 * sp); }
   ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
   ctx.fillText('アイテム', lx, ly + sp * 8);
@@ -133,7 +131,7 @@ function drawInventoryItems() {
     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
     ctx.fillText('[' + (i + 1) + ']', sx, sy + sz + 16*_M);
-    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#fff'; ctx.font = (40*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(player.consumables[i].icon, sx, sy + 10*_M); }
+    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#5d4037'; ctx.font = (40*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(player.consumables[i].icon, sx, sy + 10*_M); }
     else { ctx.fillStyle = '#555'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('空', sx, sy + 5*_M); }
     ctx.textAlign = 'left';
   }
@@ -480,7 +478,7 @@ function drawWorldLoreTab() {
   // 進捗バー
   ctx.fillStyle = '#333'; ctx.fillRect(120, 200, 400, 14);
   ctx.fillStyle = '#a78bfa'; ctx.fillRect(120, 200, 400 * (unlocked.length / Math.max(1, lores.length)), 14);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px ' + F; ctx.textAlign = 'center';
+  ctx.fillStyle = '#5d4037'; ctx.font = 'bold 11px ' + F; ctx.textAlign = 'center';
   ctx.fillText(unlocked.length + ' / ' + lores.length, 320, 211);
   ctx.textAlign = 'left';
 
@@ -594,7 +592,7 @@ function drawDialogWindow() {
     ctx.fillStyle = '#ffd700'; ctx.font = "bold 20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
     ctx.fillText(dialogMsg.speaker, dx + 35, dy + 3);
   }
-  ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
+  ctx.fillStyle = '#5d4037'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'left';
   const line = dialogMsg.lines[dialogMsg.lineIdx];
   const shown = line.substring(0, dialogMsg.charIdx);
   // CJK折り返し（文字単位）
@@ -652,7 +650,7 @@ function drawHUD() {
       ctx.strokeStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
       ctx.strokeRect(sx - 20, sy - 16, 40, 32);
       if (player.consumables && player.consumables[i]) {
-        ctx.fillStyle = '#fff'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
+        ctx.fillStyle = '#5d4037'; ctx.font = "20px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
         ctx.fillText(player.consumables[i].icon, sx, sy + 6); ctx.textAlign = 'left';
       }
       ctx.fillStyle = player.consumables[i] ? '#ffd700' : 'rgba(255,255,255,0.3)';
@@ -742,7 +740,7 @@ function drawBlessing() {
     ctx.shadowBlur = 0;
 
     // アイコン
-    ctx.font = '54px ' + F; ctx.fillStyle = '#fff';
+    ctx.font = '54px ' + F; ctx.fillStyle = '#5d4037';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(b.icon || '\u2756', 0, by + 18);
 
@@ -858,7 +856,7 @@ function _drawBlessingDetail(ctx, b, F) {
 
   // アイコン
   ctx.font = '68px ' + F; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#5d4037';
   ctx.fillText(b.icon || '\u2756', CW / 2, py + 22);
 
   // レアリティ

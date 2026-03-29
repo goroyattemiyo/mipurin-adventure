@@ -213,6 +213,25 @@ function onTouchStart(e) {
         return;
       }
       if (pos.x < 80 && pos.y < 80) { inventoryOpen = false; return; }
+      // 問題A: 図鑑サブタブ(いきもの/ぶき/せかい)タップ判定
+      if (inventoryTab === 1) {
+        var _M = 2; // touchActive === true なので常に2
+        for (var si = 0; si < 3; si++) {
+          var stx = 180 + si * 160;
+          var sty = 120;
+          if (pos.x >= stx - 56 && pos.x <= stx + 56 && pos.y >= sty - 16 && pos.y <= sty - 16 + 32 * _M) {
+            if (typeof collectionSubTab !== 'undefined') collectionSubTab = si;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+            return;
+          }
+        }
+      }
+      // 問題B: ヘルプアイコン(inventory)タップ判定
+      var _hxInv = CW - 160, _hyInv = 55 + 10 * 2, _hrInv = 34; // CW-160 は議題2修正後の座標
+      if (Math.hypot(pos.x - _hxInv, pos.y - _hyInv) < _hrInv) {
+        if (typeof UIManager !== 'undefined' && UIManager.toggleHelp) UIManager.toggleHelp('inventory');
+        return;
+      }
       if (inventoryTab === 2) {
         if (hitTestUpgradeBtn(pos.x, pos.y)) {
           var selW = equipCursor < 2 ? player.weapons[equipCursor] : player.backpack[equipCursor - 2];
@@ -267,6 +286,14 @@ function onTouchStart(e) {
 
     // --- blessing: カード直タップで選択（2段階: 選択→確認タップで決定） ---
     var gs = typeof gameState !== 'undefined' ? gameState : '';
+    // 問題B: ヘルプアイコン(blessing)タップ判定
+    if (gs === 'blessing') {
+      var _hxBl = CW - 46, _hyBl = 46, _hrBl = 32;
+      if (Math.hypot(pos.x - _hxBl, pos.y - _hyBl) < _hrBl) {
+        if (typeof UIManager !== 'undefined' && UIManager.toggleHelp) UIManager.toggleHelp('blessing');
+        return;
+      }
+    }
     if (gs === 'blessing' && typeof blessingChoices !== 'undefined') {
       var _bM = touchActive ? 2 : 1;
       var _cbw = 180 * _bM, _cbh = 220 * _bM;

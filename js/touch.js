@@ -163,6 +163,7 @@ function onTouchStart(e) {
         if (Math.hypot(pos.x - _hx, pos.y - _hy) < _hr + 10) {
           if (typeof UIManager !== 'undefined') {
             UIManager._helpKey = (UIManager._helpKey === 'inventory') ? null : 'inventory';
+            if (typeof mouse !== 'undefined') { mouse.clicked = false; }
           }
           if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
           return;
@@ -201,7 +202,7 @@ function onTouchStart(e) {
         var citems2 = (typeof getFilteredItems === 'function') ? getFilteredItems(collectionSubTab, collectionFilter[ck2]) : [];
         var cit2 = citems2[ci2];
         var cknown2 = cit2 && (cit2.type === 'enemy' ? (cit2.rec && cit2.rec.defeated > 0) : cit2.known);
-        if (pos.x >= CW/2-117 && pos.x <= CW/2+117 && pos.y >= CH/2-130 && pos.y <= CH/2+170) {
+        if (pos.x >= CW/2-117 && pos.x <= CW/2+117 && pos.y >= CH/2+20-150 && pos.y <= CH/2+20+150) {
           if (cknown2) { collectionDetailOpen = true; if (typeof Audio !== 'undefined' && Audio.dialog_open) Audio.dialog_open(); return; }
         }
       }

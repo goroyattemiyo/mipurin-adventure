@@ -29,7 +29,7 @@ function drawInventory() {
     ctx.fillText(tabs[i], tx, ty + 7*_M);
   }
   ctx.textAlign = 'left';
-  if(!(typeof touchActive!=='undefined'&&touchActive)){
+  if(typeof touchActive==='undefined'||!touchActive){
     drawKeyHint(ctx,CW/2-250,70+15*_M,'Q');
     drawKeyHint(ctx,CW/2+490,70+15*_M,'E');
   }
@@ -374,7 +374,7 @@ function drawCollectionTab() {
     ctx.fillText(subTabs[si], stx, sty + 6*_M);
   }
   ctx.textAlign = 'left';
-  if(!(typeof touchActive!=='undefined'&&touchActive)){
+  if(typeof touchActive==='undefined'||!touchActive){
     drawKeyHint(ctx,340,106,'W');
     drawKeyHint(ctx,340,120+32*_M+14,'S');
   }

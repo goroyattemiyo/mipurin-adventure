@@ -157,14 +157,18 @@ function onTouchStart(e) {
         if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
         return;
       }
-      if (inventoryTab === 1 && typeof collectionSubTab !== 'undefined' && collectionSubTab !== 2) {
-        // --- 議題1-B: ヘルプアイコン判定 ---
-      var _hx = CW - 160, _hy = 55 + 10 * (touchActive ? 2 : 1), _hr = 34;
-      if (Math.hypot(pos.x - _hx, pos.y - _hy) < _hr) {
-        if (typeof UIManager !== 'undefined') UIManager.toggleHelp('inventory');
-        return;
+      // --- ヘルプアイコン判定（全タブ共通）---
+      {
+        var _hx = CW - 160, _hy = 55 + 10 * (touchActive ? 2 : 1), _hr = 34;
+        if (Math.hypot(pos.x - _hx, pos.y - _hy) < _hr + 10) {
+          if (typeof UIManager !== 'undefined') {
+            UIManager._helpKey = (UIManager._helpKey === 'inventory') ? null : 'inventory';
+          }
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          return;
+        }
       }
-      // --- 議題1-A: サブタブ判定 ---
+      // --- サブタブ判定（図鑑タブのみ）---
       if (inventoryTab === 1) {
         var _stM = touchActive ? 2 : 1;
         for (var sti = 0; sti < 3; sti++) {
@@ -177,7 +181,8 @@ function onTouchStart(e) {
           }
         }
       }
-      if (pos.y >= 141 && pos.y <= 169) {
+      if (inventoryTab === 1 && typeof collectionSubTab !== 'undefined' && collectionSubTab !== 2) {
+        if (pos.y >= 141 && pos.y <= 169) {
           var fk2 = collectionSubTab === 0 ? ['all','forest','cave','flower','boss'] : ['all','tier1','tier2'];
           var fW2 = 70, fSX2 = 120;
           for (var ffi = 0; ffi < fk2.length; ffi++) {

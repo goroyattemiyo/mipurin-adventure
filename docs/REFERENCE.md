@@ -116,6 +116,16 @@
 - **キャッシュバスターはリリース時に必ず更新**: index.htmlの`?v=XXXX`を `Get-Date -Format 'MMddHHmm'` で更新しないとブラウザが古いファイルを使い続ける。
 - **sw.jsのfetchハンドラはResponse.error()でフォールバック**: `caches.match()`がundefinedを返す場合に備え `r || Response.error()` を必ず付ける。- 理由: ライブラリは既存コードへの影響が大きい
 
+
+## D-009: タッチUI修正方針 (2026-03-29)
+* 問題: キーヒントQ/E/W/SがスマホUIと重なる、ヘルプアイコンのタップ非対応
+* 決定:
+  - キーヒントはtouchActive===trueで完全非表示（PC専用機能）
+  - UIManager.drawHelpIconはmouse.clicked専用のため、touch.jsで_helpKeyを直接トグル
+  - カルーセルhitboxを設計書通りCW/2±117, CH/2+20±150に修正
+  - サブタブ判定はinventoryTab===1の外（全タブ共通）に配置
+* スコア: -（バグ修正のためSynapse Council不要）
+
 ## D-008: コレクションUI統一リファクタ (2026-03-28)
 * 変更: drawCollectionCarousel/drawCollectionDetail追加、drawWeaponCollection削除
 *       collectionCursor/collectionFilter/collectionAnimX をdata.jsに追加

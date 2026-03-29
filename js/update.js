@@ -172,6 +172,10 @@ function update(dt) {
       if (collectionDetailOpen && (wasPressed('KeyX') || wasPressed('Escape'))) {
         collectionDetailOpen = false; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
       }
+      if (collectionSubTab === 1) {
+        if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof window._wColSc !== 'undefined') window._wColSc = Math.max(0, window._wColSc - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+        if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof window._wColSc !== 'undefined') window._wColSc++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
+      }
       if (collectionSubTab === 2) {
         if (wasPressed('ArrowUp') || wasPressed('KeyW')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll = Math.max(0, worldLoreScroll - 1); if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }
         if (wasPressed('ArrowDown') || wasPressed('KeyS')) { if (typeof worldLoreScroll !== 'undefined') worldLoreScroll++; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }

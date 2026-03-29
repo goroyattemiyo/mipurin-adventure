@@ -915,3 +915,16 @@ function drawDmgNumbers() {
 
 
 
+
+// 🌸 手帳メニュー専用の台紙描画
+function drawNotebookBase(ctx, x, y, w, h, title) {
+  ctx.fillStyle = '#fdf6e3'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 15); ctx.fill();
+  ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 5; ctx.stroke();
+  if (title) {
+    ctx.fillStyle = '#5d4037'; ctx.beginPath(); ctx.roundRect(x, y, w, 50, [15, 15, 0, 0]); ctx.fill();
+    ctx.fillStyle = '#fdf6e3'; ctx.font = "bold 22px 'M PLUS Rounded 1c'";
+    ctx.textAlign = 'center'; ctx.fillText(title, x + w/2, y + 33); ctx.textAlign = 'left';
+  }
+  ctx.fillStyle = '#795548'; ctx.font = "bold 14px 'M PLUS Rounded 1c'";
+  ctx.textAlign = 'right'; ctx.fillText('↩ [Tab] キーで閉じる', x + w - 20, y + h - 20); ctx.textAlign = 'left';
+}

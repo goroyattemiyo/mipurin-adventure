@@ -230,6 +230,55 @@ function update(dt) {
 
       return;
     }
+        if (inventoryTab === 0) {
+      // PC向け: A/D でセクション切替, W/S で各セクション内カーソル移動
+      if (typeof touchActive === 'undefined' || !touchActive) {
+        if (wasPressed('ArrowLeft') || wasPressed('KeyA')) {
+          inventoryDetailSection = (inventoryDetailSection + 2) % 3;
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        }
+        if (wasPressed('ArrowRight') || wasPressed('KeyD')) {
+          inventoryDetailSection = (inventoryDetailSection + 1) % 3;
+          if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+        }
+
+        if (inventoryDetailSection === 0) {
+          if (wasPressed('ArrowUp') || wasPressed('KeyW')) {
+            inventoryEquipCursor = (inventoryEquipCursor + 2) % 3;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+          if (wasPressed('ArrowDown') || wasPressed('KeyS')) {
+            inventoryEquipCursor = (inventoryEquipCursor + 1) % 3;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+        } else if (inventoryDetailSection === 1) {
+          if (wasPressed('ArrowUp') || wasPressed('KeyW')) {
+            inventoryItemCursor = (inventoryItemCursor + 2) % 3;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+          if (wasPressed('ArrowDown') || wasPressed('KeyS')) {
+            inventoryItemCursor = (inventoryItemCursor + 1) % 3;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+        } else if (inventoryDetailSection === 2) {
+          const maxB = Math.max(1, activeBlessings.length);
+          if (wasPressed('ArrowUp') || wasPressed('KeyW')) {
+            inventoryBlessingCursor = (inventoryBlessingCursor - 1 + maxB) % maxB;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+          if (wasPressed('ArrowDown') || wasPressed('KeyS')) {
+            inventoryBlessingCursor = (inventoryBlessingCursor + 1) % maxB;
+            if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move();
+          }
+        }
+      }
+
+      // blessing数が減った場合にクランプ
+      if (activeBlessings.length === 0) inventoryBlessingCursor = 0;
+      else inventoryBlessingCursor = Math.min(inventoryBlessingCursor, activeBlessings.length - 1);
+
+      return;
+    }
     if (inventoryTab === 1) {
       if (wasPressed('ArrowLeft') || wasPressed('KeyA')) {
         if (collectionDetailOpen) { collectionDetailOpen = false; if (typeof Audio !== 'undefined' && Audio.menu_move) Audio.menu_move(); }

@@ -90,50 +90,355 @@ function drawInventory() {
     UIManager.showModal(ctx, _tabName + ' — 操作ガイド', _helpLines);
   }
 }
+function getInventorySafeLayout() {
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
+  const _M = isTouch ? 2 : 1;
+
+  const outer = {
+    x: 80,
+    y: 100 + 40 * _M,
+    w: CW - 160,
+    h: CH - (100 + 40 * _M) - 70
+  };
+
+  // スマホでは上部TAB/ヘルプと下部タッチUIの干渉を避けて本文領域を少し絞る
+  if (isTouch) {
+    outer.x = 120;
+    outer.y = 180;
+    outer.w = CW - 240;
+    outer.h = CH - 360;
+  }
+
+  return { isTouch, _M, outer };
+}
+
+function invInsetRect(r, pad) {
+  return { x: r.x + pad, y: r.y + pad, w: r.w - pad * 2, h: r.h - pad * 2 };
+}
+
+function invSplitColumns(r, leftRatio, gap) {
+  const leftW = Math.floor((r.w - gap) * leftRatio);
+  const rightW = r.w - gap - leftW;
+  return {
+    left: { x: r.x, y: r.y, w: leftW, h: r.h },
+    right: { x: r.x + leftW + gap, y: r.y, w: rightW, h: r.h }
+  };
+}
+
+function invStackRows(r, heights, gap) {
+  const out = [];
+  let cy = r.y;
+  for (let i = 0; i < heights.length; i++) {
+    out.push({ x: r.x, y: cy, w: r.w, h: heights[i] });
+    cy += heights[i] + gap;
+  }
+  return out;
+}
+
+function invDrawPanel(r, title, opts) {
+  opts = opts || {};
+  const bg = opts.bg || 'rgba(253,246,227,0.92)';
+  const stroke = opts.stroke || '#5d4037';
+  const titleColor = opts.titleColor || '#3e2723';
+  const radius = opts.radius || 12;
+  const titleSize = opts.titleSize || 18;
+
+  ctx.save();
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.roundRect(r.x, r.y, r.w, r.h, radius);
+  ctx.fill();
+
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(r.x, r.y, r.w, r.h, radius);
+  ctx.stroke();
+
+  if (title) {
+    ctx.fillStyle = titleColor;
+    ctx.font = `bold ${titleSize}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(title, r.x + 14, r.y + 24);
+  }
+  ctx.restore();
+}
+
+function invFitText(text, maxWidth, baseSize, minSize, weight) {
+  let size = baseSize;
+  ctx.font = `${weight ? 'bold ' : ''}${size}px 'M PLUS Rounded 1c', sans-serif`;
+  while (size > minSize && ctx.measureText(text).width > maxWidth) {
+    size -= 1;
+    ctx.font = `${weight ? 'bold ' : ''}${size}px 'M PLUS Rounded 1c', sans-serif`;
+  }
+  return size;
+}
+
+function invEllipsis(text, maxWidth, font) {
+  ctx.save();
+  ctx.font = font;
+  if (ctx.measureText(text).width <= maxWidth) {
+    ctx.restore();
+    return text;
+  }
+  let out = text;
+  while (out.length > 0 && ctx.measureText(out + '…').width > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  ctx.restore();
+  return out + '…';
+}
+
+function drawInventoryStatusBlock(r, _M) {
+  invDrawPanel(r, 'いまのようす', { titleSize: 18 * _M });
+
+  const inner = invInsetRect(r, 14);
+  const stats = [
+    ['HP', player.hp + ' / ' + player.maxHp],
+    ['ATK', Math.ceil(player.atk * (player.weapon.dmgMul || 1)).toString()],
+    ['速度', String(player.speed)],
+    ['花粉', String(pollen)],
+    ['Floor', String(floor)],
+    ['Score', String(score)],
+  ];
+
+  const cols = 2;
+  const rows = 3;
+  const gapX = 10 * _M;
+  const gapY = 10 * _M;
+  const topY = inner.y + 22 * _M;
+  const cellW = Math.floor((inner.w - gapX) / cols);
+  const cellH = Math.floor((inner.h - 34 * _M - gapY * (rows - 1)) / rows);
+
+  for (let i = 0; i < stats.length; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = inner.x + col * (cellW + gapX);
+    const cy = topY + row * (cellH + gapY);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cellW, cellH, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#6d4c41';
+    ctx.font = `bold ${Math.max(16, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText(stats[i][0], cx + 10, cy + 20);
+
+    ctx.fillStyle = '#3e2723';
+    const valueSize = invFitText(stats[i][1], cellW - 20, 20 * _M, 14 * _M, true);
+    ctx.font = `bold ${valueSize}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText(stats[i][1], cx + 10, cy + cellH - 10);
+  }
+}
+
+function drawInventoryEquipSummaryBlock(r, _M) {
+  invDrawPanel(r, 'そうび概要', { titleSize: 18 * _M });
+
+  const inner = invInsetRect(r, 14);
+  const lineGap = 30 * _M;
+  const startY = inner.y + 42 * _M;
+  const labelW = 90 * _M;
+  const valueW = inner.w - labelW - 10;
+
+  const rows = [
+    ['メイン', player.weapons[0] ? player.weapons[0].name : '- なし -', player.weapons[0]?.color || '#666'],
+    ['サブ', player.weapons[1] ? player.weapons[1].name : '- なし -', player.weapons[1]?.color || '#666'],
+    ['チャーム', player.charm ? (player.charm.icon + ' ' + player.charm.name) : '- なし -', player.charm ? '#8e24aa' : '#666']
+  ];
+
+  for (let i = 0; i < rows.length; i++) {
+    const y = startY + i * lineGap;
+    ctx.fillStyle = '#6d4c41';
+    ctx.font = `bold ${Math.max(15, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText(rows[i][0], inner.x, y);
+
+    ctx.fillStyle = rows[i][2];
+    const font = `${Math.max(15, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    const txt = invEllipsis(rows[i][1], valueW, font);
+    ctx.font = font;
+    ctx.fillText(txt, inner.x + labelW, y);
+  }
+
+  const w = player.weapon;
+  if (w) {
+    const summary = `ATK x${(w.dmgMul || 1).toFixed(1)} / 射程 ${(w.range || 0) + (player.atkRangeBonus || 0)} / SPD ${w.speed.toFixed(2)}`;
+    ctx.fillStyle = '#8d6e63';
+    ctx.font = `${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    const txt = invEllipsis(summary, inner.w, ctx.font);
+    ctx.fillText(txt, inner.x, r.y + r.h - 14);
+  }
+}
+
+function drawInventoryItemsBlock(r, _M) {
+  invDrawPanel(r, 'アイテム', { titleSize: 18 * _M });
+
+  const inner = invInsetRect(r, 12);
+  const count = 3;
+  const gap = 14 * _M;
+  const slotSize = Math.min(64 * _M, Math.floor((inner.w - gap * (count - 1)) / count));
+  const totalW = slotSize * count + gap * (count - 1);
+  const startX = inner.x + Math.floor((inner.w - totalW) / 2);
+  const cy = inner.y + 24 * _M + slotSize / 2;
+
+  for (let i = 0; i < count; i++) {
+    const sx = startX + i * (slotSize + gap);
+    const icon = player.consumables && player.consumables[i] ? player.consumables[i].icon : '－';
+
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(93,64,55,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
+    ctx.stroke();
+
+    ctx.fillStyle = '#3e2723';
+    ctx.font = `${Math.max(24, 20 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(icon, sx + slotSize / 2, cy + 8 * _M);
+
+    ctx.fillStyle = '#6d4c41';
+    ctx.font = `bold ${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText('[' + (i + 1) + ']', sx + slotSize / 2, cy + slotSize / 2 + 16 * _M);
+  }
+
+  ctx.textAlign = 'left';
+}
+
+function drawInventoryBlessingSummaryBlock(r, _M) {
+  invDrawPanel(r, '祝福要約', { titleSize: 18 * _M });
+
+  const inner = invInsetRect(r, 14);
+  if (!activeBlessings || activeBlessings.length === 0) {
+    ctx.fillStyle = '#8d6e63';
+    ctx.font = `${Math.max(16, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText('なし', inner.x, inner.y + 34);
+    return;
+  }
+
+  const maxCount = ((typeof touchActive !== 'undefined' && touchActive) ? 4 : 5);
+  const list = activeBlessings.slice(0, maxCount);
+
+  let x = inner.x;
+  let y = inner.y + 34;
+  const lineH = 28 * _M;
+  const maxW = inner.x + inner.w;
+
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i];
+    const label = `${b.icon} ${b.name}`;
+    ctx.font = `${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    const pillW = Math.min(inner.w, ctx.measureText(label).width + 20);
+
+    if (x + pillW > maxW) {
+      x = inner.x;
+      y += lineH;
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.38)';
+    ctx.beginPath();
+    ctx.roundRect(x, y - 18, pillW, 22 * _M, 999);
+    ctx.fill();
+
+    ctx.fillStyle = '#4e342e';
+    ctx.fillText(invEllipsis(label, pillW - 14, ctx.font), x + 10, y);
+    x += pillW + 8;
+  }
+
+  if (activeBlessings.length > maxCount) {
+    ctx.fillStyle = '#8d6e63';
+    ctx.font = `${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.fillText(`+${activeBlessings.length - maxCount}`, inner.x, r.y + r.h - 12);
+  }
+}
+
+function drawInventoryDetailBlock(r, _M) {
+  invDrawPanel(r, '詳細', { titleSize: 18 * _M });
+
+  const inner = invInsetRect(r, 14);
+
+  // 最初は固定で「現在メイン武器の説明」を出す
+  // 将来的に選択連動へ拡張しやすいように1か所へ集約
+  let detail = '';
+  if (player.weapon && player.weapon.desc) {
+    detail = `⚔ ${player.weapon.name} — ${player.weapon.desc}`;
+  } else {
+    detail = '選択中の要素の説明をここに表示';
+  }
+
+  const maxWidth = inner.w;
+  const fontSize = Math.max(14, 12 * _M);
+  ctx.fillStyle = '#5d4037';
+  ctx.font = `${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
+
+  const words = detail.split('');
+  let line = '';
+  let y = inner.y + 28;
+  const lineH = 20 * _M;
+  const maxLines = 2;
+  let lines = 0;
+
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i];
+    if (ctx.measureText(test).width > maxWidth) {
+      ctx.fillText(line, inner.x, y);
+      line = words[i];
+      y += lineH;
+      lines += 1;
+      if (lines >= maxLines - 1) break;
+    } else {
+      line = test;
+    }
+  }
+
+  if (line) {
+    let out = line;
+    const rest = words.slice(detail.indexOf(line) + line.length).join('');
+    if (rest.length > 0) {
+      while (ctx.measureText(out + '…').width > maxWidth && out.length > 0) {
+        out = out.slice(0, -1);
+      }
+      out += '…';
+    }
+    ctx.fillText(out, inner.x, y);
+  }
+}
 
 function drawInventoryItems() {
-  const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
-  const lx = 80, ly = 100 + 40*_M;
-  const sp = 30 * _M; // line spacing
-  ctx.fillStyle = '#3e2723'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('【 ステータス 】', lx, ly);
-  ctx.fillStyle = '#5d4037'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  const stats = ['HP: ' + player.hp + ' / ' + player.maxHp, 'ATK: ' + Math.ceil(player.atk * (player.weapon.dmgMul || 1)), '速度: ' + player.speed, 'フロア: ' + floor, 'スコア: ' + score, '花粉: ' + pollen];
-  for (let i = 0; i < stats.length; i++) ctx.fillText(stats[i], lx + 20, ly + sp + i * sp);
-  const wx = CW / 2 + 40, wy = ly;
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('武器', wx, wy);
-  ctx.fillStyle = player.weapon.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('⚔ ' + player.weapon.name, wx + 20, wy + sp);
-  ctx.fillStyle = '#ccc'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('ダメージ倍率: x' + (player.weapon.dmgMul || 1).toFixed(1), wx + 20, wy + sp*2);
-  ctx.fillText('射程: ' + ((player.weapon.range||44) + (player.atkRangeBonus||0)), wx + 20, wy + sp*3);
-  ctx.fillText('速度: ' + player.weapon.speed.toFixed(2) + 's', wx + 20, wy + sp*4);
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('【おきにいり】', wx + 20, wy + sp*5);
-  const w0 = player.weapons[0];
-  if (w0) { ctx.fillStyle = w0.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w0.name + ' (ATKx' + (w0.dmgMul||1).toFixed(1) + ' 射程' + w0.range + ')', wx + 30, wy + sp*6); }
-  ctx.fillStyle = '#aaa'; ctx.font = "bold " + (20*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('【もうひとつ】', wx + 20, wy + sp*7);
-  const w1 = player.weapons[1];
-  if (w1) { ctx.fillStyle = w1.color; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(w1.name + ' (ATKx' + (w1.dmgMul||1).toFixed(1) + ' 射程' + w1.range + ')', wx + 30, wy + sp*8); }
-  else { ctx.fillStyle = '#666'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('- なし -', wx + 30, wy + sp*8); }
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('祝福', wx, wy + sp*9 + 10);
-  if (activeBlessings.length === 0) { ctx.fillStyle = '#bbb'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('なし', wx + 20, wy + sp*10 + 10); }
-  else { for (let i = 0; i < Math.min(activeBlessings.length, 5); i++) { const b = activeBlessings[i]; ctx.fillStyle = '#5d4037'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.icon + ' ' + b.name, wx + 20, wy + sp*10 + 10 + i * sp); ctx.fillStyle = '#aaa'; ctx.font = (16*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(b.desc, wx + 50, wy + sp*10 + 10 + i * sp + 18*_M); } }
-  if (activeBlessings.length > 5) { ctx.fillStyle = '#aaa'; ctx.font = (18*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('...他 ' + (activeBlessings.length - 5) + ' 個', wx + 20, wy + sp*10 + 10 + 5 * sp); }
-  ctx.fillStyle = '#ffd700'; ctx.font = "bold " + (24*_M) + "px 'M PLUS Rounded 1c', sans-serif";
-  ctx.fillText('アイテム', lx, ly + sp * 8);
-  for (let i = 0; i < 3; i++) {
-    const sz = 28 * _M;
-    const sx = lx + sz + i * (sz * 2 + 16 * _M), sy = ly + sp * 8 + sz + 10;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(sx, sy, sz, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.textAlign = 'center';
-    ctx.fillText('[' + (i + 1) + ']', sx, sy + sz + 16*_M);
-    if (player.consumables && player.consumables[i]) { ctx.fillStyle = '#5d4037'; ctx.font = (40*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText(player.consumables[i].icon, sx, sy + 10*_M); }
-    else { ctx.fillStyle = '#555'; ctx.font = (20*_M) + "px 'M PLUS Rounded 1c', sans-serif"; ctx.fillText('空', sx, sy + 5*_M); }
-    ctx.textAlign = 'left';
+  const { isTouch, _M, outer } = getInventorySafeLayout();
+
+  // 全体の本文ベース
+  const gap = 14 * _M;
+  const panel = invInsetRect(outer, 4);
+
+  if (!isTouch) {
+    // PC: 左右2カラム + 下段詳細
+    const detailH = 84;
+    const top = { x: panel.x, y: panel.y, w: panel.w, h: panel.h - detailH - gap };
+    const detail = { x: panel.x, y: panel.y + panel.h - detailH, w: panel.w, h: detailH };
+
+    const cols = invSplitColumns(top, 0.48, gap);
+    const leftRows = invStackRows(cols.left, [190, 120], gap);
+    const rightRows = invStackRows(cols.right, [150, top.h - 150 - gap], gap);
+
+    drawInventoryStatusBlock(leftRows[0], _M);
+    drawInventoryItemsBlock(leftRows[1], _M);
+    drawInventoryEquipSummaryBlock(rightRows[0], _M);
+    drawInventoryBlessingSummaryBlock(rightRows[1], _M);
+    drawInventoryDetailBlock(detail, _M);
+  } else {
+    // スマホ: 縦積み固定
+    const rows = invStackRows(panel, [120, 100, 90, 74, 74], gap);
+
+    drawInventoryStatusBlock(rows[0], _M);
+    drawInventoryEquipSummaryBlock(rows[1], _M);
+    drawInventoryItemsBlock(rows[2], _M);
+    drawInventoryBlessingSummaryBlock(rows[3], _M);
+    drawInventoryDetailBlock(rows[4], _M);
   }
 }
 

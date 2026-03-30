@@ -240,15 +240,30 @@ function drawInventoryEquipSummaryBlock(r, _M) {
   const startY = inner.y + 42 * _M;
   const labelW = 90 * _M;
   const valueW = inner.w - labelW - 10;
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
 
   const rows = [
     ['メイン', player.weapons[0] ? player.weapons[0].name : '- なし -', player.weapons[0]?.color || '#666'],
     ['サブ', player.weapons[1] ? player.weapons[1].name : '- なし -', player.weapons[1]?.color || '#666'],
-    ['チャーム', player.charm ? (player.charm.icon + ' ' + player.charm.name) : '- なし -', player.charm ? '#8e24aa' : '#666']
+    ['チャーム', player.charm ? ((player.charm.icon || '🔮') + ' ' + player.charm.name) : '- なし -', player.charm ? '#8e24aa' : '#666']
   ];
 
   for (let i = 0; i < rows.length; i++) {
     const y = startY + i * lineGap;
+    const selected = !isTouch && inventoryDetailSection === 0 && inventoryEquipCursor === i;
+
+    if (selected) {
+      ctx.fillStyle = 'rgba(255,215,0,0.18)';
+      ctx.beginPath();
+      ctx.roundRect(inner.x - 6, y - 18, inner.w + 12, 24 * _M, 8);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(inner.x - 6, y - 18, inner.w + 12, 24 * _M, 8);
+      ctx.stroke();
+    }
+
     ctx.fillStyle = '#6d4c41';
     ctx.font = `bold ${Math.max(15, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.fillText(rows[i][0], inner.x, y);
@@ -280,18 +295,20 @@ function drawInventoryItemsBlock(r, _M) {
   const totalW = slotSize * count + gap * (count - 1);
   const startX = inner.x + Math.floor((inner.w - totalW) / 2);
   const cy = inner.y + 24 * _M + slotSize / 2;
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
 
   for (let i = 0; i < count; i++) {
     const sx = startX + i * (slotSize + gap);
     const icon = player.consumables && player.consumables[i] ? player.consumables[i].icon : '－';
+    const selected = !isTouch && inventoryDetailSection === 1 && inventoryItemCursor === i;
 
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.35)';
     ctx.beginPath();
     ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(93,64,55,0.55)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = selected ? 'rgba(255,215,0,0.7)' : 'rgba(93,64,55,0.55)';
+    ctx.lineWidth = selected ? 2.5 : 2;
     ctx.beginPath();
     ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
     ctx.stroke();
@@ -301,7 +318,7 @@ function drawInventoryItemsBlock(r, _M) {
     ctx.textAlign = 'center';
     ctx.fillText(icon, sx + slotSize / 2, cy + 8 * _M);
 
-    ctx.fillStyle = '#6d4c41';
+    ctx.fillStyle = selected ? '#3e2723' : '#6d4c41';
     ctx.font = `bold ${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.fillText('[' + (i + 1) + ']', sx + slotSize / 2, cy + slotSize / 2 + 16 * _M);
   }
@@ -357,39 +374,30 @@ function drawInventoryBlessingSummaryBlock(r, _M) {
 }
 
 function drawInventoryDetailBlock(r, _M) {
-  invDrawPanel(r, '詳細', { titleSize: 18 * _M });
+  const detail = getInventoryDetailData();
+  invDrawPanel(r, detail.title || '詳細', { titleSize: 18 * _M });
 
   const inner = invInsetRect(r, 14);
-
-  // 最初は固定で「現在メイン武器の説明」を出す
-  // 将来的に選択連動へ拡張しやすいように1か所へ集約
-  let detail = '';
-  if (player.weapon && player.weapon.desc) {
-    detail = `⚔ ${player.weapon.name} — ${player.weapon.desc}`;
-  } else {
-    detail = '選択中の要素の説明をここに表示';
-  }
-
   const maxWidth = inner.w;
   const fontSize = Math.max(14, 12 * _M);
   ctx.fillStyle = '#5d4037';
   ctx.font = `${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
 
-  const words = detail.split('');
+  const chars = (detail.text || '').split('');
   let line = '';
   let y = inner.y + 28;
   const lineH = 20 * _M;
   const maxLines = 2;
-  let lines = 0;
+  let lineCount = 0;
 
-  for (let i = 0; i < words.length; i++) {
-    const test = line + words[i];
+  for (let i = 0; i < chars.length; i++) {
+    const test = line + chars[i];
     if (ctx.measureText(test).width > maxWidth) {
       ctx.fillText(line, inner.x, y);
-      line = words[i];
+      line = chars[i];
       y += lineH;
-      lines += 1;
-      if (lines >= maxLines - 1) break;
+      lineCount += 1;
+      if (lineCount >= maxLines - 1) break;
     } else {
       line = test;
     }
@@ -397,7 +405,8 @@ function drawInventoryDetailBlock(r, _M) {
 
   if (line) {
     let out = line;
-    const rest = words.slice(detail.indexOf(line) + line.length).join('');
+    const consumed = (detail.text || '').indexOf(line) + line.length;
+    const rest = (detail.text || '').slice(Math.max(0, consumed));
     if (rest.length > 0) {
       while (ctx.measureText(out + '…').width > maxWidth && out.length > 0) {
         out = out.slice(0, -1);
@@ -406,6 +415,48 @@ function drawInventoryDetailBlock(r, _M) {
     }
     ctx.fillText(out, inner.x, y);
   }
+}
+
+function getInventoryDetailData() {
+  // スマホではまだタップ選択を入れていないので、見やすい既定値を優先
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
+
+  const section = isTouch ? 0 : inventoryDetailSection;
+
+  if (section === 0) {
+    if ((isTouch ? 0 : inventoryEquipCursor) === 0) {
+      const w = player.weapons[0];
+      return w
+        ? { title: 'メイン', text: `⚔ ${w.name} — ${w.desc || ''}` }
+        : { title: 'メイン', text: 'メイン武器はありません' };
+    }
+    if ((isTouch ? 0 : inventoryEquipCursor) === 1) {
+      const w = player.weapons[1];
+      return w
+        ? { title: 'サブ', text: `🪄 ${w.name} — ${w.desc || ''}` }
+        : { title: 'サブ', text: 'サブ武器はありません' };
+    }
+    const c = player.charm;
+    return c
+      ? { title: 'チャーム', text: `${c.icon || '🔮'} ${c.name} — ${c.desc || ''}` }
+      : { title: 'チャーム', text: 'チャームは装備していません' };
+  }
+
+  if (section === 1) {
+    const idx = isTouch ? 0 : inventoryItemCursor;
+    const it = player.consumables && player.consumables[idx];
+    return it
+      ? { title: `アイテム [${idx + 1}]`, text: `${it.icon} ${it.name} — ${it.desc || it.msg || ''}` }
+      : { title: `アイテム [${idx + 1}]`, text: 'このスロットは空です' };
+  }
+
+  if (activeBlessings && activeBlessings.length > 0) {
+    const idx = Math.min(isTouch ? 0 : inventoryBlessingCursor, activeBlessings.length - 1);
+    const b = activeBlessings[idx];
+    return { title: '祝福', text: `${b.icon} ${b.name} — ${b.desc || ''}` };
+  }
+
+  return { title: '祝福', text: '祝福はありません' };
 }
 
 function drawInventoryItems() {

@@ -40,7 +40,10 @@ function getVariantName(shape, loop) {
 
 // ===== INVENTORY SCREEN =====
 let inventoryOpen = false, inventoryTab = 0;
-
+let inventoryDetailSection = 0; // 0:equip 1:items 2:blessings
+let inventoryEquipCursor = 0;   // 0:main 1:sub 2:charm
+let inventoryItemCursor = 0;    // 0..2
+let inventoryBlessingCursor = 0; // 0..activeBlessings.length-1
 
 // ===== PALETTE =====
 const COL = { bg: '#a8d5ba', wall: '#6b8f71', floor: '#c8e6c9', floorAlt: '#b2dfb5',

@@ -88,7 +88,7 @@ function update(dt) {
     if (titleVolSel >= 0 && (wasPressed('ArrowLeft') || wasPressed('KeyA'))) { if(titleVolSel===0) setBgmVol(bgmVolume-0.1); else setSeVol(seVolume-0.1); Audio.menu_move(); }
     if (titleVolSel >= 0 && wasPressed('Escape')) { titleVolSel = -1; Audio.menu_move(); }
     if (titleVolSel >= 0 && (wasPressed('ArrowRight') || wasPressed('KeyD'))) { if(titleVolSel===0) setBgmVol(bgmVolume+0.1); else setSeVol(seVolume+0.1); Audio.menu_move(); }
-    if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; playBGM('forest_south'); gameState = 'prologue'; }
+    if (wasPressed('KeyZ')) { prologuePage = 0; prologueFade = 0; prologueTimer = 0; prologueGuard = 0.3; gameState = 'prologue'; }
     if (wasPressed('KeyX')) { gameState = 'garden'; gardenCursor = 0; Audio.menu_select(); }
     return; }
   if (gameState === 'garden') {

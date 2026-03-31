@@ -169,20 +169,29 @@ function invStackRows(r, heights, gap) {
 
 function invDrawPanel(r, title, opts) {
   opts = opts || {};
-  const bg = opts.bg || 'rgba(253,246,227,0.92)';
-  const stroke = opts.stroke || '#5d4037';
-  const titleColor = opts.titleColor || '#3e2723';
+  const bg = opts.bg || 'rgba(243,232,214,0.96)';
+  const stroke = opts.stroke || '#4e342e';
+  const titleColor = opts.titleColor || '#2f241c';
   const radius = opts.radius || 12;
   const titleSize = opts.titleSize || 18;
 
   ctx.save();
+
+  // 本体
   ctx.fillStyle = bg;
   ctx.beginPath();
   ctx.roundRect(r.x, r.y, r.w, r.h, radius);
   ctx.fill();
 
+  // 内側のうっすら明るい面を入れて、ベタ塗り感を減らす
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.beginPath();
+  ctx.roundRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, Math.max(4, radius - 2));
+  ctx.fill();
+
+  // 枠線を濃く
   ctx.strokeStyle = stroke;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
   ctx.roundRect(r.x, r.y, r.w, r.h, radius);
   ctx.stroke();
@@ -192,6 +201,14 @@ function invDrawPanel(r, title, opts) {
     ctx.font = `bold ${titleSize}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(title, r.x + 14, r.y + 24);
+
+    // タイトル下ラインを追加して視線誘導
+    ctx.strokeStyle = 'rgba(78,52,46,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(r.x + 14, r.y + 32);
+    ctx.lineTo(r.x + r.w - 14, r.y + 32);
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -253,11 +270,11 @@ function drawInventoryStatusBlock(r, _M) {
     ctx.roundRect(cx, cy, cellW, cellH, 10);
     ctx.fill();
 
-    ctx.fillStyle = '#6d4c41';
+    ctx.fillStyle = '#4e342e';
     ctx.font = `bold ${Math.max(16, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.fillText(stats[i][0], cx + 10, cy + 20);
 
-    ctx.fillStyle = '#3e2723';
+    ctx.fillStyle = '#1f1712';
     const valueSize = invFitText(stats[i][1], cellW - 20, 20 * _M, 14 * _M, true);
     ctx.font = `bold ${valueSize}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.fillText(stats[i][1], cx + 10, cy + cellH - 10);
@@ -285,18 +302,18 @@ function drawInventoryEquipSummaryBlock(r, _M) {
     const selected = !isTouch && inventoryDetailSection === 0 && inventoryEquipCursor === i;
 
     if (selected) {
-      ctx.fillStyle = 'rgba(255,215,0,0.18)';
+      ctx.fillStyle = 'rgba(255,215,0,0.24)';
       ctx.beginPath();
       ctx.roundRect(inner.x - 6, y - 18, inner.w + 12, 24 * _M, 8);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+      ctx.strokeStyle = 'rgba(255,180,0,0.85)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.roundRect(inner.x - 6, y - 18, inner.w + 12, 24 * _M, 8);
       ctx.stroke();
     }
 
-    ctx.fillStyle = '#6d4c41';
+    ctx.fillStyle = '#4e342e';
     ctx.font = `bold ${Math.max(15, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.fillText(rows[i][0], inner.x, y);
 
@@ -334,12 +351,12 @@ function drawInventoryItemsBlock(r, _M) {
     const icon = player.consumables && player.consumables[i] ? player.consumables[i].icon : '－';
     const selected = !isTouch && inventoryDetailSection === 1 && inventoryItemCursor === i;
 
-    ctx.fillStyle = selected ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.35)';
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.24)' : 'rgba(255,255,255,0.42)';
     ctx.beginPath();
     ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
     ctx.fill();
 
-    ctx.strokeStyle = selected ? 'rgba(255,215,0,0.7)' : 'rgba(93,64,55,0.55)';
+    ctx.strokeStyle = selected ? 'rgba(255,180,0,0.9)' : 'rgba(93,64,55,0.72)';
     ctx.lineWidth = selected ? 2.5 : 2;
     ctx.beginPath();
     ctx.roundRect(sx, cy - slotSize / 2, slotSize, slotSize, 12);
@@ -391,7 +408,7 @@ function drawInventoryBlessingSummaryBlock(r, _M) {
     }
 
     const selected = !isTouch && inventoryDetailSection === 2 && inventoryBlessingCursor === i;
-    ctx.fillStyle = selected ? 'rgba(255,215,0,0.20)' : 'rgba(255,255,255,0.38)';
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.24)' : 'rgba(255,255,255,0.42)';
     ctx.beginPath();
     ctx.roundRect(x, y - 18, pillW, 22 * _M, 999);
     ctx.fill();
@@ -404,7 +421,7 @@ function drawInventoryBlessingSummaryBlock(r, _M) {
       ctx.stroke();
     }
 
-    ctx.fillStyle = '#4e342e';
+    ctx.fillStyle = '#352821';
     ctx.fillText(invEllipsis(label, pillW - 14, ctx.font), x + 10, y);
     x += pillW + 8;
   }
@@ -463,7 +480,7 @@ function drawInventoryDetailBlock(r, _M) {
   const inner = invInsetRect(r, 14);
   const maxWidth = inner.w;
   const fontSize = Math.max(14, 12 * _M);
-  ctx.fillStyle = '#5d4037';
+  ctx.fillStyle = '#3a2c24';
   ctx.font = `${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
 
   const chars = (detail.text || '').split('');

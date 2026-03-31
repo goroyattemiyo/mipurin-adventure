@@ -169,27 +169,24 @@ function invStackRows(r, heights, gap) {
 
 function invDrawPanel(r, title, opts) {
   opts = opts || {};
-  const bg = opts.bg || 'rgba(243,232,214,0.96)';
+  const bg = opts.bg || 'rgba(239,228,210,0.97)';
   const stroke = opts.stroke || '#4e342e';
-  const titleColor = opts.titleColor || '#2f241c';
+  const titleColor = opts.titleColor || '#2b211b';
   const radius = opts.radius || 12;
   const titleSize = opts.titleSize || 18;
 
   ctx.save();
 
-  // 本体
   ctx.fillStyle = bg;
   ctx.beginPath();
   ctx.roundRect(r.x, r.y, r.w, r.h, radius);
   ctx.fill();
 
-  // 内側のうっすら明るい面を入れて、ベタ塗り感を減らす
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
   ctx.beginPath();
   ctx.roundRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, Math.max(4, radius - 2));
   ctx.fill();
 
-  // 枠線を濃く
   ctx.strokeStyle = stroke;
   ctx.lineWidth = 2.2;
   ctx.beginPath();
@@ -200,17 +197,19 @@ function invDrawPanel(r, title, opts) {
     ctx.fillStyle = titleColor;
     ctx.font = `bold ${titleSize}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.textAlign = 'left';
-    ctx.fillText(title, r.x + 14, r.y + 24);
+    ctx.textBaseline = 'top';
+    ctx.fillText(title, r.x + 14, r.y + 10);
 
-    // タイトル下ラインを追加して視線誘導
-    ctx.strokeStyle = 'rgba(78,52,46,0.18)';
+    ctx.strokeStyle = 'rgba(78,52,46,0.15)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(r.x + 14, r.y + 32);
-    ctx.lineTo(r.x + r.w - 14, r.y + 32);
+    ctx.moveTo(r.x + 14, r.y + 34);
+    ctx.lineTo(r.x + r.w - 14, r.y + 34);
     ctx.stroke();
   }
+
   ctx.restore();
+  ctx.textBaseline = 'alphabetic';
 }
 
 function invFitText(text, maxWidth, baseSize, minSize, weight) {
@@ -243,21 +242,20 @@ function drawInventoryStatusBlock(r, _M) {
 
   const inner = invInsetRect(r, 14);
   const stats = [
-    ['HP', player.hp + ' / ' + player.maxHp],
-    ['ATK', Math.ceil(player.atk * (player.weapon.dmgMul || 1)).toString()],
-    ['速度', String(player.speed)],
-    ['花粉', String(pollen)],
-    ['Floor', String(floor)],
-    ['Score', String(score)],
+    ['HP', `${player.hp} / ${player.maxHp}`],
+    ['ATK', `${Math.ceil(player.atk * ((player.weapon && player.weapon.dmgMul) || 1))}`],
+    ['速度', `${player.speed}`],
+    ['花粉', `${pollen}`],
+    ['Floor', `${floor}`],
+    ['Score', `${score}`],
   ];
 
   const cols = 2;
-  const rows = 3;
-  const gapX = 10 * _M;
-  const gapY = 10 * _M;
-  const topY = inner.y + 22 * _M;
+  const gapX = 12 * _M;
+  const gapY = 12 * _M;
+  const topY = inner.y + 26 * _M;
   const cellW = Math.floor((inner.w - gapX) / cols);
-  const cellH = Math.floor((inner.h - 34 * _M - gapY * (rows - 1)) / rows);
+  const cellH = Math.floor((inner.h - 42 * _M - gapY * 2) / 3);
 
   for (let i = 0; i < stats.length; i++) {
     const col = i % cols;
@@ -265,20 +263,39 @@ function drawInventoryStatusBlock(r, _M) {
     const cx = inner.x + col * (cellW + gapX);
     const cy = topY + row * (cellH + gapY);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.save();
+
+    // カード背景
+    ctx.fillStyle = 'rgba(255,250,242,0.92)';
     ctx.beginPath();
     ctx.roundRect(cx, cy, cellW, cellH, 10);
     ctx.fill();
 
-    ctx.fillStyle = '#4e342e';
-    ctx.font = `bold ${Math.max(16, 14 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
-    ctx.fillText(stats[i][0], cx + 10, cy + 20);
+    // 枠
+    ctx.strokeStyle = 'rgba(120,90,70,0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cellW, cellH, 10);
+    ctx.stroke();
 
-    ctx.fillStyle = '#1f1712';
-    const valueSize = invFitText(stats[i][1], cellW - 20, 20 * _M, 14 * _M, true);
+    // ラベル
+    ctx.fillStyle = '#5a4335';
+    ctx.font = `bold ${Math.max(14, 12 * _M)}px 'M PLUS Rounded 1c', sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(stats[i][0], cx + 12, cy + 10);
+
+    // 値
+    ctx.fillStyle = '#201814';
+    const valueSize = Math.max(18, 16 * _M);
     ctx.font = `bold ${valueSize}px 'M PLUS Rounded 1c', sans-serif`;
-    ctx.fillText(stats[i][1], cx + 10, cy + cellH - 10);
+    ctx.fillText(stats[i][1], cx + 12, cy + 30);
+
+    ctx.restore();
   }
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 function drawInventoryEquipSummaryBlock(r, _M) {

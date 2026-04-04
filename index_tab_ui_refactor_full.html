@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ミプリンの冒険 - Tab UI Refactor Preview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  width:100%;height:100dvh;height:100vh;
+  background:#1a1a2e;overflow:hidden;
+  display:flex;justify-content:center;align-items:center;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:auto;
+}
+canvas{
+  touch-action:none;-webkit-touch-callout:none;
+  user-select:none;-webkit-user-select:none;
+  background:#000;
+  width:min(100vw, calc(100dvh * 4 / 3));
+  height:min(calc(100vw * 3 / 4), 100dvh);
+}
+@supports not (height:100dvh){
+  html,body{height:100vh}
+  canvas{
+    width:min(100vw, calc(100vh * 4 / 3));
+    height:min(calc(100vw * 3 / 4), 100vh);
+  }
+}
+#pwa-banner{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;
+  background:rgba(26,26,46,0.94);border-top:2px solid #ffd700;
+  color:#ffd700;font:bold 14px 'M PLUS Rounded 1c',sans-serif;
+  padding:10px 16px;text-align:center;line-height:1.5;
+  backdrop-filter:blur(4px);
+}
+#pwa-banner.show{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+#pwa-add{background:#ffd700;color:#1a1a2e;border:none;border-radius:20px;
+  padding:6px 18px;font:bold 14px 'M PLUS Rounded 1c',sans-serif;cursor:pointer}
+#pwa-close{background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+@media (orientation:portrait){
+  body::after{
+    content:'📱 横に回転してね！';
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(26,26,46,0.95);
+    color:#ffd700;
+    font:bold 28px 'M PLUS Rounded 1c',sans-serif;
+    display:flex;justify-content:center;align-items:center;
+    z-index:9999;
+    text-align:center;
+    padding:40px;
+    line-height:1.6;
+  }
+}
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="960"></canvas>
+<div id="pwa-banner">
+  <span id="pwa-msg"></span>
+  <button id="pwa-add" style="display:none">ホーム画面に追加</button>
+  <button id="pwa-close">✕</button>
+</div>
+<script>
+(function(){
+  if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  if(localStorage.getItem('pwa_dismissed')) return;
+  var banner=document.getElementById('pwa-banner');
+  var msg=document.getElementById('pwa-msg');
+  var addBtn=document.getElementById('pwa-add');
+  var closeBtn=document.getElementById('pwa-close');
+  var deferredPrompt=null;
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  function show(){
+    if(isIOS){
+      msg.textContent='📲 ホーム画面に追加するとアプリとして遊べるよ！ → 「共有」→「ホーム画面に追加」';
+    } else {
+      msg.textContent='📲 ホーム画面に追加してアプリとして遊ぼう！';
+      if(deferredPrompt) addBtn.style.display='';
+    }
+    banner.classList.add('show');
+  }
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); deferredPrompt=e;
+    setTimeout(show, 4000);
+  });
+  if(isIOS) setTimeout(show, 4000);
+  addBtn.addEventListener('click',function(){
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){
+      deferredPrompt=null;
+      banner.classList.remove('show');
+      localStorage.setItem('pwa_dismissed','1');
+    });
+  });
+  closeBtn.addEventListener('click',function(){
+    banner.classList.remove('show');
+    localStorage.setItem('pwa_dismissed','1');
+  });
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/rot-js@2/dist/rot.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<script src='js/game.js?v=tabrefactor'></script>
+<script src='js/ui/UIManager.js?v=tabrefactor'></script>
+<script src='js/data.js?v=tabrefactor'></script>
+<script src='js/data_room.js?v=tabrefactor'></script>
+<script src='js/lore.js?v=tabrefactor'></script>
+<script src='js/gimmicks.js?v=tabrefactor'></script>
+<script src='js/bgm.js?v=tabrefactor'></script>
+<script src='js/enemies.js?v=tabrefactor'></script>
+<script src='js/blessings.js?v=tabrefactor'></script>
+<script src='js/systems.js?v=tabrefactor'></script>
+<script src='js/nodemap.js?v=tabrefactor'></script>
+<script src='js/equip_ui.js?v=tabrefactor'></script>
+<script src='js/inventory_ui.js?v=tabrefactor'></script>
+<script src='js/weapon_collection_ui.js?v=tabrefactor'></script>
+<script src='js/ui.js?v=tabrefactor'></script>
+<script src='js/shop_ui.js?v=tabrefactor'></script>
+<script src='js/ui_screens.js?v=tabrefactor'></script>
+<script src='js/combat.js?v=tabrefactor'></script>
+<script src='js/update.js?v=tabrefactor'></script>
+<script src='js/render_entities.js?v=tabrefactor'></script>
+<script src='js/render.js?v=tabrefactor'></script>
+<script src='js/touch.js?v=tabrefactor'></script>
+<script src='js/rarity.js?v=tabrefactor'></script>
+<script src='js/charms.js?v=tabrefactor'></script>
+
+<script src='js/tab_ui_base.js?v=tabrefactor'></script>
+<script src='js/tab_page_items.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection_ideal.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip_ideal.js?v=tabrefactor'></script>
+<script src='js/tab_page_items_ideal.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor_final.js?v=tabrefactor'></script>
+<script src='js/tab_ui_runtime_patch.js?v=tabrefactor'></script>
+
+<script src='js/tab_ui_base_v2.js?v=tabrefactor'></script>
+<script src='js/tab_ui_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_items_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor_final_fx.js?v=tabrefactor'></script>
+<script src='js/tab_ui_runtime_patch_fx.js?v=tabrefactor'></script>
+</body>
+</html>

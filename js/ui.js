@@ -280,21 +280,25 @@ function drawCollectionTab(nb) {
   var _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   var subTabs = ['\u3044\u304d\u3082\u306e','\u3076\u304d','\u305b\u304b\u3044'];
   for (var si = 0; si < subTabs.length; si++) {
-    var _stBase = nb ? nb.cx : 120;
+    var _stW = 112, _stGap = 16;
+    var _stTotalW = subTabs.length * _stW + (subTabs.length - 1) * _stGap;
+    var _stStartX = nb ? nb.cx + (nb.cw - _stTotalW) / 2 : 124;
     var _stBaseY = nb ? nb.cy : 110;
-    var stx = _stBase + si * 160, sty = _stBaseY + 10;
+    var stx = _stStartX + si * (_stW + _stGap) + _stW / 2;
+    var sty = _stBaseY + 10;
     ctx.fillStyle = collectionSubTab === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(stx - 56, sty - 16, 112, 32 * _M);
+    ctx.fillRect(stx - _stW/2, sty - 16, _stW, 32 * _M);
     ctx.fillStyle = collectionSubTab === si ? '#000' : '#ccc';
     ctx.font = 'bold ' + (18*_M) + 'px ' + F; ctx.textAlign = 'center';
     ctx.fillText(subTabs[si], stx, sty + 6*_M);
   }
   ctx.textAlign = 'left';
   if(typeof touchActive==='undefined'||!touchActive){
-    drawKeyHint(ctx,340,106,'W');
-    drawKeyHint(ctx,340,120+32*_M+14,'S');
+    var _khX = nb ? nb.cx + nb.cw - 30 : 340;
+    drawKeyHint(ctx,_khX, nb ? nb.cy+10 : 106,'W');
+    drawKeyHint(ctx,_khX, nb ? nb.cy+10+32*_M+14 : 120+32*_M+14,'S');
   }
-  if (collectionSubTab === 2) { drawWorldLoreTab(); return; }
+  if (collectionSubTab === 2) { drawWorldLoreTab(nb); return; }
   var subKey = collectionSubTab === 0 ? 'enemy' : 'weapon';
   var filter = collectionFilter[subKey];
   var items = getFilteredItems(collectionSubTab, filter);
@@ -332,9 +336,11 @@ function drawCollectionTab(nb) {
     if (item2) drawCollectionDetail(ctx, item2);
   }
   if (typeof isEncyclopediaComplete === 'function' && isEncyclopediaComplete()) {
-    ctx.fillStyle = 'rgba(255,215,0,0.15)'; ctx.fillRect(CW-230, 185, 210, 30);
+    var _badgeX = nb ? nb.cx + nb.cw - 220 : CW-230;
+    var _badgeY = nb ? nb.cy + 75 : 185;
+    ctx.fillStyle = 'rgba(255,215,0,0.15)'; ctx.fillRect(_badgeX, _badgeY, 210, 30);
     ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
-    ctx.fillText('complete!', CW-125, 205);
+    ctx.fillText('complete!', _badgeX + 105, _badgeY + 20);
     ctx.textAlign = 'left';
   }
 }
@@ -345,28 +351,33 @@ var worldLoreScroll = 0;
 
 
 
-function drawWorldLoreTab() {
+function drawWorldLoreTab(nb) {
   var F = "'M PLUS Rounded 1c', sans-serif";
   var tc = typeof totalClears !== 'undefined' ? totalClears : 0;
   var lores = (typeof WORLD_LORE !== 'undefined') ? WORLD_LORE : [];
+  var _wlX = nb ? nb.cx : 120;
+  var _wlY = nb ? nb.cy : 110;
+  var _wlW = nb ? nb.cw : (CW - 250);
+  var _wlH = nb ? nb.ch : (CH - 200);
 
   ctx.fillStyle = '#ffd700'; ctx.font = 'bold 22px ' + F;
-  ctx.fillText('🌍 せかいのきろく', 120, 190);
+  ctx.fillText('🌍 せかいのきろく', _wlX, _wlY + 30);
 
   // アンロック済みエントリ
   var unlocked = lores.filter(function(e) { return e.minClears <= tc; });
   var locked = lores.filter(function(e) { return e.minClears > tc; });
 
   // 進捗バー
-  ctx.fillStyle = '#333'; ctx.fillRect(120, 200, 400, 14);
-  ctx.fillStyle = '#a78bfa'; ctx.fillRect(120, 200, 400 * (unlocked.length / Math.max(1, lores.length)), 14);
+  ctx.fillStyle = '#333'; ctx.fillRect(_wlX, _wlY + 42, Math.min(_wlW - 20, 400), 14);
+  ctx.fillStyle = '#a78bfa'; ctx.fillRect(_wlX, _wlY + 42, Math.min(_wlW - 20, 400) * (unlocked.length / Math.max(1, lores.length)), 14);
   ctx.fillStyle = '#5d4037'; ctx.font = 'bold 11px ' + F; ctx.textAlign = 'center';
-  ctx.fillText(unlocked.length + ' / ' + lores.length, 320, 211);
+  ctx.fillText(unlocked.length + ' / ' + lores.length, _wlX + Math.min(_wlW - 20, 400) / 2, _wlY + 53);
   ctx.textAlign = 'left';
 
-  var cardH2 = 90, padY2 = 6, startY2 = 225, startX2 = 120;
-  var cardW2 = CW - 250;
-  var maxRows2 = Math.floor((CH - 80 - startY2) / (cardH2 + padY2));
+  var cardH2 = 90, padY2 = 6;
+  var startY2 = _wlY + 68, startX2 = _wlX;
+  var cardW2 = _wlW - 20;
+  var maxRows2 = Math.floor((_wlH - 80) / (cardH2 + padY2));
   var allEntries = unlocked.concat(locked.map(function(e) { return { id: e.id, title: '???', icon: '🔒', minClears: e.minClears, text: 'クリア回数 ' + e.minClears + ' 回でアンロック', _locked: true }; }));
 
   worldLoreScroll = Math.max(0, Math.min(worldLoreScroll, Math.max(0, allEntries.length - maxRows2)));
@@ -414,7 +425,7 @@ function drawWorldLoreTab() {
 
   // スクロールバー
   if (allEntries.length > maxRows2) {
-    var sbX2 = CW - 130, sbY2 = startY2, sbH2 = maxRows2 * (cardH2 + padY2);
+    var sbX2 = _wlX + _wlW - 14, sbY2 = startY2, sbH2 = maxRows2 * (cardH2 + padY2);
     var thumbH2 = Math.max(20, sbH2 * (maxRows2 / allEntries.length));
     var thumbY2 = sbY2 + (sbH2 - thumbH2) * (worldLoreScroll / Math.max(1, allEntries.length - maxRows2));
     ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(sbX2, sbY2, 8, sbH2);

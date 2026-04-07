@@ -52,10 +52,11 @@ function getFilteredItems(subTab, filter) {
   return [];
 }
 
-function drawCollectionCarousel(ctx, items, cursorKey, subTab) {
+function drawCollectionCarousel(ctx, items, cursorKey, subTab, nb) {
   if (!items || items.length === 0) return;
   var F = "'M PLUS Rounded 1c', sans-serif";
-  var CX = CW / 2, CY = CH / 2 + 20;
+  var CX = nb ? nb.cx + nb.cw / 2 : CW / 2;
+  var CY = nb ? nb.cy + nb.ch / 2 + 10 : CH / 2 + 20;
   var CARD_W = 180, CARD_H = 230, GAP = 220;
   var target = collectionCursor[cursorKey];
   collectionAnimX[cursorKey] += (target - collectionAnimX[cursorKey]) * 0.22;
@@ -274,12 +275,14 @@ function drawCollectionDetail(ctx, item) {
   ctx.textAlign = 'left';
 }
 
-function drawCollectionTab() {
+function drawCollectionTab(nb) {
   var F = "'M PLUS Rounded 1c', sans-serif";
   var _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
   var subTabs = ['\u3044\u304d\u3082\u306e','\u3076\u304d','\u305b\u304b\u3044'];
   for (var si = 0; si < subTabs.length; si++) {
-    var stx = 180 + si * 160, sty = 120;
+    var _stBase = nb ? nb.cx : 120;
+    var _stBaseY = nb ? nb.cy : 110;
+    var stx = _stBase + si * 160, sty = _stBaseY + 10;
     ctx.fillStyle = collectionSubTab === si ? '#ffd700' : 'rgba(255,255,255,0.3)';
     ctx.fillRect(stx - 56, sty - 16, 112, 32 * _M);
     ctx.fillStyle = collectionSubTab === si ? '#000' : '#ccc';
@@ -299,7 +302,10 @@ function drawCollectionTab() {
     ? ['all','forest','cave','flower','boss'] : ['all','tier1','tier2'];
   var filterLabels = collectionSubTab === 0
     ? ['ALL','forest','cave','flower','boss'] : ['ALL','Tier1','Tier2'];
-  var fY = 155, fStart = 120;
+  var _nbBaseX = nb ? nb.cx : 120;
+  var _nbBaseY = nb ? nb.cy : 110;
+  var _nbBaseW = nb ? nb.cw : (CW - 250);
+  var fY = _nbBaseY + 45, fStart = _nbBaseX;
   for (var fi = 0; fi < filterKeys.length; fi++) {
     var fW = 70, fX = fStart + fi * (fW + 8);
     var isActive = filter === filterKeys[fi];
@@ -314,12 +320,12 @@ function drawCollectionTab() {
     return it.type === 'enemy' ? (it.rec && it.rec.defeated > 0) : it.known;
   }).length;
   var pct = items.length > 0 ? Math.floor(ownedC / items.length * 100) : 0;
-  ctx.fillStyle = '#333'; ctx.fillRect(120, 175, 400, 10);
-  ctx.fillStyle = '#7ecf6a'; ctx.fillRect(120, 175, 400*(ownedC/Math.max(1,items.length)), 10);
+  ctx.fillStyle = '#333'; ctx.fillRect(_nbBaseX, _nbBaseY + 65, Math.min(_nbBaseW, 400), 10);
+  ctx.fillStyle = '#7ecf6a'; ctx.fillRect(_nbBaseX, _nbBaseY + 65, Math.min(_nbBaseW, 400)*(ownedC/Math.max(1,items.length)), 10);
   ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px ' + F; ctx.textAlign = 'center';
-  ctx.fillText(ownedC+' / '+items.length+' ('+pct+'%)', 320, 184);
+  ctx.fillText(ownedC+' / '+items.length+' ('+pct+'%)', _nbBaseX + Math.min(_nbBaseW,400)/2, _nbBaseY + 74);
   ctx.textAlign = 'left';
-  drawCollectionCarousel(ctx, items, subKey, collectionSubTab);
+  drawCollectionCarousel(ctx, items, subKey, collectionSubTab, nb);
   if (collectionDetailOpen) {
     var cur2 = collectionCursor[subKey];
     var item2 = items[cur2];
@@ -801,4 +807,6 @@ function drawNotebookBase(ctx, x, y, w, h, title) {
   }
   ctx.fillStyle = '#795548'; ctx.font = "bold 14px 'M PLUS Rounded 1c'";
   ctx.textAlign = 'right'; ctx.fillText('↩ [Tab] キーで閉じる', x + w - 20, y + h - 20); ctx.textAlign = 'left';
+  const _NB_PAD = 18, _NB_HDR = 58;
+  return { cx: x + _NB_PAD, cy: y + _NB_HDR, cw: w - _NB_PAD * 2, ch: h - _NB_HDR - _NB_PAD };
 }

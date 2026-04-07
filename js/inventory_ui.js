@@ -5,22 +5,32 @@ function drawInventory() {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(0, 0, CW, CH);
 
+  const NB_X = (CW - 1000) / 2, NB_Y = (CH - 700) / 2 + 20, NB_W = 1000, NB_H = 700;
+  let nb = { cx: NB_X + 18, cy: NB_Y + 58, cw: NB_W - 36, ch: NB_H - 76 };
   if (typeof drawNotebookBase === 'function') {
-    drawNotebookBase(ctx, (CW - 1000) / 2, (CH - 700) / 2 + 20, 1000, 700, '🌸 みぷりんの冒険手帳');
+    nb = drawNotebookBase(ctx, NB_X, NB_Y, NB_W, NB_H, '🌸 みぷりんの冒険手帳') || nb;
   }
 
-  const tabs = ['持ち物', '図鑑', '装備'];
-  for (let i = 0; i < tabs.length; i++) {
-    const tx = CW / 2 - 120 + i * 240;
-    const ty = 70 + 15 * _M;
-    ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(tx - 80, ty - 20 * _M, 160, 40 * _M);
-    ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
-    ctx.font = "bold " + (20 * _M) + "px 'M PLUS Rounded 1c', sans-serif";
+  const TAB_H = 36, TAB_W = 150, TAB_GAP = 8;
+  const tabsArr = ['持ち物', '図鑑', '装備'];
+  const tabRowY = nb.cy + 4;
+  const tabStartX = nb.cx + (nb.cw - (TAB_W * 3 + TAB_GAP * 2)) / 2;
+  for (let i = 0; i < tabsArr.length; i++) {
+    const tx = tabStartX + i * (TAB_W + TAB_GAP);
+    ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(93,64,55,0.15)';
+    ctx.beginPath(); ctx.roundRect(tx, tabRowY, TAB_W, TAB_H, 8); ctx.fill();
+    ctx.strokeStyle = inventoryTab === i ? '#5d4037' : 'rgba(93,64,55,0.3)';
+    ctx.lineWidth = inventoryTab === i ? 2 : 1;
+    ctx.beginPath(); ctx.roundRect(tx, tabRowY, TAB_W, TAB_H, 8); ctx.stroke();
+    ctx.fillStyle = inventoryTab === i ? '#3e2723' : '#795548';
+    ctx.font = "bold " + (18 * _M) + "px 'M PLUS Rounded 1c', sans-serif";
     ctx.textAlign = 'center';
-    ctx.fillText(tabs[i], tx, ty + 7 * _M);
+    ctx.fillText(tabsArr[i], tx + TAB_W / 2, tabRowY + TAB_H / 2 + 6);
   }
   ctx.textAlign = 'left';
+  const contY = tabRowY + TAB_H + 8;
+  const contH = nb.cy + nb.ch - contY;
+  const nbContent = { cx: nb.cx, cy: contY, cw: nb.cw, ch: contH };
 
   if (typeof touchActive === 'undefined' || !touchActive) {
     const _kF = "'M PLUS Rounded 1c', sans-serif";
@@ -75,9 +85,9 @@ function drawInventory() {
     ctx.textAlign = 'left';
   }
 
-  if (inventoryTab === 0) drawInventoryItems();
-  else if (inventoryTab === 1) drawCollectionTab();
-  if (inventoryTab === 2) drawEquipTab(80, 130, CW - 160, CH - 180);
+  if (inventoryTab === 0) drawInventoryItems(nbContent);
+  else if (inventoryTab === 1) drawCollectionTab(nbContent);
+  if (inventoryTab === 2) drawEquipTab(nbContent.cx, nbContent.cy, nbContent.cw, nbContent.ch);
 
   const _isTch = (typeof touchActive !== 'undefined' && touchActive);
   let _helpLines;
@@ -97,17 +107,17 @@ function drawInventory() {
 
   if (typeof touchActive === 'undefined' || !touchActive) {
     const _ihF = "'M PLUS Rounded 1c', sans-serif";
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, CH - 26, CW, 26);
+    ctx.fillStyle = 'rgba(93,64,55,0.08)';
+    ctx.fillRect(NB_X + 4, NB_Y + NB_H - 28, NB_W - 8, 24);
     const _ihT = inventoryTab === 0
       ? '[I]持ち物  [O]図鑑  [P]装備  [ESC]とじる'
       : inventoryTab === 1
         ? '[I]持ち物  [O]図鑑  [P]装備  [←→]サブタブ  [↑↓]スクロール  [F]フィルタ  [ESC]とじる'
         : '[I]持ち物  [O]図鑑  [P]装備  [↑↓]スクロール  [Z]強化/そうび  [ESC]とじる';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = '#795548';
     ctx.font = '13px ' + _ihF;
     ctx.textAlign = 'center';
-    ctx.fillText(_ihT, CW / 2, CH - 8);
+    ctx.fillText(_ihT, NB_X + NB_W / 2, NB_Y + NB_H - 10);
     ctx.textAlign = 'left';
   }
 
@@ -534,8 +544,15 @@ function drawInventoryDetailBlock(r, _M) {
   }
 }
 
-function drawInventoryItems() {
-  const { isTouch, _M, outer } = getInventorySafeLayout();
+function drawInventoryItems(nbContent) {
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
+  const _M = isTouch ? 2 : 1;
+  let outer;
+  if (nbContent) {
+    outer = { x: nbContent.cx, y: nbContent.cy, w: nbContent.cw, h: nbContent.ch };
+  } else {
+    outer = getInventorySafeLayout().outer;
+  }
   const gap = 14 * _M;
   const panel = invInsetRect(outer, 4);
 

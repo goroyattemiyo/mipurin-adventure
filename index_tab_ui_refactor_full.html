@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>ミプリンの冒険</title>
+<title>ミプリンの冒険 - Tab UI Refactor Preview</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{
@@ -33,7 +33,6 @@ canvas{
     height:min(calc(100vw * 3 / 4), 100vh);
   }
 }
-/* PWA install banner */
 #pwa-banner{
   display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;
   background:rgba(26,26,46,0.94);border-top:2px solid #ffd700;
@@ -45,7 +44,6 @@ canvas{
 #pwa-add{background:#ffd700;color:#1a1a2e;border:none;border-radius:20px;
   padding:6px 18px;font:bold 14px 'M PLUS Rounded 1c',sans-serif;cursor:pointer}
 #pwa-close{background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
-/* Portrait overlay */
 @media (orientation:portrait){
   body::after{
     content:'📱 横に回転してね！';
@@ -63,7 +61,7 @@ canvas{
 </style>
 </head>
 <body>
-<canvas id="c" width="2560" height="1920"></canvas>
+<canvas id="c" width="1280" height="960"></canvas>
 <div id="pwa-banner">
   <span id="pwa-msg"></span>
   <button id="pwa-add" style="display:none">ホーム画面に追加</button>
@@ -71,7 +69,6 @@ canvas{
 </div>
 <script>
 (function(){
-  // スタンドアロン(インストール済み)なら表示しない
   if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
   if(localStorage.getItem('pwa_dismissed')) return;
   var banner=document.getElementById('pwa-banner');
@@ -107,7 +104,6 @@ canvas{
     banner.classList.remove('show');
     localStorage.setItem('pwa_dismissed','1');
   });
-  // Service Worker 登録
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(function(){});
   }
@@ -116,45 +112,48 @@ canvas{
 <script src="https://cdn.jsdelivr.net/npm/rot-js@2/dist/rot.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
-<script>
-(function(){
-  var dpr=window.devicePixelRatio||1;
-  var _orig=HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext=function(type,opts){
-    var ctx=_orig.call(this,type,opts);
-    if(type==='2d'&&!this._dprApplied){this._dprApplied=true;ctx.scale(dpr,dpr);}
-    return ctx;
-  };
-})();
-</script>
-<script src='js/game.js?v=03292200'></script>
-<script src='js/ui/UIManager.js?v=03292200'></script>
-<script src='js/data.js?v=03292200'></script>
-<script src='js/data_room.js?v=03292200'></script>
-<script src='js/lore.js?v=03292200'></script>
-<script src='js/gimmicks.js?v=03292200'></script>
-<script src='js/bgm.js?v=03292200'></script>
-<script src='js/enemies.js?v=03292200'></script>
-<script src='js/blessings.js?v=03292200'></script>
-<script src='js/systems.js?v=03292200'></script>
-<script src='js/nodemap.js?v=03292200'></script>
-<script src='js/equip_ui.js?v=03292200'></script>
-<script src='js/inventory_ui.js?v=03292200'></script>
-<script src='js/weapon_collection_ui.js?v=03292200'></script>
-<script src='js/ui.js?v=03292200'></script>
-<script src='js/shop_ui.js?v=03292200'></script>
-<script src='js/ui_screens.js?v=03292200'></script>
-<script src='js/combat.js?v=03292200'></script>
-<script src='js/update.js?v=03292200'></script>
-<script src='js/render_entities.js?v=03292200'></script>
-<script src='js/render.js?v=03292200'></script>
-<script src='js/touch.js?v=03292200'></script>
-<script src='js/rarity.js?v=03292200'></script>
-<script src='js/charms.js?v=03292200'></script>
+<script src='js/game.js?v=tabrefactor'></script>
+<script src='js/ui/UIManager.js?v=tabrefactor'></script>
+<script src='js/data.js?v=tabrefactor'></script>
+<script src='js/data_room.js?v=tabrefactor'></script>
+<script src='js/lore.js?v=tabrefactor'></script>
+<script src='js/gimmicks.js?v=tabrefactor'></script>
+<script src='js/bgm.js?v=tabrefactor'></script>
+<script src='js/enemies.js?v=tabrefactor'></script>
+<script src='js/blessings.js?v=tabrefactor'></script>
+<script src='js/systems.js?v=tabrefactor'></script>
+<script src='js/nodemap.js?v=tabrefactor'></script>
+<script src='js/equip_ui.js?v=tabrefactor'></script>
+<script src='js/inventory_ui.js?v=tabrefactor'></script>
+<script src='js/weapon_collection_ui.js?v=tabrefactor'></script>
+<script src='js/ui.js?v=tabrefactor'></script>
+<script src='js/shop_ui.js?v=tabrefactor'></script>
+<script src='js/ui_screens.js?v=tabrefactor'></script>
+<script src='js/combat.js?v=tabrefactor'></script>
+<script src='js/update.js?v=tabrefactor'></script>
+<script src='js/render_entities.js?v=tabrefactor'></script>
+<script src='js/render.js?v=tabrefactor'></script>
+<script src='js/touch.js?v=tabrefactor'></script>
+<script src='js/rarity.js?v=tabrefactor'></script>
+<script src='js/charms.js?v=tabrefactor'></script>
+
+<script src='js/tab_ui_base.js?v=tabrefactor'></script>
+<script src='js/tab_page_items.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection_ideal.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip_ideal.js?v=tabrefactor'></script>
+<script src='js/tab_page_items_ideal.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor_final.js?v=tabrefactor'></script>
+<script src='js/tab_ui_runtime_patch.js?v=tabrefactor'></script>
+
+<script src='js/tab_ui_base_v2.js?v=tabrefactor'></script>
+<script src='js/tab_ui_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_items_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_collection_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/tab_page_equip_ideal_fx.js?v=tabrefactor'></script>
+<script src='js/inventory_ui_refactor_final_fx.js?v=tabrefactor'></script>
+<script src='js/tab_ui_runtime_patch_fx.js?v=tabrefactor'></script>
 </body>
 </html>
-
-
-
-
-

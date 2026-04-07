@@ -160,9 +160,9 @@ function drawMipurinCenter(rect) {
 
   if (typeof mipurinReady !== 'undefined' && mipurinReady && typeof MIPURIN_FRAMES !== 'undefined' && MIPURIN_FRAMES.down) {
     const f = MIPURIN_FRAMES.down;
-    const size = Math.min(rect.w * 0.62, rect.h * 0.78);
+    const size = Math.min(rect.w - 16, rect.h - 16);
     const dx = rect.x + rect.w / 2 - size / 2;
-    const dy = rect.y + rect.h / 2 - size / 2 + 8;
+    const dy = rect.y + rect.h / 2 - size / 2;
     ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, dx, dy, size, size);
   } else {
     ctx.fillStyle = '#fff8e1';
@@ -317,51 +317,21 @@ function drawEquipTab(px, py, pw, ph) {
   equipPanel(leftX, leftY, leftW, leftH, '今の装備', equipMode === 'slot');
 
   const centerRect = {
-    x: leftX + Math.floor(leftW * 0.29),
-    y: leftY + Math.floor(leftH * 0.22),
-    w: Math.floor(leftW * 0.42),
-    h: Math.floor(leftH * 0.40)
+    x: leftX + 8,
+    y: leftY + 32,
+    w: leftW - 16,
+    h: Math.floor(leftH * 0.58)
   };
+  const _slotY = leftY + Math.floor(leftH * 0.60);
+  const _slotH = 72;
+  const _slotW = Math.floor((leftW - 40) / 3);
+  const mainRect  = { x: leftX + 8,                      y: _slotY, w: _slotW, h: _slotH };
+  const subRect   = { x: leftX + 8 + (_slotW+8),         y: _slotY, w: _slotW, h: _slotH };
+  const charmRect = { x: leftX + 8 + (_slotW+8)*2,       y: _slotY, w: _slotW, h: _slotH };
 
-  const mainRect = {
-    x: leftX + 16,
-    y: centerRect.y + Math.floor(centerRect.h * 0.36),
-    w: Math.floor(leftW * 0.26),
-    h: 88
-  };
-
-  const subRect = {
-    x: leftX + leftW - Math.floor(leftW * 0.26) - 16,
-    y: centerRect.y + Math.floor(centerRect.h * 0.36),
-    w: Math.floor(leftW * 0.26),
-    h: 88
-  };
-
-  const charmRect = {
-    x: leftX + Math.floor(leftW * 0.5) - Math.floor(leftW * 0.16),
-    y: leftY + 42,
-    w: Math.floor(leftW * 0.32),
-    h: 78
-  };
-
-  const futureHeadRect = {
-    x: leftX + Math.floor(leftW * 0.5) - 46,
-    y: charmRect.y - 42,
-    w: 92,
-    h: 28
-  };
-  const futureBodyRect = {
-    x: leftX + Math.floor(leftW * 0.5) - 46,
-    y: centerRect.y + centerRect.h + 10,
-    w: 92,
-    h: 28
-  };
-  const futureAccessoryRect = {
-    x: leftX + Math.floor(leftW * 0.5) - 46,
-    y: futureBodyRect.y + 36,
-    w: 92,
-    h: 28
-  };
+  const futureHeadRect      = { x:0,y:0,w:0,h:0 };
+  const futureBodyRect      = { x:0,y:0,w:0,h:0 };
+  const futureAccessoryRect = { x:0,y:0,w:0,h:0 };
 
   equipSlotRects = [mainRect, subRect, charmRect];
 
@@ -375,14 +345,7 @@ function drawEquipTab(px, py, pw, ph) {
   equipDashedPanel(futureBodyRect.x, futureBodyRect.y, futureBodyRect.w, futureBodyRect.h, 'からだ');
   equipDashedPanel(futureAccessoryRect.x, futureAccessoryRect.y, futureAccessoryRect.w, futureAccessoryRect.h, 'かざり');
 
-  ctx.save();
-  ctx.fillStyle = 'rgba(93,64,55,0.75)';
-  ctx.font = `bold ${Math.max(15, 12 * _M)}px ${F}`;
-  ctx.textAlign = 'center';
-  ctx.fillText('⚔', centerRect.x - 12, centerRect.y + centerRect.h * 0.56);
-  ctx.fillText('🪄', centerRect.x + centerRect.w + 12, centerRect.y + centerRect.h * 0.56);
-  ctx.fillText('🔮', centerRect.x + centerRect.w / 2, centerRect.y - 10);
-  ctx.restore();
+  // スロットラベルはequipSlot内のtitleで表示
 
   // --- Right pane ---
   const owned = getAllOwnedWeapons();

@@ -310,14 +310,20 @@ function drawCollectionTab(nb) {
   var _nbBaseY = nb ? nb.cy : 110;
   var _nbBaseW = nb ? nb.cw : (CW - 250);
   var fY = _nbBaseY + 45, fStart = _nbBaseX;
+  var _fCount = filterKeys.length;
+  var _fBtnW = Math.floor((_nbBaseW - (_fCount-1)*10) / _fCount);
+  var _fBtnH = 30;
   for (var fi = 0; fi < filterKeys.length; fi++) {
-    var fW = 70, fX = fStart + fi * (fW + 8);
+    var fW = _fBtnW, fX = fStart + fi * (fW + 10);
     var isActive = filter === filterKeys[fi];
-    ctx.fillStyle = isActive ? '#ffd700' : 'rgba(255,255,255,0.15)';
-    ctx.beginPath(); ctx.roundRect(fX, fY-14, fW, 26, 6); ctx.fill();
-    ctx.fillStyle = isActive ? '#000' : '#aaa';
-    ctx.font = 'bold 12px ' + F; ctx.textAlign = 'center';
-    ctx.fillText(filterLabels[fi], fX + fW/2, fY+4);
+    ctx.fillStyle = isActive ? '#ffd700' : 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.roundRect(fX, fY-_fBtnH/2, fW, _fBtnH, 8); ctx.fill();
+    ctx.strokeStyle = isActive ? '#5d4037' : 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = isActive ? 2 : 1.5;
+    ctx.beginPath(); ctx.roundRect(fX, fY-_fBtnH/2, fW, _fBtnH, 8); ctx.stroke();
+    ctx.fillStyle = isActive ? '#3e2723' : '#ffffff';
+    ctx.font = 'bold 14px ' + F; ctx.textAlign = 'center';
+    ctx.fillText(filterLabels[fi], fX + fW/2, fY+6);
   }
   ctx.textAlign = 'left';
   var ownedC = items.filter(function(it) {

@@ -160,9 +160,9 @@ function drawMipurinCenter(rect) {
 
   if (typeof mipurinReady !== 'undefined' && mipurinReady && typeof MIPURIN_FRAMES !== 'undefined' && MIPURIN_FRAMES.down) {
     const f = MIPURIN_FRAMES.down;
-    const size = Math.min(rect.w - 16, rect.h - 16);
+    const size = Math.min(rect.w * 0.62, rect.h * 0.78);
     const dx = rect.x + rect.w / 2 - size / 2;
-    const dy = rect.y + rect.h / 2 - size / 2;
+    const dy = rect.y + rect.h / 2 - size / 2 + 8;
     ctx.drawImage(mipurinImg, f.sx, f.sy, f.sw, f.sh, dx, dy, size, size);
   } else {
     ctx.fillStyle = '#fff8e1';
@@ -365,6 +365,177 @@ function drawEquipTab(px, py, pw, ph) {
       ? '[↑↓]スロット選択  [→]一覧へ  [Z]強化  [ESC]とじる'
       : '[↑↓]一覧選択  [Z]強化/進化  [X]そうび切替  [←]戻る  [ESC]とじる';
     ctx.fillText(hint, px + pw / 2, py + ph - 9);
+    ctx.restore();
+  }
+}
+
+function getEquipSelectedEntry(list) {
+  if (equipMode === 'list' && list[equipListCursor]) return list[equipListCursor].w;
+  return getSlotWeapon(equipCursor);
+}
+
+function getStatDeltaText(currentItem, candidateItem) {
+  if (!currentItem || !candidateItem) return '差分なし';
+  const curD = currentItem.dmgMul || 1;
+  const newD = candidateItem.dmgMul || 1;
+  const curS = currentItem.speed || 0;
+  const newS = candidateItem.speed || 0;
+  const dmgArrow = newD > curD ? 'ATK↑' : newD < curD ? 'ATK↓' : 'ATK=';
+  const spdArrow = newS > curS ? 'SPD↑' : newS < curS ? 'SPD↓' : 'SPD=';
+  return `${dmgArrow}  ${spdArrow}`;
+}
+
+function drawEquipDetail(x, y, w, h, list) {
+  equipPanel(x, y, w, h, '詳細 / 比較', false);
+  const item = getEquipSelectedEntry(list);
+  const current = equipCursor < 2 ? getSlotWeapon(equipCursor) : null;
+
+  ctx.save();
+  ctx.textAlign = 'left';
+
+  if (!item) {
+    ctx.fillStyle = '#8d6e63';
+    ctx.font = "14px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('表示できる装備がありません', x + 14, y + 48);
+    ctx.restore();
+    return;
+  }
+
+  ctx.fillStyle = item.color || '#3e2723';
+  ctx.font = "bold 18px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(item.name || '不明', x + 14, y + 48);
+
+  const desc = item.desc || '説明なし';
+  ctx.fillStyle = '#6d4c41';
+  ctx.font = "14px 'M PLUS Rounded 1c', sans-serif";
+  ctx.fillText(equipEllipsis(desc, w - 28, "14px 'M PLUS Rounded 1c', sans-serif"), x + 14, y + 78);
+
+  const line2 = `Lv.${item.level || 0} / Rare: ${item.rarity || '-'}`;
+  ctx.fillStyle = '#8d6e63';
+  ctx.fillText(line2, x + 14, y + 106);
+
+  if (equipMode === 'list' && equipCursor < 2 && current) {
+    ctx.fillStyle = '#5d4037';
+    ctx.font = "bold 14px 'M PLUS Rounded 1c', sans-serif";
+    ctx.fillText('今の装備との差分', x + 14, y + 136);
+    ctx.fillStyle = '#7b5e57';
+    ctx.fillText(getStatDeltaText(current, item), x + 14, y + 162);
+  } else if (equipMode === 'slot' && equipCursor < 2 && current) {
+    const perf = `ATK x${(current.dmgMul || 1).toFixed(1)} / SPD ${(current.speed || 0).toFixed(2)}`;
+    ctx.fillStyle = '#7b5e57';
+    ctx.fillText(perf, x + 14, y + 136);
+  }
+
+  ctx.fillStyle = '#a1887f';
+  ctx.font = "13px 'M PLUS Rounded 1c', sans-serif";
+  const hint = equipMode === 'slot'
+    ? (equipCursor < 2 ? 'Z: 強化　→: 一覧へ' : 'チャームは表示のみ')
+    : 'Z: 強化 / 進化　X: 装備切替　←: 戻る';
+  ctx.fillText(hint, x + 14, y + h - 16);
+  ctx.restore();
+}
+
+function drawEquipTab(px, py, pw, ph) {
+  const F = "'M PLUS Rounded 1c', sans-serif";
+  const isTouch = (typeof touchActive !== 'undefined' && touchActive);
+  const _M = isTouch ? 2 : 1;
+
+  const frame = { x: px, y: py, w: pw, h: ph };
+
+  const leftW = Math.floor(frame.w * (isTouch ? 0.50 : 0.47));
+  const rightW = frame.w - leftW - 18;
+  const leftX = frame.x;
+  const leftY = frame.y;
+  const leftH = frame.h;
+  const rightX = leftX + leftW + 18;
+  const rightY = leftY;
+  const rightH = leftH;
+
+  equipPanel(leftX, leftY, leftW, leftH, '今の装備', equipMode === 'slot');
+
+  const centerRect = {
+    x: leftX + Math.floor(leftW * 0.28),
+    y: leftY + Math.floor(leftH * 0.22),
+    w: Math.floor(leftW * 0.44),
+    h: Math.floor(leftH * 0.40)
+  };
+
+  const mainRect = {
+    x: leftX + 14,
+    y: centerRect.y + Math.floor(centerRect.h * 0.38),
+    w: Math.floor(leftW * 0.26),
+    h: 88
+  };
+
+  const subRect = {
+    x: leftX + leftW - Math.floor(leftW * 0.26) - 14,
+    y: centerRect.y + Math.floor(centerRect.h * 0.38),
+    w: Math.floor(leftW * 0.26),
+    h: 88
+  };
+
+  const charmRect = {
+    x: leftX + Math.floor(leftW * 0.5) - Math.floor(leftW * 0.16),
+    y: leftY + 34,
+    w: Math.floor(leftW * 0.32),
+    h: 76
+  };
+
+  const futureHeadRect = {
+    x: leftX + Math.floor(leftW * 0.5) - 42,
+    y: charmRect.y - 34,
+    w: 84,
+    h: 24
+  };
+  const futureBodyRect = {
+    x: leftX + Math.floor(leftW * 0.5) - 42,
+    y: centerRect.y + centerRect.h + 8,
+    w: 84,
+    h: 24
+  };
+  const futureAccessoryRect = {
+    x: leftX + Math.floor(leftW * 0.5) - 42,
+    y: futureBodyRect.y + 30,
+    w: 84,
+    h: 24
+  };
+
+  equipSlotRects = [mainRect, subRect, charmRect];
+
+  drawMipurinCenter(centerRect);
+  drawEquipSlot(mainRect, 'メイン', getSlotWeapon(0), equipMode === 'slot' && equipCursor === 0, false);
+  drawEquipSlot(subRect, 'サブ', getSlotWeapon(1), equipMode === 'slot' && equipCursor === 1, false);
+  drawEquipSlot(charmRect, 'チャーム', getSlotWeapon(2), equipMode === 'slot' && equipCursor === 2, true);
+
+  equipDashedPanel(futureHeadRect.x, futureHeadRect.y, futureHeadRect.w, futureHeadRect.h, 'あたま');
+  equipDashedPanel(futureBodyRect.x, futureBodyRect.y, futureBodyRect.w, futureBodyRect.h, 'からだ');
+  equipDashedPanel(futureAccessoryRect.x, futureAccessoryRect.y, futureAccessoryRect.w, futureAccessoryRect.h, 'かざり');
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(93,64,55,0.75)';
+  ctx.font = `bold ${Math.max(15, 12 * _M)}px ${F}`;
+  ctx.textAlign = 'center';
+  ctx.fillText('⚔', centerRect.x - 12, centerRect.y + centerRect.h * 0.56);
+  ctx.fillText('🪄', centerRect.x + centerRect.w + 12, centerRect.y + centerRect.h * 0.56);
+  ctx.fillText('🔮', centerRect.x + centerRect.w / 2, centerRect.y - 8);
+  ctx.restore();
+
+  const owned = getAllOwnedWeapons();
+  const listH = Math.floor(rightH * 0.56);
+  drawOwnedWeaponList(rightX, rightY, rightW, listH, owned);
+  drawEquipDetail(rightX, rightY + listH + 14, rightW, rightH - listH - 14, owned);
+
+  if (!isTouch) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    ctx.fillRect(frame.x, frame.y + frame.h - 28, frame.w, 28);
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = "13px 'M PLUS Rounded 1c', sans-serif";
+    ctx.textAlign = 'center';
+    const hint = equipMode === 'slot'
+      ? '[↑↓]スロット選択  [→]一覧へ  [Z]強化  [ESC]とじる'
+      : '[↑↓]一覧選択  [Z]強化/進化  [X]そうび切替  [←]戻る  [ESC]とじる';
+    ctx.fillText(hint, frame.x + frame.w / 2, frame.y + frame.h - 9);
     ctx.restore();
   }
 }

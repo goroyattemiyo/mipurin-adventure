@@ -160,7 +160,7 @@ function startFloor() {
   if(typeof MONOLOGUES!=="undefined"&&Math.random()<0.6) setTimeout(()=>showBubble(MONOLOGUES[Math.floor(Math.random()*MONOLOGUES.length)]),800);
   if (floor === 0 || floor === 1) { revivalUsed = false; queenReturned = false; } // 新ラン開始時にリセット
   dialogMsg = null; dialogCallback = null;
-  rng = mulberry32(Date.now() + floor);
+  rng = mulberry32(Date.now() + floor * 99991 + Math.floor(Math.random() * 0xfffff));
   roomSpikes = []; roomMap = generateRoom(floor);
   if (typeof _roomBuffer !== 'undefined') { _roomBuffer = null; _roomBufferFloor = -1; } // ルームキャッシュをクリア
   if (isBossFloor()) { boss = null; enemies.length = 0; projectiles.length = 0; drops.length = 0; spawnBoss(); WAVES = []; wave = 0;

@@ -84,18 +84,24 @@ function drawProjectiles() {
   }
 }
 
-function spawnEnemy(type, col, row) {
-  const def = ENEMY_DEFS[type]; if (!def) return;
+function spawnEnemy(type, col, row, isEliteFlag) {
+  const def = isEliteFlag ? { ...ENEMY_DEFS[type], _elite: true } : ENEMY_DEFS[type]; if (!def) return;
   const sc = 1 + Math.log2(1 + floor) * 0.35;
   const lc = (typeof loopCount !== 'undefined') ? loopCount : 0;
   const hpScale = (1 + lc * 0.5);
   const dmgScale = (1 + lc * 0.3);
   const eColor = lc > 0 && def.color ? loopHueShift(def.color, lc) : (def.color || '#fff');
+  const isElite = !!(def._elite);
+  const eliteHp  = isElite ? 2.0 : 1.0;
+  const eliteSpd = isElite ? 1.2 : 1.0;
+  const eliteScr = isElite ? 3.0 : 1.0;
   enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
-    hp: Math.ceil(def.hp * sc * hpScale), maxHp: Math.ceil(def.hp * sc * hpScale),
+    hp: Math.ceil(def.hp * sc * hpScale * eliteHp), maxHp: Math.ceil(def.hp * sc * hpScale * eliteHp),
     dmg: Math.ceil(def.dmg * (floor <= 1 ? 1 : (1 + floor * 0.06)) * dmgScale),
-    score: Math.ceil(def.score * (1 + floor * 0.05)),
+    score: Math.ceil(def.score * (1 + floor * 0.05) * eliteScr),
+    speed: Math.ceil((def.speed || 60) * eliteSpd),
     color: eColor,
+    elite: isElite,
     vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
     chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
 }
@@ -120,7 +126,9 @@ function buildWaves() {
     for (let i = 0; i < count; i++) {
       const ti = Math.floor(rng() * Math.min(2 + w + Math.floor(floor / 2), pool.length));
       const [c, r] = randEnemyPos();
-      wv.push({ type: pool[ti], col: c, row: r });
+      const isLastEnemy = (i === count - 1);
+      const isEliteWave  = floor >= 3 && isLastEnemy;
+      wv.push({ type: pool[ti], col: c, row: r, elite: isEliteWave });
     }
     waves.push(wv);
   }
@@ -129,7 +137,7 @@ function buildWaves() {
 
 function spawnWave() {
   enemies.length = 0; projectiles.length = 0;
-  if (wave < WAVES.length) { for (const e of WAVES[wave]) spawnEnemy(e.type, e.col, e.row); }
+  if (wave < WAVES.length) { for (const e of WAVES[wave]) { spawnEnemy(e.type, e.col, e.row, e.elite); if (e.elite && typeof showFloat === 'function') showFloat('\u2b50 \u5f37\u6575\u304c\u73fe\u308c\u305f\uff01', 2.0, '#ffd700'); } }
 }
 
 // ===== BOSS =====

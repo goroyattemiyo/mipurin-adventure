@@ -102,6 +102,31 @@ function drawEntity(e, color, isP) {
   const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, e.y + e.h + 2, e.w / 2.5, 4, 0, 0, Math.PI * 2); ctx.fill();
 
+  if (!isP && e.elite) {
+    const _ea = 0.45 + Math.sin(Date.now() / 250) * 0.2;
+    const _er = e.w / 2 + 10 + Math.sin(Date.now() / 180) * 4;
+    ctx.save();
+    ctx.globalAlpha = _ea;
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(cx, cy, _er, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = _ea * 0.35;
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(cx, cy, _er - 2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowColor = '#a07000';
+    ctx.shadowBlur = 4;
+    ctx.fillText('\u2b50', cx, e.y - 14);
+    ctx.restore();
+  }
+
   if (isP && player.invTimer > 0 && Math.floor(player.invTimer * 10) % 2 === 0) ctx.globalAlpha = 0.4;
   if (!isP && e.hitFlash > 0) ctx.globalAlpha = 0.6;
 

@@ -95,7 +95,9 @@ function spawnEnemy(type, col, row, isEliteFlag) {
   const eliteHp  = isElite ? 2.0 : 1.0;
   const eliteSpd = isElite ? 1.2 : 1.0;
   const eliteScr = isElite ? 3.0 : 1.0;
-  enemies.push({ ...def, type, x: col * TILE + (TILE - def.w) / 2, y: row * TILE + (TILE - def.h) / 2,
+  const _sx = col * TILE + (TILE - def.w) / 2;
+  const _sy = row * TILE + (TILE - def.h) / 2;
+  enemies.push({ ...def, type, x: _sx, y: _sy,
     hp: Math.ceil(def.hp * sc * hpScale * eliteHp), maxHp: Math.ceil(def.hp * sc * hpScale * eliteHp),
     dmg: Math.ceil(def.dmg * (floor <= 1 ? 1 : (1 + floor * 0.06)) * dmgScale),
     score: Math.ceil(def.score * (1 + floor * 0.05) * eliteScr),
@@ -104,6 +106,21 @@ function spawnEnemy(type, col, row, isEliteFlag) {
     elite: isElite,
     vx: 0, vy: 0, state: 'idle', stateTimer: 0, wanderDir: { x: 1, y: 0 }, wanderTimer: 0,
     chargeDir: null, telegraphTimer: 0, hitFlash: 0, shootTimer: def.shootInterval || 2 });
+  // 壁めり込み防止: spawn直後に安全位置へ押し出す
+  const _en = enemies[enemies.length - 1];
+  const _margin = 2;
+  const _c0 = Math.floor((_en.x + _margin) / TILE);
+  const _c1 = Math.floor((_en.x + _en.w - 1 - _margin) / TILE);
+  const _r0 = Math.floor((_en.y + _margin) / TILE);
+  const _r1 = Math.floor((_en.y + _en.h - 1 - _margin) / TILE);
+  for (let _r = _r0; _r <= _r1; _r++) {
+    for (let _c = _c0; _c <= _c1; _c++) {
+      if (tileAt(roomMap, _c, _r) === 1) {
+        _en.x = Math.floor(_en.x / TILE) * TILE + (TILE - _en.w) / 2;
+        _en.y = Math.floor(_en.y / TILE) * TILE + (TILE - _en.h) / 2;
+      }
+    }
+  }
 }
 
 function randEnemyPos() {

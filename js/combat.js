@@ -278,7 +278,20 @@ function updateCombat(dt) {
     }
 
     if (en.pattern === 'summon') {
-      moveWithCollision(en, (dx/d)*en.speed*0.3*dt, (dy/d)*en.speed*0.3*dt);
+      en._astarTimer = (en._astarTimer || 0) - dt;
+      if (en._astarTimer <= 0) {
+        en._astarTimer = 0.3;
+        const _ec = Math.floor((en.x+en.w/2)/TILE), _er = Math.floor((en.y+en.h/2)/TILE);
+        const _pc = Math.floor((player.x+player.w/2)/TILE), _pr = Math.floor((player.y+player.h/2)/TILE);
+        en._astarDir = null;
+        try {
+          var _ast = new ROT.Path.AStar(_pc, _pr, function(x,y){return tileAt(roomMap,x,y)!==1;},{topology:4});
+          var _steps=[]; _ast.compute(_ec,_er,function(x,y){_steps.push({x,y});});
+          if(_steps.length>=2){var _ns=_steps[1];var _ddx=_ns.x*TILE+TILE/2-(en.x+en.w/2),_ddy=_ns.y*TILE+TILE/2-(en.y+en.h/2),_ddd=Math.hypot(_ddx,_ddy)||1;en._astarDir={x:_ddx/_ddd,y:_ddy/_ddd};}
+        } catch(e) {}
+      }
+      var _sdir = en._astarDir || {x:dx/d, y:dy/d};
+      moveWithCollision(en, _sdir.x*en.speed*0.5*dt, _sdir.y*en.speed*0.5*dt);
       en.summonTimer = (en.summonTimer !== undefined ? en.summonTimer : (en.summonInterval || 5.0)) - dt;
       if (en.summonTimer <= 0) {
         en.summonTimer = en.summonInterval || 5.0;

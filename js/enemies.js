@@ -32,15 +32,17 @@ const ENEMY_DEFS = {
   ghost:     { hp: 5, speed: 70, w: 48, h: 48, dmg: 1, pattern: 'teleport', score: 30, color: '#bdc3c7', shape: 'ghost', name: 'ひとだまホタル', lore: 'クリスタルの破片に引き寄せられた霊体。光に未練があるらしい…その正体は、クリスタルが砕けた夜に消えた蛍の魂だという。光を取り戻せば、きっと安らかに眠れる' },
   golem:     { hp: 12, speed: 30, w: 48, h: 48, dmg: 3, pattern: 'charge', score: 40, color: '#7f8c8d', shape: 'golem', name: 'いわいわゴーレム', lore: '女王さまがつくった古い番人。封印の力が弱まり暴走している。胸に刻まれた紋章は「守護」の古代語。命令者を失ってもなお、何かを守ろうとしている姿が切ない', chargeSpeed: 200, telegraphTime: 0.8, chargeTime: 0.4 },
   vine:      { hp: 6, speed: 0, w: 48, h: 48, dmg: 1, pattern: 'shoot', score: 20, color: '#27ae60', shape: 'vine', name: 'つるつるツタ', lore: '地面から生えたツタ。種を飛ばして攻撃してくる。花の国の壁や橋を支えていた縁の下の力持ち。クリスタルの光を失い、行き場のないエネルギーを種にこめて撃ち出している', shootInterval: 1.5 },
+  queenbee:  { hp: 10, speed: 40, w: 52, h: 52, dmg: 2, pattern: 'summon', score: 50, color: '#c0392b', shape: 'wasp', name: 'クモの女王', lore: 'やみに染まった巣の支配者。次々と手下を呼び寄せる。かつては花の国の糸の守り手だった。その糸は今も仲間を引き寄せる力を持っている', summonType: 'spider', summonInterval: 5.0 },
+  splitslime: { hp: 6, speed: 50, w: 44, h: 36, dmg: 1, pattern: 'wander', score: 20, color: '#1abc9c', shape: 'blob', name: 'わかれスライム', lore: 'やられると2つに分かれる不思議なスライム。本体は何を考えているんだろう？分かれた後の小さい自分を見て、少し寂しそうな顔をする', splitCount: 0 },
   darkbee:   { hp: 8, speed: 95, w: 48, h: 48, dmg: 2, pattern: 'chase', score: 35, color: '#2c3e50', shape: 'darkbee', name: 'ダークビー', lore: '闇の胞子に染まったミツバチ。かつてはミプリンの仲間だった。クリスタルが砕けた夜、仲間を守ろうとして闇に飲まれた。その目にはまだ微かな光が残っている——きっと救える' }
 };
 
 const THEME_ENEMIES = {
-  forest: ['mushroom', 'slime', 'spider', 'bat'],
-  cave: ['bat', 'worm', 'beetle', 'golem'],
-  flower: ['flower', 'vine', 'wasp', 'slime'],
-  abyss: ['ghost', 'darkbee', 'golem', 'spider'],
-  ruins: ['beetle', 'worm', 'ghost', 'darkbee']
+  forest: ['mushroom', 'slime', 'spider', 'bat', 'splitslime'],
+  cave: ['bat', 'worm', 'beetle', 'golem', 'queenbee'],
+  flower: ['flower', 'vine', 'wasp', 'slime', 'splitslime'],
+  abyss: ['ghost', 'darkbee', 'golem', 'spider', 'queenbee'],
+  ruins: ['beetle', 'worm', 'ghost', 'darkbee', 'splitslime']
 };
 
 // ===== PROJECTILES =====
@@ -135,6 +137,7 @@ function buildWaves() {
   const th = getTheme(floor);
   let pool = THEME_ENEMIES[th.name] || THEME_ENEMIES.forest;
     if (floor <= 2) pool = ['mushroom', 'slime'];
+  if (floor < 4) pool = pool.filter(t => t !== 'splitslime' && t !== 'queenbee');
   const waveCount = Math.min(2 + Math.floor(floor / 2), 5);
   const waves = [];
   for (let w = 0; w < waveCount; w++) {

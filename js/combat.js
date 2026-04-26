@@ -277,6 +277,19 @@ function updateCombat(dt) {
    }
     }
 
+    if (en.pattern === 'summon') {
+      moveWithCollision(en, (dx/d)*en.speed*0.3*dt, (dy/d)*en.speed*0.3*dt);
+      en.summonTimer = (en.summonTimer !== undefined ? en.summonTimer : (en.summonInterval || 5.0)) - dt;
+      if (en.summonTimer <= 0) {
+        en.summonTimer = en.summonInterval || 5.0;
+        if (enemies.filter(e=>e.hp>0).length < 7) {
+          const [_sc, _sr] = randEnemyPos();
+          spawnEnemy(en.summonType || 'spider', _sc, _sr);
+          emitParticles(en.x+en.w/2, en.y+en.h/2, '#c0392b', 8, 70, 0.4);
+          showFloat('※ 手下を呼んだ！', 1.5, '#c0392b');
+        }
+      }
+    }
     if (player.invTimer <= 0 && !player.dashing) {
    if (rectOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, { x: en.x, y: en.y, w: en.w, h: en.h })) {
     if (player.weapon.comboFx === 'parry' && player._parryWindow > 0) {
@@ -308,7 +321,23 @@ function updateCombat(dt) {
 
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].hp <= 0) {
-   score += enemies[i].score; for(let p=0;p<8;p++){const a=Math.PI*2*p/8;emitParticles(enemies[i].x+enemies[i].w/2+Math.cos(a)*12,enemies[i].y+enemies[i].h/2+Math.sin(a)*12,["#ffb7c5","#fff","#ffe4e1","#ffd1dc"][p%4], 2,60,0.3);} if(Math.random()<0.25) showBubble(["やったぁ！","えへへ♪","ばいばーい！","おつかれ〜"][Math.floor(Math.random()*4)]);
+   score += enemies[i].score;
+     if (enemies[i].type === 'splitslime' && (enemies[i].splitCount || 0) === 0) {
+       const _sx = enemies[i].x, _sy = enemies[i].y;
+       for (let _si = 0; _si < 2; _si++) {
+         const _sc2 = Math.max(1, Math.min(COLS-2, Math.floor(_sx/TILE) + (_si===0?-1:1)));
+         const _sr2 = Math.max(1, Math.min(ROWS-2, Math.floor(_sy/TILE)));
+         spawnEnemy('splitslime', _sc2, _sr2);
+         const _ne = enemies[enemies.length-1];
+         _ne.splitCount = 1;
+         _ne.hp = Math.max(1, Math.ceil(_ne.maxHp * 0.5));
+         _ne.maxHp = _ne.hp;
+         _ne.w = 32; _ne.h = 26;
+         emitParticles(_sx+24, _sy+18, '#1abc9c', 6, 60, 0.3);
+       }
+       showFloat('✨ 分裂！', 1.2, '#1abc9c');
+     }
+     for(let p=0;p<8;p++){const a=Math.PI*2*p/8;emitParticles(enemies[i].x+enemies[i].w/2+Math.cos(a)*12,enemies[i].y+enemies[i].h/2+Math.sin(a)*12,["#ffb7c5","#fff","#ffe4e1","#ffd1dc"][p%4], 2,60,0.3);} if(Math.random()<0.25) showBubble(["やったぁ！","えへへ♪","ばいばーい！","おつかれ〜"][Math.floor(Math.random()*4)]);
    emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, enemies[i].color, 6, 80, 0.4); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#fff', 3, 60, 0.3); emitParticles(enemies[i].x + enemies[i].w / 2, enemies[i].y + enemies[i].h / 2, '#ffb7c5', 3, 50, 0.5);
    Audio.enemy_die();
    if (enemies[i]._poisonTimer > 0) {

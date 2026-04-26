@@ -1,146 +1,111 @@
 function drawInventory() {
   if (!inventoryOpen) return;
   const _M = (typeof touchActive !== 'undefined' && touchActive) ? 2 : 1;
+  const _isTch = (typeof touchActive !== 'undefined' && touchActive);
+  const F = "'M PLUS Rounded 1c', sans-serif";
 
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  // === 背景オーバーレイ ===
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
   ctx.fillRect(0, 0, CW, CH);
 
-  if (typeof drawNotebookBase === 'function') {
-    drawNotebookBase(ctx, (CW - 1000) / 2, (CH - 700) / 2 + 20, 1000, 700, '🌸 みぷりんの冒険手帳');
-  }
+  // === ウィンドウ枠 (1回だけ) ===
+  const winW = Math.min(CW - 80, 1100);
+  const winH = Math.min(CH - 60, 820);
+  const winX = Math.floor((CW - winW) / 2);
+  const winY = Math.floor((CH - winH) / 2);
 
-  const tabs = ['持ち物', '図鑑', '装備'];
-  for (let i = 0; i < tabs.length; i++) {
-    const tx = CW / 2 - 120 + i * 240;
-    const ty = 70 + 15 * _M;
-    ctx.fillStyle = inventoryTab === i ? '#ffd700' : 'rgba(255,255,255,0.3)';
-    ctx.fillRect(tx - 80, ty - 20 * _M, 160, 40 * _M);
-    ctx.fillStyle = inventoryTab === i ? '#000' : '#fff';
-    ctx.font = "bold " + (20 * _M) + "px 'M PLUS Rounded 1c', sans-serif";
+  ctx.save();
+  ctx.fillStyle = 'rgba(40,28,20,0.97)';
+  ctx.beginPath(); ctx.roundRect(winX, winY, winW, winH, 18); ctx.fill();
+  ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.roundRect(winX, winY, winW, winH, 18); ctx.stroke();
+  ctx.restore();
+
+  // === タブバー (1段のみ) ===
+  const tabLabels = ['持ち物', '図鑑', '装備'];
+  const tabW = 180, tabH = 44, tabGap = 8;
+  const tabY = winY + 14;
+  const tabsX = winX + Math.floor((winW - (tabW * 3 + tabGap * 2)) / 2);
+
+  for (let i = 0; i < tabLabels.length; i++) {
+    const tx = tabsX + i * (tabW + tabGap);
+    const active = inventoryTab === i;
+    ctx.save();
+    ctx.fillStyle = active ? '#ffd700' : 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.roundRect(tx, tabY, tabW, tabH, [10,10,0,0]); ctx.fill();
+    ctx.strokeStyle = active ? '#f57f17' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = active ? 2 : 1;
+    ctx.beginPath(); ctx.roundRect(tx, tabY, tabW, tabH, [10,10,0,0]); ctx.stroke();
+    ctx.fillStyle = active ? '#1a0e00' : '#ccc';
+    ctx.font = 'bold 20px ' + F;
     ctx.textAlign = 'center';
-    ctx.fillText(tabs[i], tx, ty + 7 * _M);
-  }
-  ctx.textAlign = 'left';
-
-  if (typeof touchActive === 'undefined' || !touchActive) {
-    const _kF = "'M PLUS Rounded 1c', sans-serif";
-    const _kY = 128, _kW = 176, _kGap = 6;
-    const _kTabs = [['持ち物', 0], ['図鑑', 1], ['装備', 2]];
-    const _kSX = CW / 2 - (_kW * 3 + _kGap * 2) / 2;
-
-    for (let _ki = 0; _ki < _kTabs.length; _ki++) {
-      const _kAct = inventoryTab === _kTabs[_ki][1];
-      const _kX = _kSX + _ki * (_kW + _kGap);
-
-      ctx.fillStyle = _kAct ? 'rgba(255,215,0,0.18)' : 'rgba(255,255,255,0.05)';
-      ctx.beginPath();
-      ctx.roundRect(_kX, _kY - 13, _kW, 24, 5);
-      ctx.fill();
-
-      ctx.strokeStyle = _kAct ? '#ffd700' : 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = _kAct ? 1.5 : 1;
-      ctx.beginPath();
-      ctx.roundRect(_kX, _kY - 13, _kW, 24, 5);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.beginPath();
-      ctx.roundRect(_kX + 6, _kY - 9, 22, 16, 3);
-      ctx.fill();
-
-      ctx.strokeStyle = _kAct ? 'rgba(255,215,0,0.6)' : 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.fillStyle = _kAct ? '#ffd700' : '#aaa';
-      ctx.font = 'bold 11px ' + _kF;
-      ctx.textAlign = 'center';
-      ctx.fillText(['I', 'O', 'P'][_ki], _kX + 17, _kY + 2);
-
-      ctx.fillStyle = _kAct ? '#fff' : '#888';
-      ctx.font = (_kAct ? 'bold ' : '') + (_M * 13) + 'px ' + _kF;
-      ctx.fillText(_kTabs[_ki][0], _kX + _kW / 2 + 6, _kY + 2);
-
-      ctx.textAlign = 'left';
-      if (_kAct) {
-        ctx.fillStyle = '#ffd700';
-        ctx.fillRect(_kX + 3, _kY + 9, _kW - 6, 2);
-      }
-    }
-
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.font = '12px ' + _kF;
-    ctx.textAlign = 'right';
-    ctx.fillText('[ESC] とじる', CW - 118, _kY + 2);
-    ctx.textAlign = 'left';
+    ctx.fillText(tabLabels[i], tx + tabW / 2, tabY + 29);
+    ctx.restore();
   }
 
+  // === コンテンツエリア ===
+  const contentX = winX + 16;
+  const contentY = winY + tabH + 22;
+  const contentW = winW - 32;
+  const contentH = winH - tabH - 38;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(253,246,227,0.97)';
+  ctx.beginPath(); ctx.roundRect(contentX, contentY, contentW, contentH, [0,0,14,14]); ctx.fill();
+  ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(contentX, contentY, contentW, contentH, [0,0,14,14]); ctx.stroke();
+  ctx.restore();
+
+  // === 各タブ内容 ===
   if (inventoryTab === 0) {
     drawInventoryItems();
   } else if (inventoryTab === 1) {
     drawCollectionTab();
   } else if (inventoryTab === 2) {
-    const { outer } = getInventorySafeLayout();
-    drawEquipTab(outer.x, outer.y, outer.w, outer.h);
+    drawEquipTab(contentX, contentY, contentW, contentH);
   }
 
-  const _isTch = (typeof touchActive !== 'undefined' && touchActive);
-  let _helpLines;
-  if (inventoryTab === 0) {
-    _helpLines = _isTch
-      ? ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', '☰ボタン: タブ切替', '◄ボタン: とじる']
-      : ['花粉 = ショップで使う通貨', 'HP / ATK / 速度: プレイヤーの状態', 'TAB キー: タブ切替', 'ESC キー: とじる'];
-  } else if (inventoryTab === 1) {
-    _helpLines = _isTch
-      ? ['上下スワイプ: スクロール', '左右のタブをタップ: サブタブ切替', '☰ボタン: タブ切替', '◄ボタン: とじる']
-      : ['↑↓ キー: スクロール', '← → キー: サブタブ切替', 'TAB キー: タブ切替', 'ESC キー: とじる'];
-  } else {
-    _helpLines = _isTch
-      ? ['スロットをタップ: 選択', 'リスト項目をタップ: 武器選択', 'Zボタン: 強化 / そうび', 'Xボタン: そうびを切り替え', '◄ボタン: とじる']
-      : ['↑↓: スロット選択', '→: リストへ (武器スロット)', 'Z: 強化 / そうび', 'X: そうびを切り替え', 'ESC: とじる'];
-  }
-
-  if (typeof touchActive === 'undefined' || !touchActive) {
-    const _ihF = "'M PLUS Rounded 1c', sans-serif";
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(0, CH - 26, CW, 26);
-    const _ihT = inventoryTab === 0
-      ? '[I]持ち物  [O]図鑑  [P]装備  [ESC]とじる'
-      : inventoryTab === 1
-        ? '[I]持ち物  [O]図鑑  [P]装備  [←→]サブタブ  [↑↓]スクロール  [F]フィルタ  [ESC]とじる'
-        : '[I]持ち物  [O]図鑑  [P]装備  [↑↓]スロット/一覧  [→←]移動  [Z]強化/そうび  [ESC]とじる';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '13px ' + _ihF;
+  // === フッターヒント ===
+  if (!_isTch) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '13px ' + F;
     ctx.textAlign = 'center';
-    ctx.fillText(_ihT, CW / 2, CH - 8);
-    ctx.textAlign = 'left';
+    const hint = inventoryTab === 1
+      ? 'TAB:タブ切替  ←→:サブタブ  ↑↓:スクロール  ESC:とじる'
+      : inventoryTab === 2
+        ? 'TAB:タブ切替  ↑↓:スロット  →:一覧  Z:強化  ESC:とじる'
+        : 'TAB:タブ切替  ESC:とじる';
+    ctx.fillText(hint, CW / 2, winY + winH - 8);
+    ctx.restore();
   }
 
-  UIManager.drawHelpIcon(ctx, CW - 160, 55 + 10 * _M, 34, 'inventory');
+  // === ヘルプアイコン ===
+  UIManager.drawHelpIcon(ctx, winX + winW - 52, winY + 10, 34, 'inventory');
+  const _helpLines = inventoryTab === 0
+    ? ['花粉 = ショップ通貨', 'TAB: タブ切替', 'ESC: とじる']
+    : inventoryTab === 1
+      ? ['←→: サブタブ', '↑↓: スクロール', 'ESC: とじる']
+      : ['↑↓: スロット', '→: 一覧', 'Z: 強化', 'ESC: とじる'];
   if (UIManager.isHelpOpen('inventory')) {
-    const _tabName = ['持ち物', '図鑑', '装備'][inventoryTab] || '';
-    UIManager.showModal(ctx, _tabName + ' — 操作ガイド', _helpLines);
+    UIManager.showModal(ctx, ['持ち物', '図鑑', '装備'][inventoryTab] + ' — 操作ガイド', _helpLines);
   }
 }
 
 function getInventorySafeLayout() {
   const isTouch = (typeof touchActive !== 'undefined' && touchActive);
   const _M = isTouch ? 2 : 1;
-
+  const winW = Math.min(CW - 80, 1100);
+  const winH = Math.min(CH - 60, 820);
+  const winX = Math.floor((CW - winW) / 2);
+  const winY = Math.floor((CH - winH) / 2);
+  const tabH = 44;
   const outer = {
-    x: 80,
-    y: 100 + 40 * _M,
-    w: CW - 160,
-    h: CH - (100 + 40 * _M) - 70
+    x: winX + 16,
+    y: winY + tabH + 22,
+    w: winW - 32,
+    h: winH - tabH - 38
   };
-
-  if (isTouch) {
-    outer.x = 120;
-    outer.y = 180;
-    outer.w = CW - 240;
-    outer.h = CH - 360;
-  }
-
   return { isTouch, _M, outer };
 }
 

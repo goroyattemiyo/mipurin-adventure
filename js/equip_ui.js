@@ -302,8 +302,6 @@ function drawEquipTab(px, py, pw, ph) {
   const isTouch = (typeof touchActive !== 'undefined' && touchActive);
   const _M = isTouch ? 2 : 1;
 
-  drawNotebookBase(ctx, px, py, pw, ph, '🌸 みぷりんの冒険手帳 — そうび');
-
   const leftW = Math.floor(pw * (isTouch ? 0.50 : 0.47));
   const rightW = pw - leftW - 34;
   const leftX = px + 18;

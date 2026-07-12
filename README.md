@@ -1,8 +1,18 @@
 # ミプリンの冒険 🌸
 
+> [!NOTE]
+> このWeb版リポジトリは、Unity版への移行に伴い開発を終了しました。
+> 現在は、過去の実装・ゲーム仕様・画面構成を確認するための参照資料として保存しています。
+>
+> 現行の開発・正本リポジトリ：
+> [`goroyattemiyo/mipurin-adventure-unity`](https://github.com/goroyattemiyo/mipurin-adventure-unity)
+
 ローグライトRPG — 小さなミツバチの大冒険
 
-## Play
+## Archived Web Build
+
+最終Web版は、参考用のスナップショットとして引き続き閲覧できます。
+
 https://goroyattemiyo.github.io/mipurin-adventure
 
 ## Version
